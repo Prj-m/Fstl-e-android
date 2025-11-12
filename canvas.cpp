@@ -132,7 +132,8 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
     resetTransform();
     anim.setDuration(100);
     
-    // Enable pinch gesture for zoom
+    // Enable touch events and pinch gesture for zoom
+    setAttribute(Qt::WA_AcceptTouchEvents);
     grabGesture(Qt::PinchGesture);
 
 }
@@ -586,6 +587,7 @@ bool Canvas::gestureEvent(QGestureEvent* event)
 {
     if (QGesture* pinch = event->gesture(Qt::PinchGesture))
     {
+        event->accept();  // Must accept the gesture event
         pinchTriggered(static_cast<QPinchGesture*>(pinch));
         return true;
     }
@@ -594,11 +596,15 @@ bool Canvas::gestureEvent(QGestureEvent* event)
 
 void Canvas::pinchTriggered(QPinchGesture* gesture)
 {
-    QPinchGesture::ChangeFlags changeFlags = gesture->changeFlags();
-    
-    if (changeFlags & QPinchGesture::ScaleFactorChanged)
+    if (gesture->state() == Qt::GestureStarted)
     {
-        qreal value = gesture->scaleFactor();
+        // Store current scale factor when gesture starts
+        pinch_scale_factor = 1.0;
+    }
+    else if (gesture->state() == Qt::GestureUpdated)
+    {
+        qreal current_scale = gesture->scaleFactor();
+        qreal scale_change = current_scale / pinch_scale_factor;
         
         // Get center point of pinch
         QPointF centerPoint = gesture->centerPoint();
@@ -609,9 +615,11 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
         QVector3D a = transform_matrix().inverted() *
                       view_matrix().inverted() * v;
         
-        // Apply zoom with scale factor
-        zoom *= value / pinch_scale_factor;
-        pinch_scale_factor = value;
+        // Apply incremental zoom change
+        // scale_change > 1 = fingers spreading = zoom in (model bigger, zoom value smaller)
+        // scale_change < 1 = fingers closing = zoom out (model smaller, zoom value larger)
+        zoom /= scale_change;
+        pinch_scale_factor = current_scale;
         
         // Adjust center to zoom about pinch center
         QVector3D b = transform_matrix().inverted() *
@@ -620,8 +628,7 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
         
         update();
     }
-    
-    if (gesture->state() == Qt::GestureFinished)
+    else if (gesture->state() == Qt::GestureFinished || gesture->state() == Qt::GestureCanceled)
     {
         pinch_scale_factor = 1.0;
     }
