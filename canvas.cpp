@@ -1,6 +1,8 @@
 #include <QMouseEvent>
 #include <QGestureEvent>
 #include <QPinchGesture>
+#include <QTouchEvent>
+#include <QLineF>
 
 #include <cmath>
 
@@ -132,9 +134,11 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
     resetTransform();
     anim.setDuration(100);
     
-    // Enable touch events and pinch gesture for zoom
+    // Enable touch events; on Android we use raw touch handling instead of Qt gestures
     setAttribute(Qt::WA_AcceptTouchEvents);
+#ifndef Q_OS_ANDROID
     grabGesture(Qt::PinchGesture);
+#endif
 
 }
 
@@ -307,6 +311,7 @@ void Canvas::paintGL()
         case meshlight: drawModeStr = "Meshlight"; break;
     }
     painter.drawText(10, height() - 2*textHeight, QString("Draw Mode : %1").arg(drawModeStr));
+    painter.drawText(10, height() - 3*textHeight, QString("Zoom: %1").arg(zoom, 0, 'f', 4));
 
     if (drawAxes) {
         QString sWidth = QString("GL Width = %1").arg(width());
@@ -576,10 +581,78 @@ void Canvas::wheelEvent(QWheelEvent *event)
 
 bool Canvas::event(QEvent* event)
 {
+    // Prefer raw touch handling on Android for reliability
+    if (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate || event->type() == QEvent::TouchEnd)
+    {
+        auto* te = static_cast<QTouchEvent*>(event);
+        const auto pts = te->touchPoints();
+        if (pts.count() >= 2)
+        {
+            const QPointF p1 = pts[0].pos();
+            const QPointF p2 = pts[1].pos();
+            const qreal dist = QLineF(p1, p2).length();
+            const QPointF centerPt = (p1 + p2) * 0.5;
+            
+            if (!touch_pinch_active || event->type() == QEvent::TouchBegin)
+            {
+                // Starting a new pinch gesture
+                touch_pinch_active = true;
+                touch_start_distance = std::max(1.0, (double)dist);
+                touch_base_zoom = zoom;
+                touch_pinch_center = centerPt;
+                
+                // Capture the world-space point under the pinch center
+                QVector3D screen_pos(1 - centerPt.x() / (0.5*width()),
+                                     centerPt.y() / (0.5*height()) - 1, 0);
+                touch_anchor_world = transform_matrix().inverted() * view_matrix().inverted() * screen_pos;
+                
+                qDebug() << "PINCH START at" << centerPt << "zoom:" << zoom;
+            }
+            else
+            {
+                // Continuing pinch - calculate new zoom
+                qreal ratio = dist / touch_start_distance; // >1 = fingers apart
+                const qreal exponent = 1.5; // sensitivity (lower = gentler)
+                qreal scaled = pow(ratio, exponent);
+                
+                qreal newZoom = touch_base_zoom / scaled; // spread => zoom in (smaller zoom value)
+                newZoom = std::max(0.05, std::min(20.0, (double)newZoom));
+                zoom = newZoom;
+                
+                // Now adjust center so that touch_anchor_world stays under touch_pinch_center
+                QVector3D screen_pos(1 - touch_pinch_center.x() / (0.5*width()),
+                                     touch_pinch_center.y() / (0.5*height()) - 1, 0);
+                
+                // Where would the anchor appear on screen with current zoom/center?
+                QVector3D anchor_screen = view_matrix() * transform_matrix() * touch_anchor_world;
+                
+                // The difference between where it is and where it should be
+                QVector3D screen_error = screen_pos - anchor_screen;
+                
+                // Convert that error back to world space and adjust center
+                QVector3D world_correction = transform_matrix().inverted() * 
+                                             view_matrix().inverted() * screen_error;
+                center += world_correction;
+                
+                qDebug() << "PINCH ratio:" << ratio << "zoom:" << zoom;
+                update();
+            }
+            event->accept();
+            return true;
+        }
+        if (event->type() == QEvent::TouchEnd)
+        {
+            touch_pinch_active = false;
+        }
+        return QOpenGLWidget::event(event);
+    }
+    // Fallback to Qt gesture if available (desktop only)
+#ifndef Q_OS_ANDROID
     if (event->type() == QEvent::Gesture)
     {
         return gestureEvent(static_cast<QGestureEvent*>(event));
     }
+#endif
     return QOpenGLWidget::event(event);
 }
 
@@ -596,15 +669,21 @@ bool Canvas::gestureEvent(QGestureEvent* event)
 
 void Canvas::pinchTriggered(QPinchGesture* gesture)
 {
+    qDebug() << "PINCH TRIGGERED state:" << gesture->state();
     if (gesture->state() == Qt::GestureStarted)
     {
-        // Store current scale factor when gesture starts
-        pinch_scale_factor = 1.0;
+        // Store initial zoom when gesture starts
+        pinch_scale_factor = zoom;
+        qDebug() << "Pinch started, base zoom:" << pinch_scale_factor;
     }
     else if (gesture->state() == Qt::GestureUpdated)
     {
-        qreal current_scale = gesture->scaleFactor();
-        qreal scale_change = current_scale / pinch_scale_factor;
+        // Use total scale from gesture start for stable behavior
+        qreal total = gesture->totalScaleFactor();
+        
+        // Sensitivity: exponent > 1 makes it more responsive
+        const qreal exponent = 2.0; // tuneable
+        qreal scaled = pow(total, exponent);
         
         // Get center point of pinch
         QPointF centerPoint = gesture->centerPoint();
@@ -615,11 +694,12 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
         QVector3D a = transform_matrix().inverted() *
                       view_matrix().inverted() * v;
         
-        // Apply incremental zoom change
-        // scale_change > 1 = fingers spreading = zoom in (model bigger, zoom value smaller)
-        // scale_change < 1 = fingers closing = zoom out (model smaller, zoom value larger)
-        zoom /= scale_change;
-        pinch_scale_factor = current_scale;
+        // Apply zoom based on total since start
+        // total > 1 => fingers apart => zoom in (model bigger => smaller zoom value)
+        qreal newZoom = pinch_scale_factor / scaled;
+        // Clamp to a sane range
+        newZoom = std::max(0.1, std::min(10.0, (double)newZoom));
+        zoom = newZoom;
         
         // Adjust center to zoom about pinch center
         QVector3D b = transform_matrix().inverted() *
@@ -630,7 +710,7 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
     }
     else if (gesture->state() == Qt::GestureFinished || gesture->state() == Qt::GestureCanceled)
     {
-        pinch_scale_factor = 1.0;
+        // nothing else
     }
 }
 

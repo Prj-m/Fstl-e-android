@@ -186,7 +186,14 @@ private:
     QString meshInfo;
     
     // Pinch zoom support
-    qreal pinch_scale_factor;
+    qreal pinch_scale_factor; // stores initial zoom during gesture
+
+    // Raw touch pinch zoom
+    bool touch_pinch_active = false;
+    qreal touch_start_distance = 0.0;
+    qreal touch_base_zoom = 1.0;
+    QVector3D touch_anchor_world;  // world-space point under pinch center
+    QPointF touch_pinch_center;     // screen-space pinch center
 };
 
 #endif // CANVAS_H
