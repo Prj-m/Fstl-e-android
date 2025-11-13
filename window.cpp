@@ -496,6 +496,17 @@ Window::Window(QWidget *parent) :
 #ifndef Q_OS_ANDROID
     projectionButton->setPopupMode(QToolButton::InstantPopup);
     projectionButton->setMenu(projection_menu);
+#else
+    // Android: toggle between perspective and orthographic on click
+    connect(projectionButton, &QToolButton::clicked, this, [this]() {
+        if (perspective_action->isChecked()) {
+            orthographic_action->setChecked(true);
+            on_projection(orthographic_action);
+        } else {
+            perspective_action->setChecked(true);
+            on_projection(perspective_action);
+        }
+    });
 #endif
     projectionButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
     windowToolBar->addWidget(projectionButton);
@@ -504,6 +515,21 @@ Window::Window(QWidget *parent) :
 #ifndef Q_OS_ANDROID
     defaultViewButton->setPopupMode(QToolButton::InstantPopup);
     defaultViewButton->setMenu(defaultViewMenu);
+#else
+    // Android: cycle through predefined views on click
+    connect(defaultViewButton, &QToolButton::clicked, this, [this]() {
+        QList<QAction*> views = defaultViewAction->actions();
+        int current = 0;
+        for (int i = 0; i < views.size(); i++) {
+            if (views[i]->isChecked()) {
+                current = i;
+                break;
+            }
+        }
+        int next = (current + 1) % views.size();
+        views[next]->setChecked(true);
+        on_defaultView(views[next]);
+    });
 #endif
     defaultViewButton->setFocusPolicy(Qt::NoFocus);
     windowToolBar->addWidget(defaultViewButton);
@@ -664,6 +690,17 @@ void Window::load_persist_settings(){
  }
 
 void Window::on_drawModePrefs() {
+#ifdef Q_OS_ANDROID
+    // Settings dialog has issues on Android - show message instead
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Settings");
+    msgBox.setText("Draw mode settings are not available on Android.\n"
+                   "Use the desktop version for advanced configuration.");
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setWindowModality(Qt::ApplicationModal);
+    msgBox.exec();
+    return;
+#else
     // For now only one draw mode has settings
     // when settings for other draw mode will be available
     // we will need to check the current mode
@@ -674,6 +711,7 @@ void Window::on_drawModePrefs() {
         meshlightprefs->raise();
         meshlightprefs->activateWindow();
     }
+#endif
 }
 
 void Window::on_open()
@@ -688,10 +726,10 @@ void Window::on_open()
 #ifdef Q_OS_ANDROID
     // On Android, use a more permissive filter
     const QString filename = QFileDialog::getOpenFileName(
-                this, "Load .stl file", lastDir, "All files (*)");
+                this, "Load 3D file", lastDir, "All files (*)");
 #else
     const QString filename = QFileDialog::getOpenFileName(
-                this, "Load .stl file", lastDir, "STL files (*.stl *.STL)");
+                this, "Load 3D file", lastDir, "3D files (*.stl *.STL *.3mf *.3MF)");
 #endif
     if (!filename.isNull())
     {
@@ -975,6 +1013,11 @@ void Window::on_reload()
     {
         load_stl(fs[0], true);
     }
+    else if (!current_file.isEmpty())
+    {
+        // Fallback: if watcher has no files but we have a current file, reload it
+        load_stl(current_file, true);
+    }
 }
 
 
@@ -985,7 +1028,8 @@ bool Window::load_stl(QString filename, bool is_reload)
     // is it a directory?
     bool isDir = QFileInfo(filename).isDir();
     if (isDir) {
-        QDir searchDir = QDir(filename, "*.stl",QDir::SortFlag::DirsFirst | QDir::SortFlag::Name);
+        QDir searchDir = QDir(filename, "*.stl *.3mf",QDir::SortFlag::DirsFirst | QDir::SortFlag::Name);
+        searchDir.setNameFilters(QStringList() << "*.stl" << "*.STL" << "*.3mf" << "*.3MF");
         QStringList listFiles = searchDir.entryList();
         if (!listFiles.isEmpty()) {
             filename = filename+"/"+listFiles.at(0);
@@ -1035,8 +1079,13 @@ void Window::dragEnterEvent(QDragEnterEvent *event)
     if (event->mimeData()->hasUrls())
     {
         auto urls = event->mimeData()->urls();
-        if (urls.size() == 1 && urls.front().path().endsWith(".stl"))
-            event->acceptProposedAction();
+        if (urls.size() == 1)
+        {
+            QString path = urls.front().path();
+            if (path.endsWith(".stl", Qt::CaseInsensitive) || 
+                path.endsWith(".3mf", Qt::CaseInsensitive))
+                event->acceptProposedAction();
+        }
     }
 }
 
@@ -1320,7 +1369,8 @@ void Window::on_help() {
 }
 
 void Window::on_centerView() {
-    canvas->recenterView();
+    // Reset view completely: zoom=1, recenter, and reset rotation
+    canvas->resetView();
     canvas->update();
 }
 

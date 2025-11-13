@@ -14,11 +14,14 @@ public:
 
 protected:
     Mesh* load_stl();
+    Mesh* load_3mf();
 
     /*  Reads an ASCII stl, starting from the start of the file*/
     Mesh* read_stl_ascii(QFile& file);
     /*  Reads a binary stl, assuming we're at the end of the header */
     Mesh* read_stl_binary(QFile& file);
+    /*  Reads a 3MF file (ZIP archive with XML mesh data) */
+    Mesh* read_3mf_file();
 
 signals:
     void loaded_file(QString filename);

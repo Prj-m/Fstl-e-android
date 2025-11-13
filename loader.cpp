@@ -2,6 +2,17 @@
 
 #include "loader.h"
 #include "vertex.h"
+#include <QXmlStreamReader>
+#include <QFile>
+#include <QtCore/private/qzipreader_p.h>
+
+#ifdef Q_OS_ANDROID
+#include <android/log.h>
+#define LOG_TAG "FSTL_3MF"
+#define ALOG(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#else
+#define ALOG(...) qDebug(__VA_ARGS__)
+#endif
 
 Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
     : QThread(parent), filename(filename), is_reload(is_reload)
@@ -11,7 +22,47 @@ Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
 
 void Loader::run()
 {
-    Mesh* mesh = load_stl();
+    Mesh* mesh = nullptr;
+    
+    ALOG("Loader::run() called for file: %s", filename.toStdString().c_str());
+    
+    // Detect 3MF by checking for ZIP magic bytes (3MF is a ZIP archive)
+    // ZIP files start with "PK" (0x50 0x4B)
+    QFile file(filename);
+    bool is_3mf = false;
+    
+    if (file.open(QIODevice::ReadOnly))
+    {
+        char header[2];
+        if (file.read(header, 2) == 2)
+        {
+            if (header[0] == 0x50 && header[1] == 0x4B)  // "PK" magic bytes
+            {
+                ALOG("Detected ZIP magic bytes - treating as 3MF");
+                is_3mf = true;
+            }
+        }
+        file.close();
+    }
+    
+    // Also check file extension as fallback
+    if (!is_3mf && filename.endsWith(".3mf", Qt::CaseInsensitive))
+    {
+        ALOG("Detected .3MF extension");
+        is_3mf = true;
+    }
+    
+    if (is_3mf)
+    {
+        ALOG("Loading as 3MF file");
+        mesh = load_3mf();
+    }
+    else
+    {
+        ALOG("Loading as STL file");
+        mesh = load_stl();
+    }
+    
     if (mesh)
     {
         if (mesh->empty())
@@ -237,6 +288,125 @@ Mesh* Loader::read_stl_binary(QFile& file)
         b += sizeof(uint16_t);
     }
 
+    return mesh_from_verts(tri_count, verts);
+}
+
+Mesh* Loader::load_3mf()
+{
+    ALOG("load_3mf() START for: %s", filename.toStdString().c_str());
+    
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        ALOG("FAILED to open 3MF file: %s", filename.toStdString().c_str());
+        emit error_missing_file();
+        return nullptr;
+    }
+    
+    ALOG("File opened successfully, size: %lld", file.size());
+    
+    // Use Qt's built-in ZIP reader
+    QZipReader zip(&file);
+    if (!zip.isReadable())
+    {
+        ALOG("3MF file is NOT readable as ZIP");
+        emit error_bad_stl();
+        return nullptr;
+    }
+    
+    ALOG("ZIP is readable, listing entries...");
+    auto entries = zip.fileInfoList();
+    ALOG("ZIP contains %d entries", entries.size());
+    for (const auto& entry : entries)
+    {
+        ALOG("  Entry: %s (size: %lld)", entry.filePath.toStdString().c_str(), entry.size);
+    }
+    
+    // Read the 3D model XML from the ZIP
+    QByteArray modelData = zip.fileData("3D/3dmodel.model");
+    if (modelData.isEmpty())
+    {
+        ALOG("Failed to find 3D/3dmodel.model, trying case variations...");
+        // Try alternative paths
+        modelData = zip.fileData("3d/3dmodel.model");
+        if (modelData.isEmpty())
+        {
+            ALOG("FAILED to find model file in 3MF");
+            emit error_bad_stl();
+            return nullptr;
+        }
+    }
+    
+    ALOG("Model data loaded, size: %d bytes", modelData.size());
+    
+    // Parse XML content
+    ALOG("Starting XML parse...");
+    QXmlStreamReader xml(modelData);
+    QVector<Vertex> verts;
+    QVector<float> vertex_coords;  // Store all vertex coordinates
+    uint32_t tri_count = 0;
+    int vertex_count = 0;
+    
+    while (!xml.atEnd())
+    {
+        xml.readNext();
+        
+        if (xml.isStartElement())
+        {
+            // Use localName() to ignore namespaces
+            QString elemName = xml.name().toString();
+            
+            if (elemName == "vertex" || elemName.endsWith(":vertex"))
+            {
+                // Read vertex coordinates
+                QXmlStreamAttributes attrs = xml.attributes();
+                float x = attrs.value("x").toFloat();
+                float y = attrs.value("y").toFloat();
+                float z = attrs.value("z").toFloat();
+                vertex_coords.push_back(x);
+                vertex_coords.push_back(y);
+                vertex_coords.push_back(z);
+                vertex_count++;
+            }
+            else if (elemName == "triangle" || elemName.endsWith(":triangle"))
+            {
+                // Read triangle vertex indices
+                QXmlStreamAttributes attrs = xml.attributes();
+                int v1 = attrs.value("v1").toInt();
+                int v2 = attrs.value("v2").toInt();
+                int v3 = attrs.value("v3").toInt();
+                
+                // Add vertices to the triangle list
+                if (v1 * 3 + 2 < vertex_coords.size() &&
+                    v2 * 3 + 2 < vertex_coords.size() &&
+                    v3 * 3 + 2 < vertex_coords.size())
+                {
+                    verts.push_back(Vertex(vertex_coords[v1*3], vertex_coords[v1*3+1], vertex_coords[v1*3+2]));
+                    verts.push_back(Vertex(vertex_coords[v2*3], vertex_coords[v2*3+1], vertex_coords[v2*3+2]));
+                    verts.push_back(Vertex(vertex_coords[v3*3], vertex_coords[v3*3+1], vertex_coords[v3*3+2]));
+                    tri_count++;
+                }
+            }
+        }
+    }
+    
+    ALOG("XML parse complete: vertices=%d, triangles=%d", vertex_count, tri_count);
+    
+    if (xml.hasError())
+    {
+        ALOG("XML parse ERROR: %s", xml.errorString().toStdString().c_str());
+        emit error_bad_stl();
+        return nullptr;
+    }
+    
+    if (tri_count == 0)
+    {
+        ALOG("No triangles found in 3MF");
+        emit error_empty_mesh();
+        return nullptr;
+    }
+    
+    ALOG("Creating mesh from %d triangles", tri_count);
     return mesh_from_verts(tri_count, verts);
 }
 

@@ -5,6 +5,7 @@
 #include <QLineF>
 
 #include <cmath>
+#include <algorithm>
 
 #include "canvas.h"
 #include "backdrop.h"
@@ -586,14 +587,35 @@ bool Canvas::event(QEvent* event)
     {
         auto* te = static_cast<QTouchEvent*>(event);
         const auto pts = te->touchPoints();
-        if (pts.count() >= 2)
+        
+        // Update our manual tracking of active touches
+        for (const auto& pt : pts)
         {
-            const QPointF p1 = pts[0].pos();
-            const QPointF p2 = pts[1].pos();
+            if (pt.state() & (Qt::TouchPointPressed | Qt::TouchPointMoved | Qt::TouchPointStationary))
+            {
+                active_touches[pt.id()] = pt.pos();
+            }
+            else if (pt.state() & (Qt::TouchPointReleased))
+            {
+                active_touches.remove(pt.id());
+            }
+        }
+        
+        qDebug() << "TOUCH EVENT type:" << event->type() << "reported:" << pts.count() << "active:" << active_touches.size();
+        
+        // Check if we have 2+ active touches for pinch zoom
+        if (active_touches.size() >= 2)
+        {
+            // Get first two touch points - use keys() for consistent ordering
+            QList<int> keys = active_touches.keys();
+            std::sort(keys.begin(), keys.end()); // Sort IDs for consistency
+            QPointF p1 = active_touches[keys[0]];
+            QPointF p2 = active_touches[keys[1]];
+            
             const qreal dist = QLineF(p1, p2).length();
             const QPointF centerPt = (p1 + p2) * 0.5;
             
-            if (!touch_pinch_active || event->type() == QEvent::TouchBegin)
+            if (!touch_pinch_active)
             {
                 // Starting a new pinch gesture
                 touch_pinch_active = true;
@@ -601,49 +623,55 @@ bool Canvas::event(QEvent* event)
                 touch_base_zoom = zoom;
                 touch_pinch_center = centerPt;
                 
-                // Capture the world-space point under the pinch center
-                QVector3D screen_pos(1 - centerPt.x() / (0.5*width()),
-                                     centerPt.y() / (0.5*height()) - 1, 0);
-                touch_anchor_world = transform_matrix().inverted() * view_matrix().inverted() * screen_pos;
-                
-                qDebug() << "PINCH START at" << centerPt << "zoom:" << zoom;
+                qDebug() << "PINCH START at" << centerPt << "zoom:" << zoom << "dist:" << dist;
             }
             else
             {
-                // Continuing pinch - calculate new zoom
+                // Update pinch center to current finger midpoint
+                touch_pinch_center = centerPt;
+                
+                // Use the same pattern as wheelEvent for anchor-locked zoom
+                // Screen position to lock (normalized coordinates)
+                QVector3D v(1 - touch_pinch_center.x() / (0.5*width()),
+                            touch_pinch_center.y() / (0.5*height()) - 1, 0);
+                
+                // Find world position BEFORE zoom change
+                QVector3D a = transform_matrix().inverted() *
+                              view_matrix().inverted() * v;
+                
+                // Calculate and apply new zoom
                 qreal ratio = dist / touch_start_distance; // >1 = fingers apart
                 const qreal exponent = 1.5; // sensitivity (lower = gentler)
                 qreal scaled = pow(ratio, exponent);
                 
                 qreal newZoom = touch_base_zoom / scaled; // spread => zoom in (smaller zoom value)
-                newZoom = std::max(0.05, std::min(20.0, (double)newZoom));
+                // Tighter limits to prevent clipping issues
+                newZoom = std::max(0.1, std::min(10.0, (double)newZoom));
                 zoom = newZoom;
                 
-                // Now adjust center so that touch_anchor_world stays under touch_pinch_center
-                QVector3D screen_pos(1 - touch_pinch_center.x() / (0.5*width()),
-                                     touch_pinch_center.y() / (0.5*height()) - 1, 0);
+                // Find world position AFTER zoom change (at same screen position)
+                QVector3D b = transform_matrix().inverted() *
+                              view_matrix().inverted() * v;
                 
-                // Where would the anchor appear on screen with current zoom/center?
-                QVector3D anchor_screen = view_matrix() * transform_matrix() * touch_anchor_world;
+                // Adjust center to compensate for the difference
+                center += b - a;
                 
-                // The difference between where it is and where it should be
-                QVector3D screen_error = screen_pos - anchor_screen;
-                
-                // Convert that error back to world space and adjust center
-                QVector3D world_correction = transform_matrix().inverted() * 
-                                             view_matrix().inverted() * screen_error;
-                center += world_correction;
-                
-                qDebug() << "PINCH ratio:" << ratio << "zoom:" << zoom;
+                qDebug() << "PINCH ratio:" << ratio << "zoom:" << zoom << "dist:" << dist;
                 update();
             }
             event->accept();
             return true;
         }
-        if (event->type() == QEvent::TouchEnd)
+        else
         {
-            touch_pinch_active = false;
+            // Less than 2 touches - end pinch if active
+            if (touch_pinch_active)
+            {
+                qDebug() << "PINCH END";
+                touch_pinch_active = false;
+            }
         }
+        
         return QOpenGLWidget::event(event);
     }
     // Fallback to Qt gesture if available (desktop only)
@@ -841,6 +869,7 @@ void Canvas::resetView() {
     zoom = 1;
     recenterView();
     resetTransform();
+    update();
 }
 
 void Canvas::applyRotation(QString name) {

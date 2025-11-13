@@ -188,12 +188,12 @@ private:
     // Pinch zoom support
     qreal pinch_scale_factor; // stores initial zoom during gesture
 
-    // Raw touch pinch zoom
+    // Raw touch pinch zoom - track touch points manually
     bool touch_pinch_active = false;
     qreal touch_start_distance = 0.0;
     qreal touch_base_zoom = 1.0;
-    QVector3D touch_anchor_world;  // world-space point under pinch center
     QPointF touch_pinch_center;     // screen-space pinch center
+    QMap<int, QPointF> active_touches;  // track all active touch points by ID
 };
 
 #endif // CANVAS_H
