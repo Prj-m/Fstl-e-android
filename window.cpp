@@ -688,14 +688,26 @@ void Window::load_persist_settings(){
         fullscreen_action->blockSignals(false);
     }
     
+#ifdef Q_OS_ANDROID
+    // On Android, log settings for debugging
+    qDebug() << "Autoreload checked:" << autoreload_action->isChecked();
+    qDebug() << "Recent files:" << settings.value(RECENT_FILE_KEY).toStringList();
+#endif
+    
     // If autoreload is enabled, reload the most recent file on startup
     if (autoreload_action->isChecked()) {
         QStringList recentFileList = settings.value(RECENT_FILE_KEY).toStringList();
         if (!recentFileList.isEmpty()) {
             QString lastFile = recentFileList.at(0);
+            qDebug() << "Attempting to load last file:" << lastFile;
             if (QFileInfo::exists(lastFile)) {
+                qDebug() << "File exists, loading...";
                 load_stl(lastFile);
+            } else {
+                qDebug() << "File does not exist";
             }
+        } else {
+            qDebug() << "No recent files found";
         }
     }
  }
