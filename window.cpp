@@ -532,6 +532,13 @@ Window::Window(QWidget *parent) :
         on_defaultView(views[next]);
     });
 #endif
+    // Set initial icon based on currently selected default view
+    for (QAction* a : defaultViewAction->actions()) {
+        if (a->isChecked()) {
+            defaultViewButton->setIcon(a->icon());
+            break;
+        }
+    }
     defaultViewButton->setFocusPolicy(Qt::NoFocus);
     windowToolBar->addWidget(defaultViewButton);
 
@@ -726,20 +733,7 @@ void Window::load_persist_settings(){
  }
 
 void Window::on_drawModePrefs() {
-#ifdef Q_OS_ANDROID
-    // Settings dialog has issues on Android - show message instead
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Settings");
-    msgBox.setText("Draw mode settings are not available on Android.\n"
-                   "Use the desktop version for advanced configuration.");
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.setWindowModality(Qt::ApplicationModal);
-    msgBox.exec();
-    return;
-#else
-    // For now only one draw mode has settings
-    // when settings for other draw mode will be available
-    // we will need to check the current mode
+    // Show shader preferences dialog
     if (meshlightprefs->isVisible()) {
         meshlightprefs->hide();
     } else {
@@ -747,7 +741,6 @@ void Window::on_drawModePrefs() {
         meshlightprefs->raise();
         meshlightprefs->activateWindow();
     }
-#endif
 }
 
 void Window::on_open()
