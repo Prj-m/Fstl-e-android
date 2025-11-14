@@ -211,13 +211,13 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
     scale = 2 / (upper - lower).length();
     scaleOrg = scale;
 
-    // Always reset camera: zoom, position, and rotation
+    // Always reset view: zoom, position (center), and rotation
+    // This ensures reload button completely resets the camera
     zoom = 1;
+    recenterView();
     if (resetTransformOnLoad) {
         resetTransform();
     }
-    // Also ensure we're centered on the model
-    recenterView();
     meshInfo = QStringLiteral("Triangles: %1\nX: [%2, %3]\nY: [%4, %5]\nZ: [%6, %7]").arg(m->triCount());
     for(int dIdx = 0; dIdx < 3; dIdx++) meshInfo = meshInfo.arg(lower[dIdx]).arg(upper[dIdx]);
     if (axis) {
