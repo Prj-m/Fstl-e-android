@@ -6,9 +6,17 @@
 
 const QString ShaderLightPrefs::PREFS_GEOM = "shaderPrefsGeometry";
 
-ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QDialog(parent)
+ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(parent)
 {
     canvas = _canvas;
+
+#ifdef Q_OS_ANDROID
+    // Style the widget to appear as a solid, non-transparent panel on Android
+    this->setAutoFillBackground(true);
+    QPalette p = this->palette();
+    p.setColor(QPalette::Window, QColor(45, 45, 45)); // Dark gray background
+    this->setPalette(p);
+#endif
 
     QVBoxLayout* prefsLayout = new QVBoxLayout;
     this->setLayout(prefsLayout);

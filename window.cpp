@@ -260,7 +260,6 @@ Window::Window(QWidget *parent) :
     drawModePrefs_action->setShortcut(shortcutDrawModeSettings);
     drawModePrefs_action->setIcon(QIcon(":/qt/icons/preferences-system.png"));
     this->addAction(drawModePrefs_action);
-    drawModePrefs_action->setDisabled(true);
     view_menu->addAction(axes_action);
     axes_action->setCheckable(true);
     axes_action->setShortcut(shortcutDrawAxes);
@@ -891,24 +890,22 @@ void Window::on_drawMode(QAction* act)
     DrawMode mode;
     if (act == shaded_action)
     {
-        drawModePrefs_action->setEnabled(false);
         mode = shaded;
     }
     else if (act == wireframe_action)
     {
-        drawModePrefs_action->setEnabled(false);
         mode = wireframe;
     }
     else if (act == surfaceangle_action)
     {
-        drawModePrefs_action->setEnabled(false);
         mode = surfaceangle;
     }
     else if (act == meshlight_action)
     {
-        drawModePrefs_action->setEnabled(true);
         mode = meshlight;
     }
+    // The settings button should always be enabled.
+    drawModePrefs_action->setEnabled(true);
     canvas->set_drawMode(mode);
     QSettings().setValue(DRAW_MODE_KEY, mode);
     draw_menu->setIcon(act->icon());
