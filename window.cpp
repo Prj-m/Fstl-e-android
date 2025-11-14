@@ -633,7 +633,12 @@ void Window::load_persist_settings(){
 
     autoreload_action->setChecked(settings.value(AUTORELOAD_KEY, true).toBool());
 
+#ifdef Q_OS_ANDROID
+    // On Android, enable axes by default to show mesh info
+    bool draw_axes = settings.value(DRAW_AXES_KEY, true).toBool();
+#else
     bool draw_axes = settings.value(DRAW_AXES_KEY, false).toBool();
+#endif
     canvas->draw_axes(draw_axes);
     axes_action->setChecked(draw_axes);
 
