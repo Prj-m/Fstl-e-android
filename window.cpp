@@ -480,16 +480,17 @@ Window::Window(QWidget *parent) :
     windowToolBar->addSeparator();
 
     // Second group
-    QToolButton* msaaButton = new QToolButton;
 #ifndef Q_OS_ANDROID
+    // Anti-aliasing button - desktop only (requires restart to take effect)
+    QToolButton* msaaButton = new QToolButton;
     msaaButton->setPopupMode(QToolButton::InstantPopup);
     msaaButton->setMenu(msaaMenu);
-#endif
     msaaButton->setIcon(msaaMenu->icon());
     msaaButton->setToolTip(msaaMenu->title());
-    msaaButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
+    msaaButton->setFocusPolicy(Qt::NoFocus);
     msaaButton->setStatusTip(msaaButton->toolTip()+QString(" (applicable on restart)"));
     windowToolBar->addWidget(msaaButton);
+#endif
 
 
     projectionButton = new QToolButton;
@@ -1095,15 +1096,22 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     if (filename[0] != ':')
     {
-        //connect(loader, &Loader::loaded_file,
-        //          this, &Window::setWindowTitle);
-
+        // Regular file - add to watcher and recent files
         connect(loader, &Loader::loaded_file,
                   this, &Window::set_watched);
         connect(loader, &Loader::loaded_file,
                   this, &Window::on_loaded);
-        reload_action->setEnabled(true);
     }
+    else
+    {
+        // Resource file - just track it for reload
+        connect(loader, &Loader::loaded_file, this, [this, filename](const QString&) {
+            current_file = filename;
+            filenameStatusLabel->setText("File:" + QFileInfo(filename).fileName());
+        });
+    }
+    // Enable reload for all files (regular and resource)
+    reload_action->setEnabled(true);
 
     loader->start();
     return true;
