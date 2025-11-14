@@ -1,8 +1,8 @@
 #ifndef SHADERLIGHTPREFS_H
 #define SHADERLIGHTPREFS_H
 
-#include <QDialog>
 #include <QPushButton>
+#include <QWidget>
 #include <QLabel>
 #include <QLineEdit>
 #include <QComboBox>
@@ -15,7 +15,7 @@
 
 class Canvas;
 
-class ShaderLightPrefs : public QDialog
+class ShaderLightPrefs : public QWidget
 {
     Q_OBJECT
 public:

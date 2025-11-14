@@ -223,7 +223,23 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QDialog(p
 }
 
 void ShaderLightPrefs::buttonAmbientColorClicked() {
+#ifdef Q_OS_ANDROID
+    // On Android, avoid opening nested dialogs; cycle through a small palette instead
+    static QVector<QColor> palette = {
+        QColor::fromRgbF(0.22, 0.8, 1.0), // original default
+        QColor(255, 255, 255),
+        QColor(255, 200, 150),
+        QColor(200, 255, 200)
+    };
+    QColor current = canvas->getAmbientColor();
+    int idx = 0;
+    for (int i = 0; i < palette.size(); ++i) {
+        if (palette[i] == current) { idx = i; break; }
+    }
+    QColor newColor = palette[(idx + 1) % palette.size()];
+#else
     QColor newColor = QColorDialog::getColor(canvas->getAmbientColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
+#endif
     if (newColor.isValid() == true)
     {
         canvas->setAmbientColor(newColor);
@@ -249,7 +265,22 @@ void ShaderLightPrefs::resetAmbientColorClicked() {
 }
 
 void ShaderLightPrefs::buttonDirectiveColorClicked() {
+#ifdef Q_OS_ANDROID
+    static QVector<QColor> palette = {
+        QColor(255, 255, 255),
+        QColor(255, 220, 150),
+        QColor(200, 220, 255),
+        QColor(220, 255, 220)
+    };
+    QColor current = canvas->getDirectiveColor();
+    int idx = 0;
+    for (int i = 0; i < palette.size(); ++i) {
+        if (palette[i] == current) { idx = i; break; }
+    }
+    QColor newColor = palette[(idx + 1) % palette.size()];
+#else
     QColor newColor = QColorDialog::getColor(canvas->getDirectiveColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
+#endif
     if (newColor.isValid() == true)
     {
         canvas->setDirectiveColor(newColor);
@@ -310,7 +341,22 @@ void ShaderLightPrefs::checkboxUseWireFrameChanged() {
 }
 
 void ShaderLightPrefs::buttonWireColorClicked() {
+#ifdef Q_OS_ANDROID
+    static QVector<QColor> palette = {
+        QColor(255,128,0),
+        QColor(255,0,0),
+        QColor(0,255,0),
+        QColor(0,128,255)
+    };
+    QColor current = canvas->getWireColor();
+    int idx = 0;
+    for (int i = 0; i < palette.size(); ++i) {
+        if (palette[i] == current) { idx = i; break; }
+    }
+    QColor newColor = palette[(idx + 1) % palette.size()];
+#else
     QColor newColor = QColorDialog::getColor(canvas->getWireColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
+#endif
     if (newColor.isValid() == true)
     {
         canvas->setWireColor(newColor);

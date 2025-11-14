@@ -733,7 +733,24 @@ void Window::load_persist_settings(){
  }
 
 void Window::on_drawModePrefs() {
-    // Show shader preferences dialog
+#ifdef Q_OS_ANDROID
+    // Android: show preferences as in-window panel centered over the canvas
+    if (meshlightprefs->isVisible()) {
+        meshlightprefs->hide();
+        return;
+    }
+
+    // Size relative to main window
+    int w = static_cast<int>(width() * 0.9);
+    int h = static_cast<int>(height() * 0.8);
+    meshlightprefs->setFixedSize(w, h);
+    int x = (width() - w) / 2;
+    int y = (height() - h) / 2;
+    meshlightprefs->move(x, y);
+    meshlightprefs->show();
+    meshlightprefs->raise();
+#else
+    // Desktop: behave like original dialog
     if (meshlightprefs->isVisible()) {
         meshlightprefs->hide();
     } else {
@@ -741,6 +758,7 @@ void Window::on_drawModePrefs() {
         meshlightprefs->raise();
         meshlightprefs->activateWindow();
     }
+#endif
 }
 
 void Window::on_open()
