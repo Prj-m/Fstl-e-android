@@ -42,14 +42,18 @@ App::App(int& argc, char *argv[]) :
     }
 #endif
     
+    // Don't load default file yet - let load_persist_settings handle it
+    // if autoreload is enabled
     if (fileToOpen.isEmpty()) {
         if (argc > 1)
             fileToOpen = argv[1];
-        else
-            fileToOpen = ":gl/sphere.stl";
+        // else: no default file - load_persist_settings will handle autoreload
     }
     
-    window->load_stl(fileToOpen);
+    // Only load if we have a file from command line or intent
+    if (!fileToOpen.isEmpty()) {
+        window->load_stl(fileToOpen);
+    }
     window->show();
 }
 

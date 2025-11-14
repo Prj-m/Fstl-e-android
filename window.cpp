@@ -705,10 +705,17 @@ void Window::load_persist_settings(){
                 load_stl(lastFile);
             } else {
                 qDebug() << "File does not exist";
+                // Load default sphere if file missing
+                load_stl(":gl/sphere.stl");
             }
         } else {
             qDebug() << "No recent files found";
+            // Load default sphere if no recent files
+            load_stl(":gl/sphere.stl");
         }
+    } else {
+        // Autoreload not enabled - load default sphere
+        load_stl(":gl/sphere.stl");
     }
  }
 
