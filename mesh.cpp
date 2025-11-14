@@ -50,7 +50,12 @@ float Mesh::max(size_t start) const
 
 int Mesh::triCount() const
 {
-    return indices.size()/3;
+    // On Android, we use non-indexed rendering (indices is empty)
+    // so calculate from vertices instead
+    if (indices.empty()) {
+        return vertices.size() / 9;  // 9 floats per triangle (3 vertices * 3 coords)
+    }
+    return indices.size() / 3;
 }
 bool Mesh::empty() const
 {
