@@ -1,5 +1,7 @@
 # fstl-e for Android
 
+**Status: Alpha** - Core functionality working, but still in active development.
+
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL and 3MF file viewer.
 
 ## Features
