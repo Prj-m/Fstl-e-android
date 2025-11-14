@@ -204,19 +204,17 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
     mesh = new GLMesh(m);
     QVector3D lower(m->xmin(), m->ymin(), m->zmin());
     QVector3D upper(m->xmax(), m->ymax(), m->zmax());
-    if (!is_reload)
-    {
-        // centerOrg and scaleOrg are used to reset the view
-        center = (lower + upper) / 2;
-        centerOrg = center;
-        scale = 2 / (upper - lower).length();
-        scaleOrg = scale;
+    
+    // Always update center and scale to match the model
+    center = (lower + upper) / 2;
+    centerOrg = center;
+    scale = 2 / (upper - lower).length();
+    scaleOrg = scale;
 
-        // Reset other camera parameters
-        zoom = 1;
-        if (resetTransformOnLoad) {
-            resetTransform();
-        }
+    // Always reset camera parameters on reload
+    zoom = 1;
+    if (resetTransformOnLoad) {
+        resetTransform();
     }
     meshInfo = QStringLiteral("Triangles: %1\nX: [%2, %3]\nY: [%4, %5]\nZ: [%6, %7]").arg(m->triCount());
     for(int dIdx = 0; dIdx < 3; dIdx++) meshInfo = meshInfo.arg(lower[dIdx]).arg(upper[dIdx]);

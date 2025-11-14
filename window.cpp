@@ -687,6 +687,17 @@ void Window::load_persist_settings(){
         fullscreen_action->setChecked(true);
         fullscreen_action->blockSignals(false);
     }
+    
+    // If autoreload is enabled, reload the most recent file on startup
+    if (autoreload_action->isChecked()) {
+        QStringList recentFileList = settings.value(RECENT_FILE_KEY).toStringList();
+        if (!recentFileList.isEmpty()) {
+            QString lastFile = recentFileList.at(0);
+            if (QFileInfo::exists(lastFile)) {
+                load_stl(lastFile);
+            }
+        }
+    }
  }
 
 void Window::on_drawModePrefs() {
