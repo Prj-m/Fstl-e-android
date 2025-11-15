@@ -71,10 +71,16 @@ Window::Window(QWidget *parent) :
     watcher(new QFileSystemWatcher(this))
 
 {
+#ifndef Q_OS_ANDROID
     // This is to correct wayland error message
     // submenu has to be a child of menu
     QMenu* file_menu = menuBar()->addMenu("File");
     recent_files = new QMenu("Open recent", file_menu);
+#else
+    // Android: Don't create menus - they cause Qt accessibility/OpenGL crashes
+    QMenu* file_menu = nullptr;
+    recent_files = nullptr;
+#endif
 
     QString currentPlatform = QGuiApplication::platformName();
     isWayland = QGuiApplication::platformName() == "wayland" ? true : false;
@@ -193,6 +199,7 @@ Window::Window(QWidget *parent) :
     
     rebuild_recent_files();
 
+#ifndef Q_OS_ANDROID
     // file_menu declared at the beginning of the constructor
     // wayland needs file_menu to be the parent of recent_files
     file_menu->addAction(open_action);
@@ -460,6 +467,98 @@ Window::Window(QWidget *parent) :
     auto help_menu = menuBar()->addMenu("Help");
     help_menu->addAction(about_action);
     help_menu->addAction(help_action);
+#else // Q_OS_ANDROID
+    // Android: Create action groups without menus for toolbar functionality
+    projection_menu = nullptr;
+    draw_menu = nullptr;
+    defaultViewMenu = nullptr;
+    
+    // Create defaultViewAction group for Android toolbar
+    QAction* default1ViewAction = new QAction(QIcon(":/qt/icons/default_1_64x64.png"),"Default 1", this);
+    QAction* default2ViewAction = new QAction(QIcon(":/qt/icons/default_2_64x64.png"),"Default 2", this);
+    QAction* default3ViewAction = new QAction(QIcon(":/qt/icons/default_3_64x64.png"),"Default 3", this);
+    defaultViewAction = new QActionGroup(this);
+    for (QAction* p : {default1ViewAction, default2ViewAction, default3ViewAction}) {
+        defaultViewAction->addAction(p);
+        p->setCheckable(true);
+    }
+    defaultViewAction->setExclusive(true);
+    QObject::connect(defaultViewAction, &QActionGroup::triggered,
+                     this, &Window::on_defaultView);
+    
+    // Create projection actions for Android
+    perspective_action->setIcon(QIcon(":/qt/icons/perspective.png"));
+    orthographic_action->setIcon(QIcon(":/qt/icons/orthographic.png"));
+    auto projections = new QActionGroup(this);
+    for (auto p : {perspective_action, orthographic_action})
+    {
+        projections->addAction(p);
+        p->setCheckable(true);
+    }
+    projections->setExclusive(true);
+    QObject::connect(projections, &QActionGroup::triggered,
+                     this, &Window::on_projection);
+    
+    // Create draw mode actions for Android
+    shaded_action->setIcon(QIcon(":/qt/icons/sphere_shader1.png"));
+    wireframe_action->setIcon(QIcon(":/qt/icons/sphere_shader2.png"));
+    surfaceangle_action->setIcon(QIcon(":/qt/icons/sphere_shader3.png"));
+    meshlight_action->setIcon(QIcon(":/qt/icons/sphere_shader4.png"));
+    auto drawModes = new QActionGroup(this);
+    for (auto p : {shaded_action, wireframe_action, surfaceangle_action, meshlight_action})
+    {
+        drawModes->addAction(p);
+        p->setCheckable(true);
+    }
+    drawModes->setExclusive(true);
+    QObject::connect(drawModes, &QActionGroup::triggered,
+                     this, &Window::on_drawMode);
+    
+    // Create apply view actions with shortcuts
+    applyDefaultViewAction = new QAction("Default View", this);
+    applyDefaultViewAction->setShortcut(shortcutDefaultView);
+    this->addAction(applyDefaultViewAction);
+    
+    QAction* applyTopViewAction = new QAction("Top View", this);
+    applyTopViewAction->setShortcut(shortcutTopView);
+    this->addAction(applyTopViewAction);
+    
+    QAction* applyBottomViewAction = new QAction("Bottom View", this);
+    applyBottomViewAction->setShortcut(shortcutBottomView);
+    this->addAction(applyBottomViewAction);
+    
+    QAction* applyFrontViewAction = new QAction("Front View", this);
+    applyFrontViewAction->setShortcut(shortcutFrontView);
+    this->addAction(applyFrontViewAction);
+    
+    QAction* applyRearViewAction = new QAction("Rear View", this);
+    applyRearViewAction->setShortcut(shortcutRearView);
+    this->addAction(applyRearViewAction);
+    
+    QAction* applyLeftViewAction = new QAction("Left View", this);
+    applyLeftViewAction->setShortcut(shortcutLeftView);
+    this->addAction(applyLeftViewAction);
+    
+    QAction* applyRightViewAction = new QAction("Right View", this);
+    applyRightViewAction->setShortcut(shortcutRightView);
+    this->addAction(applyRightViewAction);
+    
+    QActionGroup* groupApplyViewAction = new QActionGroup(this);
+    for (QAction* a : {applyDefaultViewAction, applyTopViewAction, applyBottomViewAction,
+                       applyFrontViewAction, applyRearViewAction, applyLeftViewAction, applyRightViewAction}) {
+        groupApplyViewAction->addAction(a);
+    }
+    connect(groupApplyViewAction,SIGNAL(triggered(QAction*)),this,SLOT(onApplyView(QAction*)));
+    
+    // Create center action
+    centerAction = new QAction("Center View", this);
+    centerAction->setIcon(QIcon(":/qt/icons/center_view_64x64.png"));
+    centerAction->setShortcut(shortcutCenterView);
+    centerAction->setCheckable(false);
+    this->addAction(centerAction);
+    QObject::connect(centerAction, &QAction::triggered,
+                     this, &Window::on_centerView);
+#endif // Q_OS_ANDROID
 
     // Toolbar
     // First group
@@ -618,11 +717,6 @@ Window::Window(QWidget *parent) :
 
 
     this->addToolBar(windowToolBar);
-
-#ifdef Q_OS_ANDROID
-    // Hide menu bar on Android - menus cause Qt accessibility/OpenGL crashes
-    menuBar()->hide();
-#endif
 
     QLabel* labelMsaa = new QLabel;
     int msaaValue = canvas->getMsaa();
@@ -889,9 +983,15 @@ void Window::on_projection(QAction* proj)
         canvas->view_perspective(Canvas::P_ORTHOGRAPHIC, true);
         QSettings().setValue(PROJECTION_KEY, "orthographic");
     }
-    projection_menu->setIcon(proj->icon());
+    if (projection_menu) {
+        projection_menu->setIcon(proj->icon());
+    }
     projectionButton->setIcon(proj->icon());
-    projectionButton->setToolTip(QString("%1 : %2").arg(projection_menu->title()).arg(proj->toolTip()));
+    if (projection_menu) {
+        projectionButton->setToolTip(QString("%1 : %2").arg(projection_menu->title()).arg(proj->toolTip()));
+    } else {
+        projectionButton->setToolTip(proj->toolTip());
+    }
     projectionButton->setStatusTip(projectionButton->toolTip());
 }
 
@@ -921,16 +1021,24 @@ void Window::on_drawMode(QAction* act)
     drawModePrefs_action->setEnabled(true);
     canvas->set_drawMode(mode);
     QSettings().setValue(DRAW_MODE_KEY, mode);
-    draw_menu->setIcon(act->icon());
+    if (draw_menu) {
+        draw_menu->setIcon(act->icon());
+    }
     // shaderButton exists on both desktop and Android now
     shaderButton->setIcon(act->icon());
-    shaderButton->setToolTip(QString("%1 : %2").arg(draw_menu->title()).arg(act->toolTip()));
+    if (draw_menu) {
+        shaderButton->setToolTip(QString("%1 : %2").arg(draw_menu->title()).arg(act->toolTip()));
+    } else {
+        shaderButton->setToolTip(act->toolTip());
+    }
     shaderButton->setStatusTip(shaderButton->toolTip());
 }
 
 void Window::on_defaultView(QAction* view) {
     canvas->setDefaultView(view->text());
-    defaultViewMenu->setIcon(view->icon());
+    if (defaultViewMenu) {
+        defaultViewMenu->setIcon(view->icon());
+    }
     defaultViewButton->setIcon(view->icon());
     defaultViewButton->setToolTip(QString("Default load view : %1").arg(view->toolTip()));
     defaultViewButton->setStatusTip(QString("Default load view : %1").arg(view->toolTip()));
@@ -1027,7 +1135,9 @@ void Window::on_save_screenshot()
 
 void Window::on_hide_menuBar()
 {
+#ifndef Q_OS_ANDROID
     menuBar()->setVisible(!hide_menuBar_action->isChecked());
+#endif
     windowToolBar->setVisible(!hide_menuBar_action->isChecked());
     statusBar->setVisible(!hide_menuBar_action->isChecked());
     QSettings settings;
@@ -1036,6 +1146,8 @@ void Window::on_hide_menuBar()
 
 void Window::rebuild_recent_files()
 {
+#ifndef Q_OS_ANDROID
+    // Android doesn't have menus, so skip recent files menu
     QSettings settings;
     QStringList files = settings.value(RECENT_FILE_KEY).toStringList();
 
@@ -1061,6 +1173,7 @@ void Window::rebuild_recent_files()
     }
     recent_files->addSeparator();
     recent_files->addAction(recent_files_clear_action);
+#endif
 }
 
 void Window::on_reload()
