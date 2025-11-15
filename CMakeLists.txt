@@ -80,8 +80,14 @@ set_target_properties(fstl_viewer PROPERTIES
 get_target_property(Qt6Core_INCLUDE_DIRS Qt6::Core INTERFACE_INCLUDE_DIRECTORIES)
 foreach(dir ${Qt6Core_INCLUDE_DIRS})
     if(EXISTS "${dir}/QtCore")
-        target_include_directories(fstl_viewer PRIVATE "${dir}/QtCore/6.10.0/QtCore/private")
-        target_include_directories(fstl_viewer PRIVATE "${dir}/QtCore/6.10.0")
+        # Find Qt version-specific private headers dynamically
+        file(GLOB QT_VERSION_DIRS "${dir}/QtCore/*/QtCore/private")
+        foreach(private_dir ${QT_VERSION_DIRS})
+            get_filename_component(version_dir "${private_dir}/../.." ABSOLUTE)
+            target_include_directories(fstl_viewer PRIVATE "${private_dir}")
+            target_include_directories(fstl_viewer PRIVATE "${version_dir}")
+            message(STATUS "Found Qt private headers: ${private_dir}")
+        endforeach()
     endif()
 endforeach()
 
