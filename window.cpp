@@ -197,6 +197,53 @@ Window::Window(QWidget *parent) :
     QObject::connect(save_screenshot_action, &QAction::triggered, 
         this, &Window::on_save_screenshot);
     
+    // Set icons and properties for actions (needed on both desktop and Android)
+    perspective_action->setIcon(QIcon(":/qt/icons/perspective.png"));
+    orthographic_action->setIcon(QIcon(":/qt/icons/orthographic.png"));
+    
+    shaded_action->setIcon(QIcon(":/qt/icons/sphere_shader1.png"));
+    wireframe_action->setIcon(QIcon(":/qt/icons/sphere_shader2.png"));
+    surfaceangle_action->setIcon(QIcon(":/qt/icons/sphere_shader3.png"));
+    meshlight_action->setIcon(QIcon(":/qt/icons/sphere_shader4.png"));
+    
+    drawModePrefs_action->setShortcut(shortcutDrawModeSettings);
+    drawModePrefs_action->setIcon(QIcon(":/qt/icons/preferences-system.png"));
+    this->addAction(drawModePrefs_action);
+    
+    axes_action->setCheckable(true);
+    axes_action->setShortcut(shortcutDrawAxes);
+    axes_action->setIcon(QIcon(":/qt/icons/axes.png"));
+    this->addAction(axes_action);
+    QObject::connect(axes_action, &QAction::toggled,
+            this, &Window::on_drawAxes);
+    
+    invert_zoom_action->setCheckable(true);
+    invert_zoom_action->setIcon(QIcon(":/qt/icons/invert_zoom.png"));
+    QObject::connect(invert_zoom_action, &QAction::triggered,
+            this, &Window::on_invertZoom);
+    
+    resetTransformOnLoadAction->setCheckable(true);
+    resetTransformOnLoadAction->setIcon(QIcon(":/qt/icons/reset_rotation_on_load.png"));
+    QObject::connect(resetTransformOnLoadAction, &QAction::triggered,
+            this, &Window::on_resetTransformOnLoad);
+    
+    hide_menuBar_action->setShortcut(shortcutHideMenuBar);
+    hide_menuBar_action->setCheckable(true);
+    QObject::connect(hide_menuBar_action, &QAction::toggled,
+            this, &Window::on_hide_menuBar);
+    this->addAction(hide_menuBar_action);
+    
+    fullscreen_action->setShortcut(shortcutFullscreen);
+    fullscreen_action->setIcon(QIcon(":/qt/icons/view-fullscreen.png"));
+    fullscreen_action->setCheckable(true);
+    if (!isWayland) {
+        QObject::connect(fullscreen_action, &QAction::toggled,
+            this, &Window::on_fullscreen);
+    } else {
+        fullscreen_action->setDisabled(true);
+    }
+    this->addAction(fullscreen_action);
+    
     rebuild_recent_files();
 
 #ifndef Q_OS_ANDROID
@@ -487,8 +534,6 @@ Window::Window(QWidget *parent) :
                      this, &Window::on_defaultView);
     
     // Create projection actions for Android
-    perspective_action->setIcon(QIcon(":/qt/icons/perspective.png"));
-    orthographic_action->setIcon(QIcon(":/qt/icons/orthographic.png"));
     auto projections = new QActionGroup(this);
     for (auto p : {perspective_action, orthographic_action})
     {
@@ -500,10 +545,6 @@ Window::Window(QWidget *parent) :
                      this, &Window::on_projection);
     
     // Create draw mode actions for Android
-    shaded_action->setIcon(QIcon(":/qt/icons/sphere_shader1.png"));
-    wireframe_action->setIcon(QIcon(":/qt/icons/sphere_shader2.png"));
-    surfaceangle_action->setIcon(QIcon(":/qt/icons/sphere_shader3.png"));
-    meshlight_action->setIcon(QIcon(":/qt/icons/sphere_shader4.png"));
     auto drawModes = new QActionGroup(this);
     for (auto p : {shaded_action, wireframe_action, surfaceangle_action, meshlight_action})
     {
@@ -552,7 +593,7 @@ Window::Window(QWidget *parent) :
     
     // Create center action
     centerAction = new QAction("Center View", this);
-    centerAction->setIcon(QIcon(":/qt/icons/center_view_64x64.png"));
+    centerAction->setIcon(QIcon(":/qt/icons/center_64x64.png"));
     centerAction->setShortcut(shortcutCenterView);
     centerAction->setCheckable(false);
     this->addAction(centerAction);
