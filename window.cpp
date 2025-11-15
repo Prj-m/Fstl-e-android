@@ -566,6 +566,8 @@ Window::Window(QWidget *parent) :
     windowToolBar->addSeparator();
     // Third group
 
+#ifndef Q_OS_ANDROID
+    // Popup menu buttons - desktop only (cause crashes on Android)
     QToolButton* viewportSizeButton = new QToolButton;
     viewportSizeButton->setPopupMode(QToolButton::InstantPopup);
     viewportSizeButton->setMenu(resolutionMenu);
@@ -574,9 +576,12 @@ Window::Window(QWidget *parent) :
     viewportSizeButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
     viewportSizeButton->setStatusTip(viewportSizeButton->toolTip());
     windowToolBar->addWidget(viewportSizeButton);
+#endif
 
     windowToolBar->addAction(centerAction);
 
+#ifndef Q_OS_ANDROID
+    // Popup menu buttons - desktop only (cause crashes on Android)
     QToolButton* applyViewButton = new QToolButton;
     applyViewButton->setPopupMode(QToolButton::InstantPopup);
     applyViewButton->setMenu(applyViewMenu);
@@ -585,6 +590,7 @@ Window::Window(QWidget *parent) :
     applyViewButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
     applyViewButton->setStatusTip(applyViewButton->toolTip());
     windowToolBar->addWidget(applyViewButton);
+#endif
 
 
 
@@ -606,10 +612,17 @@ Window::Window(QWidget *parent) :
     QWidget* spacer = new QWidget();
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     windowToolBar->addWidget(spacer);
+#ifndef Q_OS_ANDROID
     windowToolBar->addAction(help_action);
+#endif
 
 
     this->addToolBar(windowToolBar);
+
+#ifdef Q_OS_ANDROID
+    // Hide menu bar on Android - menus cause Qt accessibility/OpenGL crashes
+    menuBar()->hide();
+#endif
 
     QLabel* labelMsaa = new QLabel;
     int msaaValue = canvas->getMsaa();
