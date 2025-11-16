@@ -321,7 +321,11 @@ void ShaderLightPrefs::comboDirectionsChanged(int ind) {
     setRadio(ind);
     setPix(ind);
     canvas->setCurrentLightDirection(ind);
+#ifdef Q_OS_ANDROID
+    canvas->repaint();
+#else
     canvas->update();
+#endif
 }
 
 void ShaderLightPrefs::resetDirection() {
@@ -415,7 +419,12 @@ void ShaderLightPrefs::radioSourceClicked(int ind) {
     pos = (pos >= 14) ? pos - 1 : pos;
     comboDirections->setCurrentIndex(pos);
     canvas->setCurrentLightDirection(pos);
+#ifdef Q_OS_ANDROID
+    // On Android, force immediate repaint since dialog may cover canvas
+    canvas->repaint();
+#else
     canvas->update();
+#endif
 }
 
 void ShaderLightPrefs::setRadio(int ind) {
