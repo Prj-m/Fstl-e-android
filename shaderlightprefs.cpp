@@ -417,7 +417,14 @@ void ShaderLightPrefs::radioSourceClicked(int ind) {
         return;
     }
     pos = (pos >= 14) ? pos - 1 : pos;
+    
+    // Update combo without triggering signal (avoid recursion)
+    comboDirections->blockSignals(true);
     comboDirections->setCurrentIndex(pos);
+    comboDirections->blockSignals(false);
+    
+    // Update cube icon and canvas directly
+    setPix(pos);
     canvas->setCurrentLightDirection(pos);
 #ifdef Q_OS_ANDROID
     // On Android, force immediate repaint since dialog may cover canvas
