@@ -146,9 +146,17 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     lightSourceWidgetLayout->addWidget(radioFrontButton,3,2);
     lightSourceWidgetLayout->addWidget(radioRFNoneButton,3,3);
 
-    connect(leftRight,SIGNAL(buttonClicked(int)),this,SLOT(radioSourceClicked(int)));
-    connect(topBottom,SIGNAL(buttonClicked(int)),this,SLOT(radioSourceClicked(int)));
-    connect(rearFront,SIGNAL(buttonClicked(int)),this,SLOT(radioSourceClicked(int)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    // Qt 5.15+ and Qt 6: use idClicked signal with modern syntax
+    connect(leftRight, &QButtonGroup::idClicked, this, &ShaderLightPrefs::radioSourceClicked);
+    connect(topBottom, &QButtonGroup::idClicked, this, &ShaderLightPrefs::radioSourceClicked);
+    connect(rearFront, &QButtonGroup::idClicked, this, &ShaderLightPrefs::radioSourceClicked);
+#else
+    // Qt 5.14 and below: use buttonClicked signal
+    connect(leftRight, SIGNAL(buttonClicked(int)), this, SLOT(radioSourceClicked(int)));
+    connect(topBottom, SIGNAL(buttonClicked(int)), this, SLOT(radioSourceClicked(int)));
+    connect(rearFront, SIGNAL(buttonClicked(int)), this, SLOT(radioSourceClicked(int)));
+#endif
     setRadio(canvas->getCurrentLightDirection());
 
     labelPix = new QLabel;
