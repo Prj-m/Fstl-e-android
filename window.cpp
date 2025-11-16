@@ -2,6 +2,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QRegularExpression>
+#include <QDateTime>
+#include <QTimer>
 
 #ifndef FSTLE_VERSION
 #define FSTLE_VERSION "1.0.0"
@@ -1143,11 +1145,35 @@ void Window::on_loaded(const QString& filename)
 void Window::on_save_screenshot()
 {
     const auto image = canvas->grabFramebuffer();
+    
+#ifdef Q_OS_ANDROID
+    // Android: Generate filename with timestamp and save to Pictures
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    QString filename = QString("fstl_screenshot_%1.png").arg(timestamp);
+    QString picturesPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    QString fullPath = picturesPath + "/" + filename;
+    
+    const auto save_ok = image.save(fullPath, "PNG");
+    if(save_ok)
+    {
+        canvas->set_status("Screenshot saved: " + filename);
+        QTimer::singleShot(2000, canvas, &Canvas::clear_status);
+    }
+    else
+    {
+        canvas->set_status("Error saving screenshot");
+        QTimer::singleShot(2000, canvas, &Canvas::clear_status);
+    }
+#else
+    // Desktop: Use file dialog
     auto file_name = QFileDialog::getSaveFileName(
         this, 
         tr("Save Screenshot Image"),
         QStandardPaths::standardLocations(QStandardPaths::StandardLocation::PicturesLocation).first(),
         "Images (*.png *.jpg)");
+    
+    if (file_name.isEmpty())
+        return;
 
     auto get_file_extension = [](const std::string& file_name) -> std::string
     {
@@ -1172,6 +1198,7 @@ void Window::on_save_screenshot()
     {
         QMessageBox::warning(this, tr("Error Saving Image"), tr("Unable to save screen shot image."));
     }
+#endif
 }
 
 void Window::on_hide_menuBar()
