@@ -101,13 +101,29 @@ bool StepMeshLoader::parseStepData(const QString& data)
     
     ALOG("STEP: Parsed %d entities", entityCount);
     
+    if (entityCount == 0)
+    {
+        errorString = "No STEP entities found in DATA section";
+        ALOG("STEP: %s", errorString.toStdString().c_str());
+        return false;  // real parse failure
+    }
+    
     // Extract geometry
     tessellateGeometry();
     
     ALOG("STEP: Extracted %lld vertices (%lld triangles)", 
          (long long)vertices.size(), (long long)vertices.size() / 3);
     
-    return vertices.size() > 0;
+    if (vertices.isEmpty())
+    {
+        // Parsing was syntactically OK but we couldn't tessellate geometry
+        errorString = "STEP file parsed but no tessellatable geometry was found";
+        ALOG("STEP: %s", errorString.toStdString().c_str());
+        // Return true so caller can report an "empty mesh" instead of "invalid file"
+        return true;
+    }
+    
+    return true;
 }
 
 StepEntity StepMeshLoader::parseEntity(const QString& line)
