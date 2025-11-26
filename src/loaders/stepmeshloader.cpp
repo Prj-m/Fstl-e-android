@@ -95,8 +95,8 @@ bool StepMeshLoader::parseStepData(const QString& data)
     // Extract geometry
     tessellateGeometry();
     
-    ALOG("STEP: Extracted %d vertices (%d triangles)", 
-         vertices.size(), vertices.size() / 3);
+    ALOG("STEP: Extracted %lld vertices (%lld triangles)", 
+         (long long)vertices.size(), (long long)vertices.size() / 3);
     
     return vertices.size() > 0;
 }
@@ -166,7 +166,7 @@ void StepMeshLoader::tessellateGeometry()
         }
     }
     
-    ALOG("STEP: Found %d CARTESIAN_POINTs, %d VERTEX_POINTs", points.size(), vertexToPoint.size());
+    ALOG("STEP: Found %lld CARTESIAN_POINTs, %lld VERTEX_POINTs", (long long)points.size(), (long long)vertexToPoint.size());
     
     // Helper function to resolve a reference to a point
     auto resolveToPoint = [&](const QString& ref) -> QVector3D {
@@ -180,14 +180,21 @@ void StepMeshLoader::tessellateGeometry()
         if (vertexToPoint.contains(id) && points.contains(vertexToPoint[id]))
             return points[vertexToPoint[id]];
         
-        // Try to resolve entity
+        // Try to resolve entity - avoid recursion, just check one level
         if (entities.contains(id))
         {
             const StepEntity& e = entities[id];
             if (e.type == "CARTESIAN_POINT") return extractPoint(e);
+            // For VERTEX_POINT, resolve its point reference directly
             if (e.type == "VERTEX_POINT" && e.params.size() > 1)
             {
-                return resolveToPoint(e.params[1].trimmed());
+                QString pointRef = e.params[1].trimmed();
+                if (pointRef.startsWith("#"))
+                {
+                    int pointId = pointRef.mid(1).toInt();
+                    if (points.contains(pointId))
+                        return points[pointId];
+                }
             }
         }
         return QVector3D();
