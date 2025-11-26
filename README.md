@@ -24,6 +24,8 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 - Displays mesh information (triangle count, dimensions)
 - Supports Android's scoped storage (content URIs)
 
+**Note:** STEP file support is experimental and limited to basic geometry. Complex STEP files may not load correctly.
+
 ## Building
 
 Requires Qt 6.5+ for Android (tested with Qt 6.10).

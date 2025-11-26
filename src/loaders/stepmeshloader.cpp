@@ -35,16 +35,25 @@ bool StepMeshLoader::parseFile(const QString& filename)
 
 bool StepMeshLoader::parseStepData(const QString& data)
 {
-    ALOG("STEP: Starting parse");
+    ALOG("STEP: Starting parse, file size: %lld bytes", (long long)data.size());
     
     // STEP files have sections: HEADER, DATA, END
+    // Check for ISO-10303-21 header
+    if (!data.contains("ISO-10303-21"))
+    {
+        ALOG("STEP: Warning - ISO-10303-21 header not found");
+    }
+    
     int dataStart = data.indexOf("DATA;");
     int dataEnd = data.indexOf("ENDSEC;", dataStart);
     
+    ALOG("STEP: DATA section: start=%d, end=%d", dataStart, dataEnd);
+    
     if (dataStart == -1 || dataEnd == -1)
     {
-        errorString = "Invalid STEP file format";
+        errorString = "Invalid STEP file format - DATA section not found";
         ALOG("STEP: %s", errorString.toStdString().c_str());
+        ALOG("STEP: File preview: %s", data.left(500).toStdString().c_str());
         return false;
     }
     
