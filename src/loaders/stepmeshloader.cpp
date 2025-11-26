@@ -97,6 +97,15 @@ bool StepMeshLoader::parseStepData(const QString& data)
         entity.params = paramList;
         entities[id] = entity;
         entityCount++;
+
+        if (entityCount <= 12)
+        {
+            QString preview;
+            if (!paramList.isEmpty())
+                preview = paramList[0].left(80);
+            ALOG("STEP: Entity %d type=%s param0=%s", id,
+                 type.toStdString().c_str(), preview.toStdString().c_str());
+        }
     }
     
     ALOG("STEP: Parsed %d entities", entityCount);
