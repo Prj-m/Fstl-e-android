@@ -1,6 +1,6 @@
 # fstl-e for Android
 
-![UI screenshot (ngon wireframe on Android)](screenshots/android_ngon_wireframe.png)
+![UI screenshot (Android app)](screenshots/android_app_ui_20251125_191127.png)
 
 **Status: Alpha** - Core functionality working, but still in active development.
 
