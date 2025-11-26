@@ -1,5 +1,7 @@
 # fstl-e for Android
 
+![UI screenshot (ngon wireframe on Android)](screenshots/android_ngon_wireframe.png)
+
 **Status: Alpha** - Core functionality working, but still in active development.
 
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
