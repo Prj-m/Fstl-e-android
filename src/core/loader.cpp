@@ -38,7 +38,9 @@ void Loader::run()
     
     if (file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        QByteArray header = file.read(512);  // small sniff window
+        // Read a reasonably sized header window so we can detect both ZIP magic
+        // and typical STEP headers even if there are leading comments.
+        QByteArray header = file.read(4096);
         file.close();
         
         if (header.size() >= 2 && header[0] == 0x50 && header[1] == 0x4B)  // "PK" magic bytes
@@ -50,6 +52,10 @@ void Loader::run()
         if (!is_3mf)
         {
             QByteArray upper = header.toUpper();
+            // Log a short preview to help diagnose mis-detection cases
+            QByteArray preview = upper.left(120);
+            ALOG("Header preview (uppercased): %s", preview.constData());
+            
             if (upper.contains("ISO-10303-21"))
             {
                 ALOG("Detected ISO-10303-21 header - treating as STEP");
