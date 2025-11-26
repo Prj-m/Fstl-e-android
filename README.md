@@ -1,10 +1,19 @@
 # fstl-e for Android
+# fstl-e for Android
 
-![UI screenshot (Android app)](screenshots/android_app_ui_20251125_191127_85pct.png)
+<p align="center"><img src="screenshots/android_app_ui_20251125_191127_85pct.png" alt="UI screenshot (Android)" width="360"></p>
+
 
 **Status: Alpha** - Core functionality working, but still in active development.
 
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
+
+## Download
+
+Direct APK (debug build):
+
+- APK: dist/fstl-e-android-debug_20251125_191624.apk
+- SHA-256: dist/fstl-e-android-debug_20251125_191624.apk.sha256
 
 ## Features
 
