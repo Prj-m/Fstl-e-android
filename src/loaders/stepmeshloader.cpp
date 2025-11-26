@@ -143,6 +143,7 @@ void StepMeshLoader::tessellateGeometry()
 {
     // Extract all CARTESIAN_POINTs first
     QMap<int, QVector3D> points;
+    QMap<int, int> vertexToPoint;  // Map VERTEX_POINT to CARTESIAN_POINT
     
     for (auto it = entities.begin(); it != entities.end(); ++it)
     {
@@ -153,60 +154,102 @@ void StepMeshLoader::tessellateGeometry()
             QVector3D point = extractPoint(entity);
             points[entity.id] = point;
         }
+        else if (entity.type == "VERTEX_POINT" && entity.params.size() > 1)
+        {
+            // VERTEX_POINT references a CARTESIAN_POINT
+            QString pointRef = entity.params[1].trimmed();
+            if (pointRef.startsWith("#"))
+            {
+                int pointId = pointRef.mid(1).toInt();
+                vertexToPoint[entity.id] = pointId;
+            }
+        }
     }
     
-    ALOG("STEP: Found %d CARTESIAN_POINTs", points.size());
+    ALOG("STEP: Found %d CARTESIAN_POINTs, %d VERTEX_POINTs", points.size(), vertexToPoint.size());
     
-    // Look for triangulated geometry or face bounds
-    // This is a simplified approach - full STEP parsing is very complex
+    // Helper function to resolve a reference to a point
+    auto resolveToPoint = [&](const QString& ref) -> QVector3D {
+        if (!ref.startsWith("#")) return QVector3D();
+        int id = ref.mid(1).toInt();
+        
+        // Direct point?
+        if (points.contains(id)) return points[id];
+        
+        // Vertex pointing to point?
+        if (vertexToPoint.contains(id) && points.contains(vertexToPoint[id]))
+            return points[vertexToPoint[id]];
+        
+        // Try to resolve entity
+        if (entities.contains(id))
+        {
+            const StepEntity& e = entities[id];
+            if (e.type == "CARTESIAN_POINT") return extractPoint(e);
+            if (e.type == "VERTEX_POINT" && e.params.size() > 1)
+            {
+                return resolveToPoint(e.params[1].trimmed());
+            }
+        }
+        return QVector3D();
+    };
+    
+    // Look for various face/loop types
     for (auto it = entities.begin(); it != entities.end(); ++it)
     {
         const StepEntity& entity = it.value();
+        QVector<QVector3D> facePoints;
         
-        // Look for triangulated faces or polygons
-        if (entity.type.contains("FACE") || 
-            entity.type.contains("POLY_LOOP") ||
-            entity.type.contains("FACE_BOUND"))
+        // Handle POLY_LOOP - contains ordered vertex list
+        if (entity.type == "POLY_LOOP" && entity.params.size() > 0)
         {
-            // Try to extract point references
-            QVector<QVector3D> facePoints;
+            QString vertexListStr = entity.params[0];
+            // Parse list: (vertexListStr could be "(#1,#2,#3)")
+            QRegularExpression refRegex("#(\\d+)");
+            QRegularExpressionMatchIterator refIt = refRegex.globalMatch(vertexListStr);
             
+            while (refIt.hasNext())
+            {
+                QString ref = refIt.next().captured(0);
+                QVector3D pt = resolveToPoint(ref);
+                if (!pt.isNull())
+                    facePoints.append(pt);
+            }
+        }
+        // Handle FACE_BOUND
+        else if (entity.type == "FACE_BOUND" || entity.type == "FACE_OUTER_BOUND")
+        {
+            // FACE_BOUND typically references a loop
             for (const QString& param : entity.params)
             {
                 if (param.startsWith("#"))
                 {
-                    StepEntity refEntity = resolveRef(param);
-                    if (refEntity.type == "CARTESIAN_POINT")
+                    StepEntity loopEntity = resolveRef(param);
+                    if (loopEntity.type == "POLY_LOOP" && loopEntity.params.size() > 0)
                     {
-                        facePoints.append(extractPoint(refEntity));
-                    }
-                    else if (refEntity.type.contains("VERTEX"))
-                    {
-                        // VERTEX may reference a point
-                        for (const QString& vParam : refEntity.params)
+                        QString vertexListStr = loopEntity.params[0];
+                        QRegularExpression refRegex("#(\\d+)");
+                        QRegularExpressionMatchIterator refIt = refRegex.globalMatch(vertexListStr);
+                        
+                        while (refIt.hasNext())
                         {
-                            if (vParam.startsWith("#"))
-                            {
-                                StepEntity pointEntity = resolveRef(vParam);
-                                if (pointEntity.type == "CARTESIAN_POINT")
-                                {
-                                    facePoints.append(extractPoint(pointEntity));
-                                }
-                            }
+                            QString ref = refIt.next().captured(0);
+                            QVector3D pt = resolveToPoint(ref);
+                            if (!pt.isNull())
+                                facePoints.append(pt);
                         }
                     }
                 }
             }
-            
-            // Triangulate polygon (fan triangulation for simple case)
-            if (facePoints.size() >= 3)
+        }
+        
+        // Triangulate polygon (fan triangulation)
+        if (facePoints.size() >= 3)
+        {
+            for (int i = 1; i < facePoints.size() - 1; i++)
             {
-                for (int i = 1; i < facePoints.size() - 1; i++)
-                {
-                    vertices.append(facePoints[0]);
-                    vertices.append(facePoints[i]);
-                    vertices.append(facePoints[i + 1]);
-                }
+                vertices.append(facePoints[0]);
+                vertices.append(facePoints[i]);
+                vertices.append(facePoints[i + 1]);
             }
         }
     }
