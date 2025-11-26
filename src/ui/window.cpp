@@ -820,12 +820,7 @@ void Window::load_persist_settings(){
         }
     }
 
-#ifdef Q_OS_ANDROID
-    // Android: use shaded mode which works with pre-computed colors
-    DrawMode draw_mode = (DrawMode)settings.value(DRAW_MODE_KEY, shaded).toInt();
-#else
     DrawMode draw_mode = (DrawMode)settings.value(DRAW_MODE_KEY, meshlight).toInt();
-#endif
     
     if(draw_mode >= DRAWMODECOUNT)
     {
