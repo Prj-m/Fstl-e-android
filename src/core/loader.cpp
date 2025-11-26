@@ -3,6 +3,7 @@
 #include "core/loader.h"
 #include "core/vertex.h"
 #include "loaders/stepmeshloader.h"
+#include "loaders/occtsteploader.h"
 #include <QXmlStreamReader>
 #include <QFile>
 #include <QVector3D>
@@ -424,23 +425,50 @@ Mesh* Loader::load_3mf()
 Mesh* Loader::load_step()
 {
     ALOG("load_step() START for: %s", filename.toStdString().c_str());
-    
-    StepMeshLoader stepLoader;
-    if (!stepLoader.parseFile(filename))
+
+    QVector<QVector3D> stepVerts;
+    uint32_t tri_count = 0;
+
+#ifdef FSTL_USE_OCCT_STEP
     {
-        ALOG("Failed to parse STEP file");
-        emit error_bad_stl();
-        return nullptr;
+        ALOG("Trying Open CASCADE STEP loader first...");
+        OcctStepLoader occtLoader;
+        unsigned int occtTriCount = 0;
+        if (occtLoader.load(filename, stepVerts, occtTriCount) && !stepVerts.isEmpty())
+        {
+            tri_count = occtTriCount;
+            ALOG("OCCT STEP loader succeeded with %d triangles", tri_count);
+        }
+        else
+        {
+            ALOG("OCCT STEP loader failed or returned empty geometry - falling back to internal parser");
+            stepVerts.clear();
+            tri_count = 0;
+        }
     }
-    
-    QVector<QVector3D> stepVerts = stepLoader.getVertices();
+#endif
+
     if (stepVerts.isEmpty())
     {
-        ALOG("No geometry found in STEP file");
-        emit error_empty_mesh();
-        return nullptr;
+        StepMeshLoader stepLoader;
+        if (!stepLoader.parseFile(filename))
+        {
+            ALOG("Failed to parse STEP file with internal parser");
+            emit error_bad_stl();
+            return nullptr;
+        }
+
+        stepVerts = stepLoader.getVertices();
+        tri_count = stepLoader.getTriangleCount();
+
+        if (stepVerts.isEmpty())
+        {
+            ALOG("No geometry found in STEP file (internal parser)");
+            emit error_empty_mesh();
+            return nullptr;
+        }
     }
-    
+
     // Convert QVector3D to Vertex
     QVector<Vertex> verts;
     verts.reserve(stepVerts.size());
@@ -448,10 +476,8 @@ Mesh* Loader::load_step()
     {
         verts.push_back(Vertex(v.x(), v.y(), v.z()));
     }
-    
-    uint32_t tri_count = stepLoader.getTriangleCount();
+
     ALOG("STEP: Creating mesh from %d triangles", tri_count);
-    
     return mesh_from_verts(tri_count, verts);
 }
 

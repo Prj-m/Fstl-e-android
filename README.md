@@ -9,10 +9,16 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 ## Download
 
-**Direct APK (current build):**
+**Lite APK (recommended for most users):**
 
-- [Download APK (arm64-v8a)](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk)
+- [fstl-e-android-arm64-v8a.apk](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk)
 - [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk.sha256)
+
+This build is small and uses the built-in STEP parser (experimental, limited STEP support).
+
+**STEP-enabled APK (planned):**
+
+A larger APK with full STEP support via the Open CASCADE kernel will be provided as a separate download once the OCCT-based loader is wired up. It will be published alongside the lite APK on the Releases page.
 
 ## Features
 

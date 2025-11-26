@@ -42,6 +42,8 @@ set(PROJECT_SOURCES
     # Loader sources
     src/loaders/stepmeshloader.cpp
     include/loaders/stepmeshloader.h
+    src/loaders/occtsteploader.cpp
+    include/loaders/occtsteploader.h
     
     # UI sources
     src/ui/canvas.cpp
@@ -136,6 +138,26 @@ target_link_libraries(fstl_viewer
         Qt6::Network
         Qt6::Xml
 )
+
+# Optional: full STEP support via Open CASCADE (desktop or heavy Android build)
+if(ENABLE_OCCT_STEP)
+    find_package(OpenCASCADE QUIET COMPONENTS TKSTEP TKSTEPAttr TKSTEPBase TKBRep TKGeomBase TKGeomAlgo TKMesh)
+    if(OpenCASCADE_FOUND)
+        message(STATUS "OpenCASCADE found - enabling full STEP support")
+        target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
+        target_link_libraries(fstl_viewer PRIVATE
+            OpenCASCADE::TKSTEP
+            OpenCASCADE::TKSTEPAttr
+            OpenCASCADE::TKSTEPBase
+            OpenCASCADE::TKBRep
+            OpenCASCADE::TKGeomBase
+            OpenCASCADE::TKGeomAlgo
+            OpenCASCADE::TKMesh
+        )
+    else()
+        message(WARNING "ENABLE_OCCT_STEP=ON but OpenCASCADE not found - falling back to internal STEP parser")
+    endif()
+endif()
 
 # Link Android log library for logging
 if(ANDROID)
