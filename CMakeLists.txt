@@ -27,23 +27,32 @@ else()
     message(STATUS "3MF support DISABLED - only STL files will be supported")
 endif()
 
-# Source files - note: this appears to be a desktop Qt app being ported
-# For Android with QML, you may want to remove desktop-specific files
+# Source files organized in subdirectories
 set(PROJECT_SOURCES
-    main.cpp
-    app.cpp
-    axis.cpp
-    backdrop.cpp
-    canvas.cpp
-    glmesh.cpp
-    loader.cpp
-    mesh.cpp
-    shaderlightprefs.cpp
-    speedmousedialog.cpp
-    window.cpp
-    qml.qrc
-    qt/qt.qrc
-    gl/gl.qrc
+    # Core sources
+    src/core/main.cpp
+    src/core/app.cpp
+    src/core/mesh.cpp
+    src/core/loader.cpp
+    
+    # Loader sources
+    src/loaders/stepmeshloader.cpp
+    
+    # UI sources
+    src/ui/canvas.cpp
+    src/ui/window.cpp
+    src/ui/shaderlightprefs.cpp
+    src/ui/speedmousedialog.cpp
+    
+    # Rendering sources
+    src/rendering/axis.cpp
+    src/rendering/backdrop.cpp
+    src/rendering/glmesh.cpp
+    
+    # Resources
+    resources/qml.qrc
+    resources/icons.qrc
+    resources/shaders.qrc
 )
 
 if(ANDROID)
@@ -81,6 +90,12 @@ set_target_properties(fstl_viewer PROPERTIES
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
+)
+
+# Add include directories for new structure
+target_include_directories(fstl_viewer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Include Qt private headers for QZipReader

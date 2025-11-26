@@ -2,11 +2,11 @@
 
 **Status: Alpha** - Core functionality working, but still in active development.
 
-Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL and 3MF file viewer.
+Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
 
 ## Features
 
-- Fast rendering of STL (binary and ASCII) and 3MF files
+- Fast rendering of STL (binary and ASCII), 3MF, and STEP files
 - Multiple draw modes: Shaded, Wireframe, Surface Angle, Meshlight
 - Configurable lighting and shader preferences
 - Touch gestures: pinch to zoom, drag to rotate

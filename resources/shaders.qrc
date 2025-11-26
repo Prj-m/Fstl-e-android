@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/gl">
+        <file>shaders/mesh.frag</file>
+        <file>shaders/mesh.vert</file>
+        <file>shaders/mesh_wireframe.frag</file>
+        <file>shaders/mesh_surfaceangle.frag</file>
+        <file>shaders/mesh_light.frag</file>
+        <file>shaders/quad.frag</file>
+        <file>shaders/quad.vert</file>
+        <file>shaders/colored_lines.frag</file>
+        <file>shaders/colored_lines.vert</file>
+        <file>shaders/sphere.stl</file>
+        <file>shaders/calc_altitudes.glsl</file>
+        <file>shaders/mesh_light_120.frag</file>
+    </qresource>
+</RCC>
