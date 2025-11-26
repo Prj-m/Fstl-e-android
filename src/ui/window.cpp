@@ -953,8 +953,8 @@ void Window::on_bad_stl()
 {
     QMessageBox::critical(this, "Error",
                           "<b>Error:</b><br>"
-                          "This <code>.stl</code> file is invalid or corrupted.<br>"
-                          "Please export it from the original source, verify, and retry.");
+                          "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
+                          "Please re-export it from the original source or try a simpler version.");
     load_stl(":/gl/shaders/sphere.stl");
     filenameStatusLabel->setText("File:none");
 }
