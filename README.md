@@ -1,6 +1,6 @@
 # fstl-e for Android
 
-<p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="600"></p>
+<p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="700"></p>
 
 
 **Status: Alpha** - Core functionality working, but still in active development.
