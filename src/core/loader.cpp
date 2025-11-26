@@ -29,35 +29,55 @@ void Loader::run()
     
     ALOG("Loader::run() called for file: %s", filename.toStdString().c_str());
     
-    // Detect 3MF by checking for ZIP magic bytes (3MF is a ZIP archive)
-    // ZIP files start with "PK" (0x50 0x4B)
+    // Detect 3MF and STEP by inspecting the file header.
+    // 3MF: ZIP container (magic bytes "PK")
+    // STEP: ISO-10303-21 text header and/or HEADER/DATA markers
     QFile file(filename);
     bool is_3mf = false;
+    bool is_step = false;
     
-    if (file.open(QIODevice::ReadOnly))
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        char header[2];
-        if (file.read(header, 2) == 2)
+        QByteArray header = file.read(512);  // small sniff window
+        file.close();
+        
+        if (header.size() >= 2 && header[0] == 0x50 && header[1] == 0x4B)  // "PK" magic bytes
         {
-            if (header[0] == 0x50 && header[1] == 0x4B)  // "PK" magic bytes
+            ALOG("Detected ZIP magic bytes - treating as 3MF");
+            is_3mf = true;
+        }
+        
+        if (!is_3mf)
+        {
+            QByteArray upper = header.toUpper();
+            if (upper.contains("ISO-10303-21"))
             {
-                ALOG("Detected ZIP magic bytes - treating as 3MF");
-                is_3mf = true;
+                ALOG("Detected ISO-10303-21 header - treating as STEP");
+                is_step = true;
+            }
+            else if (upper.contains("HEADER;") && upper.contains("DATA;"))
+            {
+                ALOG("Detected HEADER/DATA markers - probable STEP file");
+                is_step = true;
             }
         }
-        file.close();
     }
     
-    // Also check file extension as fallback
-    if (!is_3mf && filename.endsWith(".3mf", Qt::CaseInsensitive))
+    // Also check file extension as fallback when header sniff did not decide
+    if (!is_3mf && !is_step)
     {
-        ALOG("Detected .3MF extension");
-        is_3mf = true;
+        if (filename.endsWith(".3mf", Qt::CaseInsensitive))
+        {
+            ALOG("Detected .3MF extension");
+            is_3mf = true;
+        }
+        else if (filename.endsWith(".step", Qt::CaseInsensitive) ||
+                 filename.endsWith(".stp", Qt::CaseInsensitive))
+        {
+            ALOG("Detected .STEP/.STP extension");
+            is_step = true;
+        }
     }
-    
-    // Check for STEP file format
-    bool is_step = filename.endsWith(".step", Qt::CaseInsensitive) || 
-                   filename.endsWith(".stp", Qt::CaseInsensitive);
     
     if (is_3mf)
     {
