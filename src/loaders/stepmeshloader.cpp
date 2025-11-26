@@ -215,45 +215,112 @@ void StepMeshLoader::tessellateGeometry()
         const StepEntity& entity = it.value();
         QVector<QVector3D> facePoints;
         
-        // Handle POLY_LOOP - contains ordered vertex list
-        if (entity.type == "POLY_LOOP" && entity.params.size() > 0)
+        // Helper to extract a list of point refs from a loop-style entity
+        auto collectPointsFromLoopEntity = [&](const StepEntity& loopEntity, QVector<QVector3D>& outPoints)
         {
-            QString vertexListStr = entity.params[0];
-            // Parse list: (vertexListStr could be "(#1,#2,#3)")
+            // Find the parameter that actually contains the list of references "(#1,#2,#3,...)"
+            QString vertexListStr;
+            for (const QString& p : loopEntity.params)
+            {
+                if (p.contains('#'))
+                {
+                    vertexListStr = p;
+                    break;
+                }
+            }
+            if (vertexListStr.isEmpty())
+                return;
+            
             QRegularExpression refRegex("#(\\d+)");
             QRegularExpressionMatchIterator refIt = refRegex.globalMatch(vertexListStr);
-            
             while (refIt.hasNext())
             {
                 QString ref = refIt.next().captured(0);
                 QVector3D pt = resolveToPoint(ref);
                 if (!pt.isNull())
-                    facePoints.append(pt);
+                    outPoints.append(pt);
             }
-        }
-        // Handle FACE_BOUND
-        else if (entity.type == "FACE_BOUND" || entity.type == "FACE_OUTER_BOUND")
+        };
+        
+        // Handle POLY_LOOP - contains ordered vertex list
+        if (entity.type == "POLY_LOOP")
         {
-            // FACE_BOUND typically references a loop
+            collectPointsFromLoopEntity(entity, facePoints);
+        }
+        // Handle EDGE_LOOP - ordered list of ORIENTED_EDGE, which reference EDGE_CURVE/vertices
+        else if (entity.type == "EDGE_LOOP")
+        {
+            // EDGE_LOOP parameters may include a name and a list of oriented edges
+            // Extract all entity references from all params
             for (const QString& param : entity.params)
             {
-                if (param.startsWith("#"))
+                QRegularExpression refRegex("#(\\d+)");
+                QRegularExpressionMatchIterator refIt = refRegex.globalMatch(param);
+                while (refIt.hasNext())
                 {
-                    StepEntity loopEntity = resolveRef(param);
-                    if (loopEntity.type == "POLY_LOOP" && loopEntity.params.size() > 0)
+                    QString oeRef = refIt.next().captured(0);
+                    StepEntity oeEntity = resolveRef(oeRef);
+                    if (!oeEntity.type.contains("ORIENTED_EDGE"))
+                        continue;
+                    
+                    // ORIENTED_EDGE params typically include an EDGE_CURVE reference
+                    for (const QString& oeParam : oeEntity.params)
                     {
-                        QString vertexListStr = loopEntity.params[0];
-                        QRegularExpression refRegex("#(\\d+)");
-                        QRegularExpressionMatchIterator refIt = refRegex.globalMatch(vertexListStr);
+                        if (!oeParam.startsWith("#"))
+                            continue;
+                        StepEntity edgeEntity = resolveRef(oeParam);
+                        if (!edgeEntity.type.contains("EDGE_CURVE"))
+                            continue;
                         
-                        while (refIt.hasNext())
+                        // EDGE_CURVE usually references two vertices (#v1,#v2,...)
+                        QVector<int> vertexIds;
+                        QRegularExpression vRefRegex("#(\\d+)");
+                        QRegularExpressionMatchIterator vIt = vRefRegex.globalMatch(oeParam);
+                        while (vIt.hasNext())
                         {
-                            QString ref = refIt.next().captured(0);
-                            QVector3D pt = resolveToPoint(ref);
+                            int id = vIt.next().captured(1).toInt();
+                            vertexIds.append(id);
+                        }
+                        if (vertexIds.isEmpty())
+                        {
+                            // Fallback: scan edgeEntity params for vertex refs
+                            for (const QString& eParam : edgeEntity.params)
+                            {
+                                QRegularExpression eRefRegex("#(\\d+)");
+                                QRegularExpressionMatchIterator eIt = eRefRegex.globalMatch(eParam);
+                                while (eIt.hasNext())
+                                {
+                                    int id = eIt.next().captured(1).toInt();
+                                    vertexIds.append(id);
+                                }
+                            }
+                        }
+                        
+                        if (!vertexIds.isEmpty())
+                        {
+                            // Use the first vertex of the edge as part of the loop polygon
+                            QString vRef = QString("#%1").arg(vertexIds.first());
+                            QVector3D pt = resolveToPoint(vRef);
                             if (!pt.isNull())
                                 facePoints.append(pt);
                         }
+                        break; // only process first EDGE_CURVE per ORIENTED_EDGE
                     }
+                }
+            }
+        }
+        // Handle FACE_BOUND / FACE_OUTER_BOUND that reference loops
+        else if (entity.type == "FACE_BOUND" || entity.type == "FACE_OUTER_BOUND")
+        {
+            // FACE_BOUND typically references a loop (POLY_LOOP or EDGE_LOOP)
+            for (const QString& param : entity.params)
+            {
+                if (!param.startsWith("#"))
+                    continue;
+                StepEntity loopEntity = resolveRef(param);
+                if (loopEntity.type == "POLY_LOOP" || loopEntity.type == "EDGE_LOOP")
+                {
+                    collectPointsFromLoopEntity(loopEntity, facePoints);
                 }
             }
         }
