@@ -17,8 +17,15 @@ find_package(Qt6 REQUIRED COMPONENTS
     Network
     Xml
 )
-# 3MF support uses QtCore private QZipReader (no additional dependencies needed)
-message(STATUS "3MF support enabled via QtCore private headers")
+
+# Option to enable/disable 3MF support (requires Qt private headers)
+option(ENABLE_3MF "Enable 3MF file support (requires Qt private headers)" ON)
+
+if(ENABLE_3MF)
+    message(STATUS "3MF support enabled - will attempt to use QtCore private headers")
+else()
+    message(STATUS "3MF support DISABLED - only STL files will be supported")
+endif()
 
 # Source files - note: this appears to be a desktop Qt app being ported
 # For Android with QML, you may want to remove desktop-specific files

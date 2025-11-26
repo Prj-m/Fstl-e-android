@@ -16,7 +16,7 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL and 3MF fi
 
 ## Building
 
-Requires Qt 6.10+ for Android with NDK 27+.
+Requires Qt 6.5+ for Android (tested with Qt 6.10).
 
 ```bash
 mkdir build && cd build
