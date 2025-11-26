@@ -29,8 +29,8 @@ Axis::Axis()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/colored_lines.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/colored_lines.frag");
+    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/colored_lines.vert");
+    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/colored_lines.frag");
     shader.link();
     const int ptSize = 6*sizeof(float);
     for(int lIdx = 0; lIdx < 3; lIdx++)

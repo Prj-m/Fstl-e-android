@@ -868,16 +868,16 @@ void Window::load_persist_settings(){
             } else {
                 qDebug() << "File does not exist";
                 // Load default sphere if file missing
-                load_stl(":gl/sphere.stl");
+                load_stl(":/gl/shaders/sphere.stl");
             }
         } else {
             qDebug() << "No recent files found";
             // Load default sphere if no recent files
-            load_stl(":gl/sphere.stl");
+            load_stl(":/gl/shaders/sphere.stl");
         }
     } else {
         // Autoreload not enabled - load default sphere
-        load_stl(":gl/sphere.stl");
+        load_stl(":/gl/shaders/sphere.stl");
     }
  }
 
@@ -960,7 +960,7 @@ void Window::on_bad_stl()
                           "<b>Error:</b><br>"
                           "This <code>.stl</code> file is invalid or corrupted.<br>"
                           "Please export it from the original source, verify, and retry.");
-    load_stl(":/gl/sphere.stl");
+    load_stl(":/gl/shaders/sphere.stl");
     filenameStatusLabel->setText("File:none");
 }
 
@@ -969,7 +969,7 @@ void Window::on_empty_mesh()
     QMessageBox::critical(this, "Error",
                           "<b>Error:</b><br>"
                           "This file is syntactically correct<br>but contains no triangles.");
-    load_stl(":/gl/sphere.stl");
+    load_stl(":/gl/shaders/sphere.stl");
     filenameStatusLabel->setText("File:none");
 }
 
@@ -978,7 +978,7 @@ void Window::on_missing_file()
     QMessageBox::critical(this, "Error",
                           "<b>Error:</b><br>"
                           "The target file is missing.<br>");
-    load_stl(":/gl/sphere.stl");
+    load_stl(":/gl/shaders/sphere.stl");
     filenameStatusLabel->setText("File:none");
 }
 

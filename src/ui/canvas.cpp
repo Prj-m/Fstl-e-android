@@ -261,23 +261,23 @@ void Canvas::initializeGL()
     fallbackGlsl = false;
 
     mesh_vertshader = new QOpenGLShader(QOpenGLShader::Vertex);
-    mesh_vertshader->compileSourceFile(":/gl/mesh.vert");
+    mesh_vertshader->compileSourceFile(":/gl/shaders/mesh.vert");
     mesh_shader.addShader(mesh_vertshader);
-    mesh_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/mesh.frag");
+    mesh_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh.frag");
     mesh_shader.link();
     mesh_wireframe_shader.addShader(mesh_vertshader);
-    mesh_wireframe_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/mesh_wireframe.frag");
+    mesh_wireframe_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_wireframe.frag");
     mesh_wireframe_shader.link();
     mesh_surfaceangle_shader.addShader(mesh_vertshader);
-    mesh_surfaceangle_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/mesh_surfaceangle.frag");
+    mesh_surfaceangle_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_surfaceangle.frag");
     mesh_surfaceangle_shader.link();
     mesh_meshlight_shader.addShader(mesh_vertshader);
-    bool loadSuccess330 = mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/calc_altitudes.glsl") &&
-                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/mesh_light.frag");
+    bool loadSuccess330 = mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/shaders/calc_altitudes.glsl") &&
+                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light.frag");
     if (!loadSuccess330) {
         // fallback to 120
         fallbackGlsl = true;
-        mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/mesh_light_120.frag");
+        mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light_120.frag");
         qDebug() << "Cannot load a shader using glsl version 330, fall back to another using version 120";
         qDebug() << "Adding wireframe on top of meshlight shader will be disabled.";
     }

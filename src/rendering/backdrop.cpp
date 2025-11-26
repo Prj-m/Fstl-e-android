@@ -4,8 +4,8 @@ Backdrop::Backdrop()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/quad.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/quad.frag");
+    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/quad.vert");
+    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/quad.frag");
     shader.link();
 
     float vbuf[] = {

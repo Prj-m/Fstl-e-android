@@ -34,20 +34,32 @@ set(PROJECT_SOURCES
     src/core/app.cpp
     src/core/mesh.cpp
     src/core/loader.cpp
+    include/core/app.h
+    include/core/loader.h
+    include/core/mesh.h
+    include/core/vertex.h
     
     # Loader sources
     src/loaders/stepmeshloader.cpp
+    include/loaders/stepmeshloader.h
     
     # UI sources
     src/ui/canvas.cpp
     src/ui/window.cpp
     src/ui/shaderlightprefs.cpp
     src/ui/speedmousedialog.cpp
+    include/ui/canvas.h
+    include/ui/window.h
+    include/ui/shaderlightprefs.h
+    include/ui/speedmousedialog.h
     
     # Rendering sources
     src/rendering/axis.cpp
     src/rendering/backdrop.cpp
     src/rendering/glmesh.cpp
+    include/rendering/axis.h
+    include/rendering/backdrop.h
+    include/rendering/glmesh.h
     
     # Resources
     resources/qml.qrc
