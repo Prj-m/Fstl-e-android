@@ -4,6 +4,60 @@
 #include <QApplication>
 #include <QRadioButton>
 #include <QColorDialog>
+#include <QPainter>
+#include <QMouseEvent>
+#include <algorithm>
+
+class AmbientColorPlane : public QWidget
+{
+public:
+    explicit AmbientColorPlane(ShaderLightPrefs* prefs, QWidget* parent = nullptr)
+        : QWidget(parent), prefs(prefs) {}
+
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);
+        int w = width();
+        int h = height();
+        if (w <= 0 || h <= 0) return;
+
+        QImage img(w, h, QImage::Format_RGB32);
+        for (int y = 0; y < h; ++y) {
+            double v = h > 1 ? 1.0 - double(y) / double(h - 1) : 1.0; // brightness
+            for (int x = 0; x < w; ++x) {
+                double hf = w > 1 ? double(x) / double(w - 1) : 0.0;  // hue
+                QColor c;
+                c.setHsvF(hf, 1.0, v);
+                img.setPixelColor(x, y, c);
+            }
+        }
+        p.drawImage(0, 0, img);
+        p.setPen(QColor(80, 80, 80));
+        p.drawRect(rect().adjusted(0, 0, -1, -1));
+    }
+
+    void mousePressEvent(QMouseEvent* ev) override { handle(ev); }
+    void mouseMoveEvent(QMouseEvent* ev) override {
+        if (ev->buttons() & Qt::LeftButton) handle(ev);
+    }
+
+private:
+    ShaderLightPrefs* prefs;
+
+    void handle(QMouseEvent* ev) {
+        if (!prefs) return;
+        int w = width();
+        int h = height();
+        if (w <= 0 || h <= 0) return;
+        int x = std::max(0, std::min(ev->pos().x(), w - 1));
+        int y = std::max(0, std::min(ev->pos().y(), h - 1));
+        double hf = w > 1 ? double(x) / double(w - 1) : 0.0;
+        double v  = h > 1 ? 1.0 - double(y) / double(h - 1) : 1.0;
+        QColor c;
+        c.setHsvF(hf, 1.0, v);
+        prefs->applyAmbientFromPlane(c);
+    }
+};
 
 const QString ShaderLightPrefs::PREFS_GEOM = "shaderPrefsGeometry";
 
@@ -20,7 +74,11 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
 #endif
 
     QVBoxLayout* prefsLayout = new QVBoxLayout;
+    prefsLayout->setContentsMargins(8, 8, 8, 8);
+    prefsLayout->setSpacing(6);
     this->setLayout(prefsLayout);
+
+    ambientPlane = nullptr;
 
     QLabel* title = new QLabel("Shader preferences");
     QFont boldFont = QApplication::font();
@@ -31,6 +89,8 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
 
     QWidget* middleWidget = new QWidget;
     QGridLayout* middleLayout = new QGridLayout;
+    middleLayout->setHorizontalSpacing(6);
+    middleLayout->setVerticalSpacing(4);
     middleWidget->setLayout(middleLayout);
     this->layout()->addWidget(middleWidget);
 
@@ -51,7 +111,31 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     editAmbientFactor = new QLineEdit;
     editAmbientFactor->setValidator(new QDoubleValidator);
     editAmbientFactor->setText(QString("%1").arg(canvas->getAmbientFactor()));
+
+#ifdef Q_OS_ANDROID
+    // On Android, provide a slider + numeric field for ambient factor
+    sliderAmbientFactor = new QSlider(Qt::Horizontal);
+    sliderAmbientFactor->setRange(0, 200); // maps to 0.0 - 2.0
+    sliderAmbientFactor->setSingleStep(1);
+    sliderAmbientFactor->setPageStep(5);
+    sliderAmbientFactor->setValue(static_cast<int>(canvas->getAmbientFactor() * 100.0));
+    sliderAmbientFactor->setFocusPolicy(Qt::NoFocus);
+
+    QWidget* ambientFactorWidget = new QWidget;
+    QHBoxLayout* ambientFactorLayout = new QHBoxLayout;
+    ambientFactorLayout->setContentsMargins(0, 0, 0, 0);
+    ambientFactorLayout->setSpacing(4);
+    ambientFactorWidget->setLayout(ambientFactorLayout);
+    ambientFactorLayout->addWidget(editAmbientFactor);
+    ambientFactorLayout->addWidget(sliderAmbientFactor);
+
+    middleLayout->addWidget(ambientFactorWidget,0,2,1,2);
+    connect(sliderAmbientFactor,&QSlider::valueChanged,this,&ShaderLightPrefs::sliderAmbientFactorChanged);
+#else
+    sliderAmbientFactor = nullptr;
     middleLayout->addWidget(editAmbientFactor,0,2,1,2);
+#endif
+
     connect(editAmbientFactor,SIGNAL(editingFinished()),this,SLOT(editAmbientFactorFinished()));
 
     QPushButton* buttonResetAmbientColor = new QPushButton("Reset");
@@ -77,6 +161,14 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     middleLayout->addWidget(buttonResetDirectiveColor,1,4);
     buttonResetDirectiveColor->setFocusPolicy(Qt::NoFocus);
     connect(buttonResetDirectiveColor,SIGNAL(clicked(bool)),this,SLOT(resetDirectiveColorClicked()));
+
+#ifdef Q_OS_ANDROID
+    // Inline ambient color plane for Android (shows when user taps swatch)
+    ambientPlane = new AmbientColorPlane(this, middleWidget);
+    ambientPlane->setMinimumHeight(120);
+    ambientPlane->setVisible(false);
+    middleLayout->addWidget(ambientPlane,2,0,1,5);
+#endif
 
     // Fill in directions
 
@@ -169,7 +261,7 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     buttonResetDirection->setFocusPolicy(Qt::NoFocus);
     connect(buttonResetDirection,SIGNAL(clicked(bool)),this,SLOT(resetDirection()));
 
-    middleLayout->addWidget(lightSourceWidget,2,0,4,5);
+    middleLayout->addWidget(lightSourceWidget,3,0,4,5);
 
     groupWireFrame = new QFrame;
     QGridLayout* groupWireFrameLayout = new QGridLayout;
@@ -210,7 +302,7 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     groupWireFrameLayout->addWidget(buttonResetLineWidth,2,3);
     connect(buttonResetLineWidth,SIGNAL(clicked(bool)),this,SLOT(resetWireWidthClicked()));
 
-    middleLayout->addWidget(groupWireFrame,6,0,3,5);
+    middleLayout->addWidget(groupWireFrame,7,0,3,5);
 
 #ifdef Q_OS_ANDROID
     // Simple view setting: show/hide the floating layer-peel button
@@ -222,7 +314,7 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     } else {
         checkboxShowLayerButton->setChecked(true);
     }
-    middleLayout->addWidget(checkboxShowLayerButton,9,0,1,5);
+    middleLayout->addWidget(checkboxShowLayerButton,10,0,1,5);
     connect(checkboxShowLayerButton, &QCheckBox::stateChanged, this, [this](int state) {
         if (auto win = qobject_cast<Window*>(parentWidget())) {
             win->setLayerButtonVisible(state == Qt::Checked);
@@ -259,34 +351,34 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
 
 void ShaderLightPrefs::buttonAmbientColorClicked() {
 #ifdef Q_OS_ANDROID
-    // On Android, avoid opening nested dialogs; cycle through a small palette instead
-    static QVector<QColor> palette = {
-        QColor::fromRgbF(0.22, 0.8, 1.0), // original default
-        QColor(255, 255, 255),
-        QColor(255, 200, 150),
-        QColor(200, 255, 200)
-    };
-    QColor current = canvas->getAmbientColor();
-    int idx = 0;
-    for (int i = 0; i < palette.size(); ++i) {
-        if (palette[i] == current) { idx = i; break; }
+    // Android: toggle visibility of the inline color plane instead of
+    // opening a separate dialog (avoids GL/accessibility deadlocks).
+    if (ambientPlane) {
+        ambientPlane->setVisible(!ambientPlane->isVisible());
     }
-    QColor newColor = palette[(idx + 1) % palette.size()];
 #else
-    QColor newColor = QColorDialog::getColor(canvas->getAmbientColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
-#endif
-    if (newColor.isValid() == true)
-    {
+    QColor newColor = QColorDialog::getColor(
+        canvas->getAmbientColor(), this,
+        QString("Choose ambient color"),
+        QColorDialog::DontUseNativeDialog);
+    if (newColor.isValid()) {
         canvas->setAmbientColor(newColor);
         QPixmap dummy(20, 20);
         dummy.fill(canvas->getAmbientColor());
         buttonAmbientColor->setIcon(QIcon(dummy));
         canvas->update();
     }
+#endif
 }
 
 void ShaderLightPrefs::editAmbientFactorFinished() {
-    canvas->setAmbientFactor(editAmbientFactor->text().toDouble());
+    double f = editAmbientFactor->text().toDouble();
+    canvas->setAmbientFactor(f);
+#ifdef Q_OS_ANDROID
+    if (sliderAmbientFactor) {
+        sliderAmbientFactor->setValue(static_cast<int>(f * 100.0));
+    }
+#endif
     canvas->update();
 }
 
@@ -296,16 +388,26 @@ void ShaderLightPrefs::resetAmbientColorClicked() {
     dummy.fill(canvas->getAmbientColor());
     buttonAmbientColor->setIcon(QIcon(dummy));
     editAmbientFactor->setText(QString("%1").arg(canvas->getAmbientFactor()));
+#ifdef Q_OS_ANDROID
+    if (sliderAmbientFactor) {
+        sliderAmbientFactor->setValue(static_cast<int>(canvas->getAmbientFactor() * 100.0));
+    }
+    if (ambientPlane) ambientPlane->setVisible(false);
+#endif
     canvas->update();
 }
 
 void ShaderLightPrefs::buttonDirectiveColorClicked() {
 #ifdef Q_OS_ANDROID
+    // Android: cycle through a preset directive palette instead of dialogs.
     static QVector<QColor> palette = {
-        QColor(255, 255, 255),
-        QColor(255, 220, 150),
-        QColor(200, 220, 255),
-        QColor(220, 255, 220)
+        QColor(255, 255, 255),            // pure white
+        QColor(240, 240, 240),            // soft white
+        QColor(255, 230, 190),            // warm
+        QColor(255, 210, 160),            // warmer
+        QColor(210, 230, 255),            // cool
+        QColor(200, 255, 220),            // greenish
+        QColor(255, 230, 255)             // magenta tint
     };
     QColor current = canvas->getDirectiveColor();
     int idx = 0;
@@ -314,7 +416,10 @@ void ShaderLightPrefs::buttonDirectiveColorClicked() {
     }
     QColor newColor = palette[(idx + 1) % palette.size()];
 #else
-    QColor newColor = QColorDialog::getColor(canvas->getDirectiveColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
+    QColor newColor = QColorDialog::getColor(
+        canvas->getDirectiveColor(), this,
+        QString("Choose directive color"),
+        QColorDialog::DontUseNativeDialog);
 #endif
     if (newColor.isValid() == true)
     {
@@ -337,6 +442,21 @@ void ShaderLightPrefs::resetDirectiveColorClicked() {
     dummy.fill(canvas->getDirectiveColor());
     buttonDirectiveColor->setIcon(QIcon(dummy));
     editDirectiveFactor->setText(QString("%1").arg(canvas->getDirectiveFactor()));
+    canvas->update();
+}
+
+void ShaderLightPrefs::applyAmbientFromPlane(const QColor& c) {
+    canvas->setAmbientColor(c);
+    QPixmap dummy(20, 20);
+    dummy.fill(canvas->getAmbientColor());
+    buttonAmbientColor->setIcon(QIcon(dummy));
+    canvas->update();
+}
+
+void ShaderLightPrefs::sliderAmbientFactorChanged(int v) {
+    double f = static_cast<double>(v) / 100.0;
+    editAmbientFactor->setText(QString::number(f, 'f', 2));
+    canvas->setAmbientFactor(f);
     canvas->update();
 }
 
@@ -381,11 +501,13 @@ void ShaderLightPrefs::checkboxUseWireFrameChanged() {
 
 void ShaderLightPrefs::buttonWireColorClicked() {
 #ifdef Q_OS_ANDROID
+    // Android: cycle through a small set of wire colors.
     static QVector<QColor> palette = {
-        QColor(255,128,0),
-        QColor(255,0,0),
-        QColor(0,255,0),
-        QColor(0,128,255)
+        QColor(255,128,0),   // original orange
+        QColor(255,0,0),     // red
+        QColor(0,255,0),     // green
+        QColor(0,128,255),   // blue
+        QColor(255,255,255)  // white
     };
     QColor current = canvas->getWireColor();
     int idx = 0;
@@ -394,7 +516,10 @@ void ShaderLightPrefs::buttonWireColorClicked() {
     }
     QColor newColor = palette[(idx + 1) % palette.size()];
 #else
-    QColor newColor = QColorDialog::getColor(canvas->getWireColor(), this, QString("Choose color"),QColorDialog::DontUseNativeDialog);
+    QColor newColor = QColorDialog::getColor(
+        canvas->getWireColor(), this,
+        QString("Choose wireframe color"),
+        QColorDialog::DontUseNativeDialog);
 #endif
     if (newColor.isValid() == true)
     {

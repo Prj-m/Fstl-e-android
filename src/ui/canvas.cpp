@@ -391,7 +391,12 @@ void Canvas::draw_mesh()
         //
         // -1,-1,0 Light from top right
         //glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),-1.0f,-1.0f,0.0f);
-        glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),listDir.at(currentLightDirection).x(), listDir.at(currentLightDirection).y(), listDir.at(currentLightDirection).z());
+        // Map UI directions (Top/Bottom, Front/Rear) to a more intuitive
+        // screen-space feel by flipping Y and Z. This makes the "Top" and
+        // "Bottom" radio buttons (and Front/Rear) behave as users expect
+        // when looking at the model on screen.
+        QVector3D d = listDir.at(currentLightDirection);
+        glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"), d.x(), -d.y(), -d.z());
         if (!fallbackGlsl) {
             glUniform1i(selected_mesh_shader->uniformLocation("useWire"),useWire);
             glUniform1f(selected_mesh_shader->uniformLocation("wireWidth"),wireWidth);

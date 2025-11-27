@@ -910,9 +910,9 @@ void Window::on_drawModePrefs() {
         return;
     }
 
-    // Size relative to main window
-    int w = static_cast<int>(width() * 0.9);
-    int h = static_cast<int>(height() * 0.8);
+    // Size relative to main window (slightly more compact)
+    int w = static_cast<int>(width() * 0.85);
+    int h = static_cast<int>(height() * 0.6);
     meshlightprefs->setFixedSize(w, h);
     int x = (width() - w) / 2;
     int y = (height() - h) / 2;

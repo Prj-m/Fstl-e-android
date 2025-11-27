@@ -12,8 +12,10 @@
 #include <QButtonGroup>
 #include <QVBoxLayout>
 #include <QGridLayout>
+#include <QColor>
 
 class Canvas;
+class AmbientColorPlane;
 
 class ShaderLightPrefs : public QWidget
 {
@@ -22,6 +24,9 @@ public:
     ShaderLightPrefs(QWidget* parent, Canvas* _canvas);
     void toggleUseWire();
 
+    // Helper used by AmbientColorPlane
+    void applyAmbientFromPlane(const QColor& c);
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
@@ -29,6 +34,7 @@ protected:
 private slots:
     void buttonAmbientColorClicked();
     void editAmbientFactorFinished();
+    void sliderAmbientFactorChanged(int v);
     void resetAmbientColorClicked();
 
     void buttonDirectiveColorClicked();
@@ -55,6 +61,7 @@ private:
     Canvas* canvas;
     QPushButton* buttonAmbientColor;
     QLineEdit* editAmbientFactor;
+    QSlider* sliderAmbientFactor;
     QPushButton* buttonDirectiveColor;
     QLineEdit* editDirectiveFactor;
     QComboBox* comboDirections;
@@ -66,12 +73,15 @@ private:
     QSlider* sliderWireWidth;
     QLabel* labelPix;
     QCheckBox* checkboxShowLayerButton;
+    AmbientColorPlane* ambientPlane;
 
     QButtonGroup* leftRight;
     QButtonGroup* topBottom;
     QButtonGroup* rearFront;
 
     const static QString PREFS_GEOM;
+
+    friend class AmbientColorPlane;
 };
 
 #endif // SHADERLIGHTPREFS_H
