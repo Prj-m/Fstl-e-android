@@ -9,12 +9,12 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 ## Download
 
-**Standard release APK (recommended):**
+**Lite APK (recommended for most users):**
 
 - [fstl-e-android-arm64-v8a.apk](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk)
 - [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk.sha256)
 
-**Debug APK (same features, extra logging):**
+**Full STEP-enabled APK:**
 
 - [fstl-e-android-debug_20251125_191624.apk](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-debug_20251125_191624.apk)
 - [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-debug_20251125_191624.apk.sha256)
