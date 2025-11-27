@@ -28,6 +28,11 @@ const QString Canvas::WIRE_COLOR = "wireColor";
 const QString Canvas::AB_FACTOR = "abFactor";
 const QString Canvas::DEFAULT_VIEW = "defaultView";
 const QString Canvas::MSAA = "glMSAA";
+const QString Canvas::BACKDROP_TOP_LEFT = "Backdrop/topLeftColor";
+const QString Canvas::BACKDROP_TOP_RIGHT = "Backdrop/topRightColor";
+const QString Canvas::BACKDROP_BOTTOM_LEFT = "Backdrop/bottomLeftColor";
+const QString Canvas::BACKDROP_BOTTOM_RIGHT = "Backdrop/bottomRightColor";
+const QString Canvas::BACKDROP_PRESET_INDEX = "Backdrop/presetIndex";
 
 
 // default values
@@ -52,7 +57,7 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
     //delay this later for msaa
     //setFormat(format);
     QFile styleFile(":/qt/style.qss");
-    styleFile.open( QFile::ReadOnly );
+    (void)styleFile.open(QFile::ReadOnly);
     setStyleSheet(styleFile.readAll());
     currentTransform = QMatrix4x4();
 
@@ -68,6 +73,13 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
     wireWidth = settings.value(WIRE_WIDTH,defaultWireWidth).value<float>();
     wireColor = settings.value(WIRE_COLOR,defaultWireColor).value<QColor>();
     msaa = settings.value(MSAA,defaultMsaa).value<int>();
+
+    // Load any saved backdrop colors; actual GL uniforms are
+    // applied in initializeGL once the Backdrop is created.
+    backdropTL = settings.value(BACKDROP_TOP_LEFT, tlStandardBackdrop).value<QColor>();
+    backdropTR = settings.value(BACKDROP_TOP_RIGHT, trStandardBackdrop).value<QColor>();
+    backdropBL = settings.value(BACKDROP_BOTTOM_LEFT, blStandardBackdrop).value<QColor>();
+    backdropBR = settings.value(BACKDROP_BOTTOM_RIGHT, brStandardBackdrop).value<QColor>();
 
     format.setSamples(msaa);
     //qDebug() << format.samples();
@@ -291,6 +303,9 @@ void Canvas::initializeGL()
     mesh_meshlight_shader.link();
 
     backdrop = new Backdrop();
+    // Apply persisted backdrop corner colors to the GL backdrop
+    backdrop->setColors(backdropTL, backdropTR, backdropBL, backdropBR);
+
     axis = new Axis();
 }
 
@@ -301,6 +316,8 @@ void Canvas::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     backdrop->draw();
+    // Ensure background quad does not interfere with mesh depth
+    glClear(GL_DEPTH_BUFFER_BIT);
     if (mesh)  draw_mesh();
     if (drawAxes) axis->draw(transform_matrix(), view_matrix(),
         orient_matrix(), aspect_matrix(), width() / float(height()));
@@ -986,4 +1003,76 @@ void Canvas::setMsaa(int m) {
 
 void Canvas::resetMsaa() {
     setMsaa(defaultMsaa);
+}
+
+void Canvas::setBackdropCorners(const QColor& tl, const QColor& tr,
+                                const QColor& bl, const QColor& br) {
+    backdropTL = tl; backdropTR = tr; backdropBL = bl; backdropBR = br;
+    QSettings settings;
+    settings.setValue(BACKDROP_TOP_LEFT, tl);
+    settings.setValue(BACKDROP_TOP_RIGHT, tr);
+    settings.setValue(BACKDROP_BOTTOM_LEFT, bl);
+    settings.setValue(BACKDROP_BOTTOM_RIGHT, br);
+    if (backdrop) {
+        backdrop->setColors(tl, tr, bl, br);
+    }
+    update();
+}
+
+void Canvas::setBackdropTLCorner(const QColor& color) {
+    backdropTL = color;
+    QSettings settings;
+    settings.setValue(BACKDROP_TOP_LEFT, color);
+    if (backdrop) {
+        backdrop->setTopLeft(color);
+    }
+    update();
+}
+
+void Canvas::setBackdropTRCorner(const QColor& color) {
+    backdropTR = color;
+    QSettings settings;
+    settings.setValue(BACKDROP_TOP_RIGHT, color);
+    if (backdrop) {
+        backdrop->setTopRight(color);
+    }
+    update();
+}
+
+void Canvas::setBackdropBLCorner(const QColor& color) {
+    backdropBL = color;
+    QSettings settings;
+    settings.setValue(BACKDROP_BOTTOM_LEFT, color);
+    if (backdrop) {
+        backdrop->setBottomLeft(color);
+    }
+    update();
+}
+
+void Canvas::setBackdropBRCorner(const QColor& color) {
+    backdropBR = color;
+    QSettings settings;
+    settings.setValue(BACKDROP_BOTTOM_RIGHT, color);
+    if (backdrop) {
+        backdrop->setBottomRight(color);
+    }
+    update();
+}
+
+void Canvas::loadBackdropFromSettings() {
+    const QSettings settings;
+    backdropTL = settings.value(BACKDROP_TOP_LEFT, tlStandardBackdrop).value<QColor>();
+    backdropTR = settings.value(BACKDROP_TOP_RIGHT, trStandardBackdrop).value<QColor>();
+    backdropBL = settings.value(BACKDROP_BOTTOM_LEFT, blStandardBackdrop).value<QColor>();
+    backdropBR = settings.value(BACKDROP_BOTTOM_RIGHT, brStandardBackdrop).value<QColor>();
+}
+
+void Canvas::setBackdropPresetIndex(const int index) {
+    QSettings settings;
+    settings.setValue(BACKDROP_PRESET_INDEX, index);
+}
+
+int Canvas::getBackdropPresetIndex() {
+    const QSettings settings;
+    return settings.value(BACKDROP_PRESET_INDEX, 1).toInt();
 }

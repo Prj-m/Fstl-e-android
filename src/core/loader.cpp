@@ -354,7 +354,7 @@ Mesh* Loader::load_3mf()
     
     ALOG("ZIP is readable, listing entries...");
     auto entries = zip.fileInfoList();
-    ALOG("ZIP contains %d entries", entries.size());
+    ALOG("ZIP contains %d entries", int(entries.size()));
     for (const auto& entry : entries)
     {
         ALOG("  Entry: %s (size: %lld)", entry.filePath.toStdString().c_str(), entry.size);
@@ -375,7 +375,7 @@ Mesh* Loader::load_3mf()
         }
     }
     
-    ALOG("Model data loaded, size: %d bytes", modelData.size());
+    ALOG("Model data loaded, size: %d bytes", int(modelData.size()));
     
     // Parse XML content
     ALOG("Starting XML parse...");

@@ -3,11 +3,11 @@
 precision highp float;
 
 attribute vec2 vertex_position;
-attribute vec3 vertex_color;
+attribute vec2 vertex_uv;
 
-varying vec3 frag_color;
+varying vec2 v_uv;
 
 void main() {
-    gl_Position = vec4(vertex_position, 0.9, 1.0);
-    frag_color = vertex_color;
+    gl_Position = vec4(vertex_position, 0.0, 1.0);
+    v_uv = vertex_uv;
 }

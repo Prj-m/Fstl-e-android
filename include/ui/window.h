@@ -12,6 +12,7 @@
 
 class Canvas;
 class ShaderLightPrefs;
+class BackdropSettingsDialog;
 class SpeedMouseDialog;
 
 class Window : public QMainWindow
@@ -69,6 +70,7 @@ private slots:
     void onApplyView(QAction* act);
     void onSpeedMouseButton();
     void onMsaaAction(QAction* act);
+    void on_backdropSettings();
 
 private:
     void rebuild_recent_files();
@@ -88,6 +90,7 @@ private:
     QAction* const surfaceangle_action;
     QAction* const meshlight_action;
     QAction* const drawModePrefs_action;
+    QAction* const backdropSettings_action;
     QAction* const axes_action;
     QAction* const invert_zoom_action;
     QAction* const reload_action;
@@ -132,6 +135,7 @@ private:
     const static QKeySequence shortcutScreenshot;
     const static QKeySequence shortcutQuit;
     const static QKeySequence shortcutDrawModeSettings;
+    const static QKeySequence shortcutBackdropSettings;
     const static QKeySequence shortcutDrawAxes;
     const static QKeySequence shortcutHideMenuBar;
     const static QKeySequence shortcutFullscreen;
@@ -156,10 +160,14 @@ private:
     Canvas* canvas;
 
     ShaderLightPrefs* meshlightprefs;
+    BackdropSettingsDialog* backdropsettingsdialog;
     SpeedMouseDialog* speedMouseDialog;
     QList<QAction*> dm_acts;
 
-    // Android-only floating layer-peel button (bottom-left over canvas)
+    // Sequence of specific-view actions (used on Android eye button)
+    QList<QAction*> applyViewActions;
+
+    // Android-only floating layer-peel button (bottom-right over canvas)
     QToolButton* layerPeelButton;
 public:
     // Exposed so ShaderLightPrefs can toggle visibility from "settings"

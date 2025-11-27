@@ -24,8 +24,10 @@ public:
     ShaderLightPrefs(QWidget* parent, Canvas* _canvas);
     void toggleUseWire();
 
-    // Helper used by AmbientColorPlane
-    void applyAmbientFromPlane(const QColor& c);
+    enum ColorPlaneTarget { PlaneTargetAmbient, PlaneTargetDirective };
+
+    // Called by the inline color plane to apply the picked color
+    void applyColorFromPlane(const QColor& c);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -34,7 +36,6 @@ protected:
 private slots:
     void buttonAmbientColorClicked();
     void editAmbientFactorFinished();
-    void sliderAmbientFactorChanged(int v);
     void resetAmbientColorClicked();
 
     void buttonDirectiveColorClicked();
@@ -61,7 +62,6 @@ private:
     Canvas* canvas;
     QPushButton* buttonAmbientColor;
     QLineEdit* editAmbientFactor;
-    QSlider* sliderAmbientFactor;
     QPushButton* buttonDirectiveColor;
     QLineEdit* editDirectiveFactor;
     QComboBox* comboDirections;
@@ -72,8 +72,14 @@ private:
     QLabel* labelWireWidth;
     QSlider* sliderWireWidth;
     QLabel* labelPix;
-    QCheckBox* checkboxShowLayerButton;
+
+    // Inline color plane (Android) and its current target
     AmbientColorPlane* ambientPlane;
+    ColorPlaneTarget planeTarget;
+
+#ifdef Q_OS_ANDROID
+    QCheckBox* checkboxShowLayerButton;
+#endif
 
     QButtonGroup* leftRight;
     QButtonGroup* topBottom;

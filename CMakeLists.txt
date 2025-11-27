@@ -57,10 +57,12 @@ set(PROJECT_SOURCES
     src/ui/window.cpp
     src/ui/shaderlightprefs.cpp
     src/ui/speedmousedialog.cpp
+    src/ui/backdropsettingsdialog.cpp
     include/ui/canvas.h
     include/ui/window.h
     include/ui/shaderlightprefs.h
     include/ui/speedmousedialog.h
+    include/ui/backdropsettingsdialog.h
     
     # Rendering sources
     src/rendering/axis.cpp

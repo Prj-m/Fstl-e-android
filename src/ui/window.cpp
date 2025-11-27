@@ -14,6 +14,7 @@
 #include "core/loader.h"
 #include "ui/shaderlightprefs.h"
 #include "ui/speedmousedialog.h"
+#include "ui/backdropsettingsdialog.h"
 #include <QDrag>
 
 const QString Window::RECENT_FILE_KEY = "recentFiles";
@@ -33,6 +34,7 @@ const QKeySequence Window::shortcutReload = Qt::Key_R;
 const QKeySequence Window::shortcutScreenshot = Qt::Key_S;
 const QKeySequence Window::shortcutQuit = Qt::Key_Q;
 const QKeySequence Window::shortcutDrawModeSettings = Qt::Key_P;
+const QKeySequence Window::shortcutBackdropSettings = Qt::Key_B;
 const QKeySequence Window::shortcutDrawAxes = Qt::Key_A;
 const QKeySequence Window::shortcutHideMenuBar = Qt::Key_M;
 const QKeySequence Window::shortcutFullscreen = Qt::Key_F;
@@ -60,6 +62,7 @@ Window::Window(QWidget *parent) :
     surfaceangle_action(new QAction("Surface Angle", this)),
     meshlight_action(new QAction("Shaded ambient and directive light source", this)),
     drawModePrefs_action(new QAction("Draw Mode Settings")),
+    backdropSettings_action(new QAction("Background Settings")),
     axes_action(new QAction("Draw Axes", this)),
     invert_zoom_action(new QAction("Invert Zoom", this)),
     reload_action(new QAction("Reload", this)),
@@ -103,6 +106,7 @@ Window::Window(QWidget *parent) :
     surfaceangle_action->setStatusTip(surfaceangle_action->toolTip());
     meshlight_action->setStatusTip(meshlight_action->toolTip());
     drawModePrefs_action->setStatusTip(drawModePrefs_action->toolTip());
+    backdropSettings_action->setStatusTip(backdropSettings_action->toolTip());
     axes_action->setStatusTip(axes_action->toolTip());
     invert_zoom_action->setStatusTip(invert_zoom_action->toolTip());
     reload_action->setStatusTip("Reload the file");
@@ -145,7 +149,11 @@ Window::Window(QWidget *parent) :
     statusBar = new QStatusBar;
 
     meshlightprefs = new ShaderLightPrefs(this, canvas);
+    meshlightprefs->hide();
+    backdropsettingsdialog = new BackdropSettingsDialog(this, canvas);
+    backdropsettingsdialog->hide();
     speedMouseDialog = new SpeedMouseDialog(this, canvas, statusBar);
+    speedMouseDialog->hide();
 
     QObject::connect(drawModePrefs_action, &QAction::triggered,this,&Window::on_drawModePrefs);
 
@@ -214,6 +222,13 @@ Window::Window(QWidget *parent) :
     drawModePrefs_action->setIcon(QIcon(":/qt/icons/preferences-system.png"));
     this->addAction(drawModePrefs_action);
     
+    // Background color / gradient presets (multi-color wrench)
+    backdropSettings_action->setShortcut(shortcutBackdropSettings);
+    backdropSettings_action->setIcon(QIcon(":/qt/icons/backdrop-settings.png"));
+    this->addAction(backdropSettings_action);
+    QObject::connect(backdropSettings_action, &QAction::triggered,
+                     this, &Window::on_backdropSettings);
+
     axes_action->setCheckable(true);
     axes_action->setShortcut(shortcutDrawAxes);
     axes_action->setIcon(QIcon(":/qt/icons/axes.png"));
@@ -318,6 +333,15 @@ Window::Window(QWidget *parent) :
     drawModePrefs_action->setShortcut(shortcutDrawModeSettings);
     drawModePrefs_action->setIcon(QIcon(":/qt/icons/preferences-system.png"));
     this->addAction(drawModePrefs_action);
+
+    // Background color / gradient presets (multi-color wrench)
+    view_menu->addAction(backdropSettings_action);
+    backdropSettings_action->setShortcut(shortcutBackdropSettings);
+    backdropSettings_action->setIcon(QIcon(":/qt/icons/backdrop-settings.png"));
+    this->addAction(backdropSettings_action);
+    QObject::connect(backdropSettings_action, &QAction::triggered,
+                     this, &Window::on_backdropSettings);
+
     view_menu->addAction(axes_action);
     axes_action->setCheckable(true);
     axes_action->setShortcut(shortcutDrawAxes);
@@ -559,34 +583,41 @@ Window::Window(QWidget *parent) :
     QObject::connect(drawModes, &QActionGroup::triggered,
                      this, &Window::on_drawMode);
     
-    // Create apply view actions with shortcuts
+    // Create apply view actions with shortcuts (also used by Android eye button)
     applyDefaultViewAction = new QAction("Default View", this);
     applyDefaultViewAction->setShortcut(shortcutDefaultView);
     this->addAction(applyDefaultViewAction);
+    applyViewActions.append(applyDefaultViewAction);
     
     QAction* applyTopViewAction = new QAction("Top View", this);
     applyTopViewAction->setShortcut(shortcutTopView);
     this->addAction(applyTopViewAction);
+    applyViewActions.append(applyTopViewAction);
     
     QAction* applyBottomViewAction = new QAction("Bottom View", this);
     applyBottomViewAction->setShortcut(shortcutBottomView);
     this->addAction(applyBottomViewAction);
+    applyViewActions.append(applyBottomViewAction);
     
     QAction* applyFrontViewAction = new QAction("Front View", this);
     applyFrontViewAction->setShortcut(shortcutFrontView);
     this->addAction(applyFrontViewAction);
+    applyViewActions.append(applyFrontViewAction);
     
     QAction* applyRearViewAction = new QAction("Rear View", this);
     applyRearViewAction->setShortcut(shortcutRearView);
     this->addAction(applyRearViewAction);
+    applyViewActions.append(applyRearViewAction);
     
     QAction* applyLeftViewAction = new QAction("Left View", this);
     applyLeftViewAction->setShortcut(shortcutLeftView);
     this->addAction(applyLeftViewAction);
+    applyViewActions.append(applyLeftViewAction);
     
     QAction* applyRightViewAction = new QAction("Right View", this);
     applyRightViewAction->setShortcut(shortcutRightView);
     this->addAction(applyRightViewAction);
+    applyViewActions.append(applyRightViewAction);
     
     QActionGroup* groupApplyViewAction = new QActionGroup(this);
     for (QAction* a : {applyDefaultViewAction, applyTopViewAction, applyBottomViewAction,
@@ -702,10 +733,43 @@ Window::Window(QWidget *parent) :
 #endif
     windowToolBar->addWidget(shaderButton);
     windowToolBar->addAction(drawModePrefs_action);
+    windowToolBar->addAction(backdropSettings_action);
 
+#ifdef Q_OS_ANDROID
+    // Android: show axes, then eye button cycling specific views, then reset-on-load
     windowToolBar->addAction(axes_action);
-    windowToolBar->addAction(invert_zoom_action);
+
+    QToolButton* applyViewButton = new QToolButton;
+    applyViewButton->setIcon(QIcon(":/qt/icons/eye_64x64.png"));
+    applyViewButton->setToolTip("Cycle specific views");
+    applyViewButton->setFocusPolicy(Qt::NoFocus);
+    windowToolBar->addWidget(applyViewButton);
+
+    connect(applyViewButton, &QToolButton::clicked, this, [this]() {
+        if (applyViewActions.isEmpty()) return;
+        static int index = 0;
+        if (index < 0 || index >= applyViewActions.size()) index = 0;
+        QAction* act = applyViewActions.at(index);
+        onApplyView(act);
+        index = (index + 1) % applyViewActions.size();
+    });
+
     windowToolBar->addAction(resetTransformOnLoadAction);
+#else
+    // Desktop: show axes, then the "eye" apply-view menu button, then reset-on-load
+    windowToolBar->addAction(axes_action);
+
+    QToolButton* applyViewButton = new QToolButton;
+    applyViewButton->setPopupMode(QToolButton::InstantPopup);
+    applyViewButton->setMenu(applyViewMenu);
+    applyViewButton->setIcon(applyViewMenu->icon());
+    applyViewButton->setToolTip(applyViewMenu->title());
+    applyViewButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
+    applyViewButton->setStatusTip(applyViewButton->toolTip());
+    windowToolBar->addWidget(applyViewButton);
+
+    windowToolBar->addAction(resetTransformOnLoadAction);
+#endif
 
     windowToolBar->addSeparator();
     // Third group
@@ -725,15 +789,8 @@ Window::Window(QWidget *parent) :
     windowToolBar->addAction(centerAction);
 
 #ifndef Q_OS_ANDROID
-    // Popup menu buttons - desktop only (cause crashes on Android)
-    QToolButton* applyViewButton = new QToolButton;
-    applyViewButton->setPopupMode(QToolButton::InstantPopup);
-    applyViewButton->setMenu(applyViewMenu);
-    applyViewButton->setIcon(applyViewMenu->icon());
-    applyViewButton->setToolTip(applyViewMenu->title());
-    applyViewButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
-    applyViewButton->setStatusTip(applyViewButton->toolTip());
-    windowToolBar->addWidget(applyViewButton);
+    // Desktop: place invert-zoom control next to viewport/center tools
+    windowToolBar->addAction(invert_zoom_action);
 #endif
 
 
@@ -778,7 +835,7 @@ Window::Window(QWidget *parent) :
     this->setStatusBar(statusBar);
 
 #ifdef Q_OS_ANDROID
-    // Floating layer-peel button in bottom-left of the 3D view
+    // Floating layer-peel button in bottom-right of the 3D view
     layerPeelButton = new QToolButton(canvas);
     layerPeelButton->setIcon(QIcon(":/qt/icons/resolution_1_32.png")); // layered-planes style icon
     layerPeelButton->setToolTip("Peel back layers");
@@ -927,6 +984,32 @@ void Window::on_drawModePrefs() {
         meshlightprefs->show();
         meshlightprefs->raise();
         meshlightprefs->activateWindow();
+    }
+#endif
+}
+
+void Window::on_backdropSettings() {
+#ifdef Q_OS_ANDROID
+    // Android: show Background Color Settings as centered in-window overlay
+    if (backdropsettingsdialog->isVisible()) {
+        backdropsettingsdialog->hide();
+        return;
+    }
+    int w = static_cast<int>(width() * 0.85);
+    int h = static_cast<int>(height() * 0.6);
+    backdropsettingsdialog->setFixedSize(w, h);
+    int x = (width() - w) / 2;
+    int y = (height() - h) / 2;
+    backdropsettingsdialog->move(x, y);
+    backdropsettingsdialog->show();
+    backdropsettingsdialog->raise();
+#else
+    if (backdropsettingsdialog->isVisible()) {
+        backdropsettingsdialog->hide();
+    } else {
+        backdropsettingsdialog->show();
+        backdropsettingsdialog->raise();
+        backdropsettingsdialog->activateWindow();
     }
 #endif
 }
@@ -1390,8 +1473,9 @@ void Window::resizeEvent(QResizeEvent *event)
 #ifdef Q_OS_ANDROID
     if (layerPeelButton && canvas) {
         const int margin = 24;
-        layerPeelButton->move(margin,
-                              canvas->height() - layerPeelButton->height() - margin);
+        const int x = canvas->width() - layerPeelButton->width() - margin;
+        const int y = canvas->height() - layerPeelButton->height() - margin;
+        layerPeelButton->move(x, y);
         layerPeelButton->raise();
     }
 #endif
@@ -1448,8 +1532,9 @@ void Window::setLayerButtonVisible(bool visible)
     }
     layerPeelButton->setVisible(visible);
     const int margin = 24;
-    layerPeelButton->move(margin,
-                          canvas->height() - layerPeelButton->height() - margin);
+    const int x = canvas->width() - layerPeelButton->width() - margin;
+    const int y = canvas->height() - layerPeelButton->height() - margin;
+    layerPeelButton->move(x, y);
     layerPeelButton->raise();
     QSettings().setValue(SHOW_LAYER_BUTTON_KEY, visible);
 #else

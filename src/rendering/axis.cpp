@@ -156,8 +156,8 @@ void Axis::draw(QMatrix4x4 transMat, QMatrix4x4 viewMat,
         transVec[aIdx] = 1.25;//This is how far we want the letters to be extended out
         QOpenGLBuffer b = flowerLabelVertices[aIdx];
         //The only transform we want is to translate the letters to the ends of the axis lines
-        QMatrix4x4 labelTransMat = QMatrix4x4();
-        labelTransMat.translate(orientMat * transVec);
+        QMatrix4x4 labelTransMat;
+        labelTransMat.translate(orientMat.map(transVec));
         b.bind();
         loadMatrixUniforms(labelTransMat, aspectMat * hudMat);
         loadAttribPtr();
