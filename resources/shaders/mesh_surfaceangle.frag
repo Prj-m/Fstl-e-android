@@ -4,10 +4,18 @@ precision mediump float;
 
 uniform float zoom;
 
+// Layer-peeling clip plane (object-space Z)
+uniform bool layerClipEnabled;
+uniform float layerClipZ;
+
 in vec3 world_normal;
+in vec3 vObjPos;
 out vec4 fragColor;
 
 void main() {
+    if (layerClipEnabled && vObjPos.z > layerClipZ) {
+        discard;
+    }
     // Use world normal
     vec3 ec_normal = normalize(world_normal);
     

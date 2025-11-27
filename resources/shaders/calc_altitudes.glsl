@@ -3,8 +3,13 @@
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
 
+// From vertex shader
+in vec3 vObjPos[];
+
 out vec3 ec_pos;
 noperspective out vec3 altitude;
+// To fragment shader (mesh_light.frag)
+out vec3 gObjPos;
 
 uniform vec2 portSize;
 
@@ -35,6 +40,7 @@ void main() {
     // release values
     gl_Position = p0;
     ec_pos = gl_Position.xyz;
+    gObjPos = vObjPos[0];
     altitude = vec3(h0*p0.w, 0.0, 0.0);
     EmitVertex();
 
@@ -45,6 +51,7 @@ void main() {
     // release values
     gl_Position = p1;
     ec_pos = gl_Position.xyz;
+    gObjPos = vObjPos[1];
     altitude = vec3(0.0, h1*p1.w, 0.0);
     EmitVertex();
 
@@ -55,6 +62,7 @@ void main() {
     // release values
     gl_Position = p2;
     ec_pos = gl_Position.xyz;
+    gObjPos = vObjPos[2];
     altitude = vec3(0.0, 0.0, h2*p2.w);
     EmitVertex();
 

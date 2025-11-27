@@ -25,6 +25,7 @@ const QString Window::DRAW_MODE_KEY = "drawMode";
 const QString Window::WINDOW_GEOM_KEY = "windowGeometry";
 const QString Window::RESET_TRANSFORM_ON_LOAD_KEY = "resetTransformOnLoad";
 const QString Window::HIDE_MENU_BAR = "hideMenuBar";
+const QString Window::SHOW_LAYER_BUTTON_KEY = "showLayerButton";
 
 
 const QKeySequence Window::shortcutOpen = Qt::Key_O;
@@ -70,7 +71,8 @@ Window::Window(QWidget *parent) :
     setGLSizeAction(new QAction("Set Viewport Size",this)),
     recent_files_group(new QActionGroup(this)),
     recent_files_clear_action(new QAction("Clear recent files", this)),
-    watcher(new QFileSystemWatcher(this))
+    watcher(new QFileSystemWatcher(this)),
+    layerPeelButton(nullptr)
 
 {
 #ifndef Q_OS_ANDROID
@@ -775,6 +777,24 @@ Window::Window(QWidget *parent) :
 
     this->setStatusBar(statusBar);
 
+#ifdef Q_OS_ANDROID
+    // Floating layer-peel button in bottom-left of the 3D view
+    layerPeelButton = new QToolButton(canvas);
+    layerPeelButton->setIcon(QIcon(":/qt/icons/resolution_1_32.png")); // layered-planes style icon
+    layerPeelButton->setToolTip("Peel back layers");
+    layerPeelButton->setFocusPolicy(Qt::NoFocus);
+    layerPeelButton->setIconSize(QSize(64, 64));
+    layerPeelButton->setAutoRaise(true);
+    layerPeelButton->setStyleSheet(
+        "QToolButton {"
+        "  background-color: rgba(0, 0, 0, 150);"
+        "  border-radius: 32px;"
+        "  padding: 8px;"
+        "}"
+    );
+    connect(layerPeelButton, &QToolButton::clicked, canvas, &Canvas::peelLayerStep);
+#endif
+
     load_persist_settings();
 }
 
@@ -787,6 +807,12 @@ void Window::load_persist_settings(){
     bool resetTransformOnLoad = settings.value(RESET_TRANSFORM_ON_LOAD_KEY, true).toBool();
     canvas->setResetTransformOnLoad(resetTransformOnLoad);
     resetTransformOnLoadAction->setChecked(resetTransformOnLoad);
+
+#ifdef Q_OS_ANDROID
+    // Show or hide the floating layer-peel button
+    bool showLayerButton = settings.value(SHOW_LAYER_BUTTON_KEY, true).toBool();
+    setLayerButtonVisible(showLayerButton);
+#endif
 
     autoreload_action->setChecked(settings.value(AUTORELOAD_KEY, true).toBool());
 
@@ -1361,6 +1387,14 @@ void Window::resizeEvent(QResizeEvent *event)
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }
+#ifdef Q_OS_ANDROID
+    if (layerPeelButton && canvas) {
+        const int margin = 24;
+        layerPeelButton->move(margin,
+                              canvas->height() - layerPeelButton->height() - margin);
+        layerPeelButton->raise();
+    }
+#endif
     QWidget::resizeEvent(event);
 }
 
@@ -1394,6 +1428,33 @@ void Window::sorted_insert(QStringList& list, const QCollator& collator, const Q
     }
 
     list.insert(index, value);
+}
+
+bool Window::isLayerButtonVisible() const
+{
+#ifdef Q_OS_ANDROID
+    QSettings settings;
+    return settings.value(SHOW_LAYER_BUTTON_KEY, true).toBool();
+#else
+    return false;
+#endif
+}
+
+void Window::setLayerButtonVisible(bool visible)
+{
+#ifdef Q_OS_ANDROID
+    if (!layerPeelButton) {
+        return;
+    }
+    layerPeelButton->setVisible(visible);
+    const int margin = 24;
+    layerPeelButton->move(margin,
+                          canvas->height() - layerPeelButton->height() - margin);
+    layerPeelButton->raise();
+    QSettings().setValue(SHOW_LAYER_BUTTON_KEY, visible);
+#else
+    Q_UNUSED(visible);
+#endif
 }
 
 void Window::build_folder_file_list()

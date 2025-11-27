@@ -7,11 +7,19 @@ uniform vec4 ambient_light_color;
 uniform vec4 directive_light_color;
 uniform vec3 directive_light_direction;
 
+// Layer-peeling clip plane (object-space Z)
+uniform bool layerClipEnabled;
+uniform float layerClipZ;
+
 in vec3 ec_pos;
 in vec3 world_normal;
+in vec3 vObjPos;
 out vec4 fragColor;
 
 void main() {
+    if (layerClipEnabled && vObjPos.z > layerClipZ) {
+        discard;
+    }
     // Normalize light direction
     vec3 dir = normalize(directive_light_direction);
 

@@ -21,6 +21,13 @@ find_package(Qt6 REQUIRED COMPONENTS
 # Option to enable/disable 3MF support (requires Qt private headers)
 option(ENABLE_3MF "Enable 3MF file support (requires Qt private headers)" ON)
 
+# Option to enable/disable Open CASCADE-based STEP support
+# This requires OpenCASCADE libraries to be available for the target
+# platform and will significantly increase binary size when enabled.
+# Enabled by default; if OCCT is not found, the build falls back to the
+# internal STEP parser and prints a warning.
+option(ENABLE_OCCT_STEP "Enable Open CASCADE-based STEP support (larger binary)" ON)
+
 if(ENABLE_3MF)
     message(STATUS "3MF support enabled - will attempt to use QtCore private headers")
 else()
@@ -141,18 +148,31 @@ target_link_libraries(fstl_viewer
 
 # Optional: full STEP support via Open CASCADE (desktop or heavy Android build)
 if(ENABLE_OCCT_STEP)
-    find_package(OpenCASCADE QUIET COMPONENTS TKSTEP TKSTEPAttr TKSTEPBase TKBRep TKGeomBase TKGeomAlgo TKMesh)
+    # If OpenCASCADE_DIR was not provided, try a default sibling directory
+    # where occt-android is commonly built/installed on this project layout.
+    if(NOT OpenCASCADE_DIR)
+        set(_OCCT_DEFAULT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/lib/cmake/opencascade")
+        if(EXISTS "${_OCCT_DEFAULT_DIR}")
+            set(OpenCASCADE_DIR "${_OCCT_DEFAULT_DIR}" CACHE PATH "OpenCASCADE install directory" FORCE)
+        endif()
+        unset(_OCCT_DEFAULT_DIR)
+    endif()
+
+    # OpenCASCADE 8.x exposes modules like FoundationClasses / DataExchange, and
+    # defines imported library targets such as TKDESTEP, TKXSBase, TKBRep, etc.
+    # We don't request individual components here; we just need the libraries
+    # necessary for STEP import and meshing.
+    find_package(OpenCASCADE QUIET)
     if(OpenCASCADE_FOUND)
         message(STATUS "OpenCASCADE found - enabling full STEP support")
         target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
         target_link_libraries(fstl_viewer PRIVATE
-            OpenCASCADE::TKSTEP
-            OpenCASCADE::TKSTEPAttr
-            OpenCASCADE::TKSTEPBase
-            OpenCASCADE::TKBRep
-            OpenCASCADE::TKGeomBase
-            OpenCASCADE::TKGeomAlgo
-            OpenCASCADE::TKMesh
+            TKDESTEP
+            TKXSBase
+            TKBRep
+            TKGeomBase
+            TKGeomAlgo
+            TKMesh
         )
     else()
         message(WARNING "ENABLE_OCCT_STEP=ON but OpenCASCADE not found - falling back to internal STEP parser")

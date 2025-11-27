@@ -452,6 +452,12 @@ Mesh* Loader::load_step()
 {
     ALOG("load_step() START for: %s", filename.toStdString().c_str());
 
+#ifdef FSTL_USE_OCCT_STEP
+    ALOG("OCCT STEP support is compiled in");
+#else
+    ALOG("OCCT STEP support is NOT compiled in - using internal parser only");
+#endif
+
     QVector<QVector3D> stepVerts;
     uint32_t tri_count = 0;
 

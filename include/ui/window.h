@@ -125,6 +125,7 @@ private:
     const static QString WINDOW_GEOM_KEY;
     const static QString RESET_TRANSFORM_ON_LOAD_KEY;
     const static QString HIDE_MENU_BAR;
+    const static QString SHOW_LAYER_BUTTON_KEY;
 
     const static QKeySequence shortcutOpen;
     const static QKeySequence shortcutReload;
@@ -157,6 +158,13 @@ private:
     ShaderLightPrefs* meshlightprefs;
     SpeedMouseDialog* speedMouseDialog;
     QList<QAction*> dm_acts;
+
+    // Android-only floating layer-peel button (bottom-left over canvas)
+    QToolButton* layerPeelButton;
+public:
+    // Exposed so ShaderLightPrefs can toggle visibility from "settings"
+    void setLayerButtonVisible(bool visible);
+    bool isLayerButtonVisible() const;
 };
 
 #endif // WINDOW_H

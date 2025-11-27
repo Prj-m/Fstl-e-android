@@ -10,12 +10,20 @@ uniform bool useWire;
 uniform vec3 wireColor;
 uniform float wireWidth;
 
+// Layer-peeling clip plane (object-space Z)
+uniform bool layerClipEnabled;
+uniform float layerClipZ;
+
 in vec3 ec_pos;
 in vec3 altitude;  // Note: noperspective not well supported in ES, removed
+in vec3 gObjPos;
 
 out vec4 fragColor;
 
 void main() {
+    if (layerClipEnabled && gObjPos.z > layerClipZ) {
+        discard;
+    }
     // Normalize light direction
     vec3 dir = normalize(directive_light_direction);
 

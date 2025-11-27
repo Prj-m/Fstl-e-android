@@ -205,6 +205,12 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
     QVector3D lower(m->xmin(), m->ymin(), m->zmin());
     QVector3D upper(m->xmax(), m->ymax(), m->zmax());
     
+    // Cache Z-extent for layer-peeling clip plane (object-space Z)
+    meshZMin = lower.z();
+    meshZMax = upper.z();
+    layerClipEnabled = false;
+    layerClipZ = meshZMax;
+    
     // Always update center and scale to match the model
     center = (lower + upper) / 2;
     centerOrg = center;
@@ -391,6 +397,16 @@ void Canvas::draw_mesh()
             glUniform1f(selected_mesh_shader->uniformLocation("wireWidth"),wireWidth);
             glUniform2f(selected_mesh_shader->uniformLocation("portSize"),(float)this->width(),(float)this->height());
             glUniform3f(selected_mesh_shader->uniformLocation("wireColor"),wireColor.redF(),wireColor.greenF(),wireColor.blueF());
+        }
+    }
+
+    // Layer peeling clip-plane uniforms (applies to all draw modes)
+    GLint locClipEnabled = selected_mesh_shader->uniformLocation("layerClipEnabled");
+    if (locClipEnabled >= 0) {
+        glUniform1i(locClipEnabled, layerClipEnabled ? 1 : 0);
+        GLint locClipZ = selected_mesh_shader->uniformLocation("layerClipZ");
+        if (locClipZ >= 0) {
+            glUniform1f(locClipZ, layerClipZ);
         }
     }
 
@@ -747,6 +763,39 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
 void Canvas::resizeGL(int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+void Canvas::peelLayerStep()
+{
+    if (!mesh) {
+        return;
+    }
+
+    // If extents are degenerate, skip clipping
+    if (meshZMax <= meshZMin) {
+        layerClipEnabled = false;
+        update();
+        return;
+    }
+
+    const float totalDepth = meshZMax - meshZMin;
+    const float step = totalDepth / 10.0f; // 10 steps from front to back
+
+    if (!layerClipEnabled) {
+        // First tap: enable clipping starting just beyond the outer shell
+        layerClipEnabled = true;
+        layerClipZ = meshZMax - step * 0.5f;
+    } else {
+        // Move the clip plane deeper into the model
+        layerClipZ -= step;
+        if (layerClipZ <= meshZMin + step * 0.5f) {
+            // Reached the back – reset clipping on next tap
+            layerClipEnabled = false;
+            layerClipZ = meshZMax;
+        }
+    }
+
+    update();
 }
 
 QColor Canvas::getAmbientColor() {

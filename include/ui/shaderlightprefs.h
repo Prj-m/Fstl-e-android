@@ -65,6 +65,7 @@ private:
     QLabel* labelWireWidth;
     QSlider* sliderWireWidth;
     QLabel* labelPix;
+    QCheckBox* checkboxShowLayerButton;
 
     QButtonGroup* leftRight;
     QButtonGroup* topBottom;

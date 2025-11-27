@@ -1,5 +1,6 @@
 #include "ui/shaderlightprefs.h"
 #include "ui/canvas.h"
+#include "ui/window.h"
 #include <QApplication>
 #include <QRadioButton>
 #include <QColorDialog>
@@ -210,6 +211,24 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     connect(buttonResetLineWidth,SIGNAL(clicked(bool)),this,SLOT(resetWireWidthClicked()));
 
     middleLayout->addWidget(groupWireFrame,6,0,3,5);
+
+#ifdef Q_OS_ANDROID
+    // Simple view setting: show/hide the floating layer-peel button
+    checkboxShowLayerButton = new QCheckBox("Show layer button (peel view)");
+    checkboxShowLayerButton->setFocusPolicy(Qt::NoFocus);
+    // Ask parent window for current state so dialog reflects real setting
+    if (auto win = qobject_cast<Window*>(parentWidget())) {
+        checkboxShowLayerButton->setChecked(win->isLayerButtonVisible());
+    } else {
+        checkboxShowLayerButton->setChecked(true);
+    }
+    middleLayout->addWidget(checkboxShowLayerButton,9,0,1,5);
+    connect(checkboxShowLayerButton, &QCheckBox::stateChanged, this, [this](int state) {
+        if (auto win = qobject_cast<Window*>(parentWidget())) {
+            win->setLayerButtonVisible(state == Qt::Checked);
+        }
+    });
+#endif
 
     // Ok button
     QWidget* boxButton = new QWidget;

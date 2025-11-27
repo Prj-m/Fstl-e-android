@@ -84,6 +84,8 @@ public slots:
     void set_status(const QString& s);
     void clear_status();
     void load_mesh(Mesh* m, bool is_reload);
+    // Advance the layer-peeling clip plane; used by the Android floating button
+    void peelLayerStep();
 
 protected:
     void paintGL() override;
@@ -194,6 +196,12 @@ private:
     qreal touch_base_zoom = 1.0;
     QPointF touch_pinch_center;     // screen-space pinch center
     QMap<int, QPointF> active_touches;  // track all active touch points by ID
+
+    // Layer peeling / clip-plane state (object-space Z slicing)
+    bool layerClipEnabled = false;
+    float layerClipZ = 0.0f;
+    float meshZMin = 0.0f;
+    float meshZMax = 0.0f;
 };
 
 #endif // CANVAS_H
