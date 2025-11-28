@@ -59,6 +59,12 @@ OCCT cannot generate any triangles.
 
 MIT License - see LICENSE file
 
+### Third-party components
+
+- STEP file support uses Open CASCADE Technology (OCCT). OCCT is free software
+  licensed under the GNU Lesser General Public License (LGPL) version 2.1 with
+  the Open CASCADE exception. See the OCCT licensing information for details.
+
 ## Credits
 
 - Original fstl: [Matt Keeter](https://github.com/fstl-app/fstl)

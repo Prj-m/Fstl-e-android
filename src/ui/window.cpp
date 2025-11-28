@@ -640,8 +640,9 @@ Window::Window(QWidget *parent) :
     // First group
     windowToolBar = new QToolBar;
 #ifdef Q_OS_ANDROID
-    // Make toolbar icons larger for touch screens
-    windowToolBar->setIconSize(QSize(64, 64));
+    // Make toolbar icons moderately large for touch screens
+    // Use 48x48 which scales better across high-DPI devices than 64x64
+    windowToolBar->setIconSize(QSize(48, 48));
     // Popup menus are disabled on Android to avoid Qt accessibility deadlock
     // The crash happens when QToolButton popup menus try to access OpenGL context
 #endif

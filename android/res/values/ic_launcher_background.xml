@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Neutral dark background so the fstl-e logo sits cleanly inside any mask -->
+    <color name="ic_launcher_background">#20232A</color>
+</resources>
