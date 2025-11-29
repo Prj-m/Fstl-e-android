@@ -4,12 +4,15 @@
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QTimer>
+#include <QScreen>
+#include <QProxyStyle>
 
 #ifndef FSTLE_VERSION
 #define FSTLE_VERSION "1.0.0"
 #endif
 
 #include "ui/window.h"
+#include <QIcon>
 #include "ui/canvas.h"
 #include "core/loader.h"
 #include "ui/shaderlightprefs.h"
@@ -28,6 +31,31 @@ const QString Window::RESET_TRANSFORM_ON_LOAD_KEY = "resetTransformOnLoad";
 const QString Window::HIDE_MENU_BAR = "hideMenuBar";
 const QString Window::SHOW_LAYER_BUTTON_KEY = "showLayerButton";
 
+
+#ifdef Q_OS_ANDROID
+// Custom style to make the toolbar overflow (extension) button wider on Android
+class AndroidOverflowStyle : public QProxyStyle
+{
+public:
+    explicit AndroidOverflowStyle(QStyle* baseStyle = nullptr)
+        : QProxyStyle(baseStyle) {}
+
+    int pixelMetric(PixelMetric metric, const QStyleOption* option,
+                    const QWidget* widget) const override
+    {
+        if (metric == QStyle::PM_ToolBarExtensionExtent) {
+            // Base the width on the toolbar's icon size so it stays proportional
+            const QToolBar* tb = qobject_cast<const QToolBar*>(widget);
+            int iconExtent = tb ? tb->iconSize().width() : 48;
+            // Make the overflow just a hair narrower than a regular icon cell
+            // so the chevron pill feels tight against the last icon.
+            int extent = qMax(iconExtent - 4, 36);
+            return extent;
+        }
+        return QProxyStyle::pixelMetric(metric, option, widget);
+    }
+};
+#endif
 
 const QKeySequence Window::shortcutOpen = Qt::Key_O;
 const QKeySequence Window::shortcutReload = Qt::Key_R;
@@ -48,35 +76,33 @@ const QKeySequence Window::shortcutFrontView = Qt::Key_3;
 const QKeySequence Window::shortcutRearView = Qt::Key_4;
 const QKeySequence Window::shortcutLeftView = Qt::Key_5;
 const QKeySequence Window::shortcutRightView = Qt::Key_6;
-
-Window::Window(QWidget *parent) :
-    QMainWindow(parent),
-    open_action(new QAction("Open", this)),
-    about_action(new QAction("About", this)),
-    help_action(new QAction("Help",this)),
-    quit_action(new QAction("Quit", this)),
-    perspective_action(new QAction("Perspective", this)),
-    orthographic_action(new QAction("Orthographic", this)),
-    shaded_action(new QAction("Shaded", this)),
-    wireframe_action(new QAction("Wireframe", this)),
-    surfaceangle_action(new QAction("Surface Angle", this)),
-    meshlight_action(new QAction("Shaded ambient and directive light source", this)),
-    drawModePrefs_action(new QAction("Draw Mode Settings")),
-    backdropSettings_action(new QAction("Background Settings")),
-    axes_action(new QAction("Draw Axes", this)),
-    invert_zoom_action(new QAction("Invert Zoom", this)),
-    reload_action(new QAction("Reload", this)),
-    autoreload_action(new QAction("Autoreload", this)),
-    save_screenshot_action(new QAction("Save Screenshot", this)),
-    hide_menuBar_action(new QAction("Hide Menu Bar", this)),
-    fullscreen_action(new QAction("Toggle Fullscreen",this)),
-    resetTransformOnLoadAction(new QAction("Reset rotation on load",this)),
-    setGLSizeAction(new QAction("Set Viewport Size",this)),
-    recent_files_group(new QActionGroup(this)),
-    recent_files_clear_action(new QAction("Clear recent files", this)),
-    watcher(new QFileSystemWatcher(this)),
-    layerPeelButton(nullptr)
-
+Window::Window(QWidget* parent)
+    : QMainWindow(parent)
+    , open_action(new QAction("Open", this))
+    , about_action(new QAction("About", this))
+    , help_action(new QAction("Help",this))
+    , quit_action(new QAction("Quit", this))
+    , perspective_action(new QAction("Perspective", this))
+    , orthographic_action(new QAction("Orthographic", this))
+    , shaded_action(new QAction("Shaded", this))
+    , wireframe_action(new QAction("Wireframe", this))
+    , surfaceangle_action(new QAction("Surface Angle", this))
+    , meshlight_action(new QAction("Shaded ambient and directive light source", this))
+    , drawModePrefs_action(new QAction("Draw Mode Settings"))
+    , backdropSettings_action(new QAction("Background Settings"))
+    , axes_action(new QAction("Draw Axes", this))
+    , invert_zoom_action(new QAction("Invert Zoom", this))
+    , reload_action(new QAction("Reload", this))
+    , autoreload_action(new QAction("Autoreload", this))
+    , save_screenshot_action(new QAction("Save Screenshot", this))
+    , hide_menuBar_action(new QAction("Hide Menu Bar", this))
+    , fullscreen_action(new QAction("Toggle Fullscreen",this))
+    , resetTransformOnLoadAction(new QAction("Reset rotation on load",this))
+    , setGLSizeAction(new QAction("Set Viewport Size",this))
+    , recent_files_group(new QActionGroup(this))
+    , recent_files_clear_action(new QAction("Clear recent files", this))
+    , watcher(new QFileSystemWatcher(this))
+    , layerPeelButton(nullptr)
 {
 #ifndef Q_OS_ANDROID
     // This is to correct wayland error message
@@ -640,9 +666,29 @@ Window::Window(QWidget *parent) :
     // First group
     windowToolBar = new QToolBar;
 #ifdef Q_OS_ANDROID
-    // Make toolbar icons moderately large for touch screens
-    // Use 48x48 which scales better across high-DPI devices than 64x64
-    windowToolBar->setIconSize(QSize(48, 48));
+    // Make Qt use a wider overflow (extension) area on Android
+    windowToolBar->setStyle(new AndroidOverflowStyle(windowToolBar->style()));
+
+    // Use density-independent sizing for consistent icon size across all devices
+    // Physical size calculation: physicalDotsPerInch gives real-world DPI
+    QScreen* screen = QGuiApplication::primaryScreen();
+    qreal physicalDpi = screen->physicalDotsPerInch();
+    qreal logicalDpi = screen->logicalDotsPerInch();
+    qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
+    
+    // Target: ~6mm (0.24 inches) icons = comfortable tap target
+    // At 160 DPI baseline, that's ~38 pixels
+    int iconPx = static_cast<int>(38 * scaleFactor);
+    
+    // Clamp to reasonable range: min 32px, slightly below 64px so we can
+    // squeeze one more icon into the row on narrower phones.
+    iconPx = qBound(32, iconPx, 56);
+    
+    windowToolBar->setIconSize(QSize(iconPx, iconPx));
+    // Base toolbar button styling only
+    windowToolBar->setStyleSheet(
+        "QToolButton { margin: 0px; padding: 2px; }"
+    );
     // Popup menus are disabled on Android to avoid Qt accessibility deadlock
     // The crash happens when QToolButton popup menus try to access OpenGL context
 #endif
@@ -784,9 +830,6 @@ Window::Window(QWidget *parent) :
     viewportSizeButton->setToolTip(resolutionMenu->title());
     viewportSizeButton->setFocusPolicy(Qt::NoFocus); // we do not want the button to have keyboard focus
     viewportSizeButton->setStatusTip(viewportSizeButton->toolTip());
-    windowToolBar->addWidget(viewportSizeButton);
-#endif
-
     windowToolBar->addAction(centerAction);
 
 #ifndef Q_OS_ANDROID
@@ -800,6 +843,7 @@ Window::Window(QWidget *parent) :
     windowToolBar->addAction(fullscreen_action);
 
     windowToolBar->addSeparator();
+#endif
 
     //
     speedMouseButton = new QToolButton;
@@ -810,16 +854,21 @@ Window::Window(QWidget *parent) :
     windowToolBar->addWidget(speedMouseButton);
     connect(speedMouseButton,SIGNAL(clicked(bool)),this,SLOT(onSpeedMouseButton()));
 
+#ifndef Q_OS_ANDROID
     windowToolBar->addSeparator();
     QWidget* spacer = new QWidget();
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     windowToolBar->addWidget(spacer);
-#ifndef Q_OS_ANDROID
     windowToolBar->addAction(help_action);
 #endif
 
 
     this->addToolBar(windowToolBar);
+    windowToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+#ifdef Q_OS_ANDROID
+    // Style Qt's built-in overflow (extension) button once it exists
+    QTimer::singleShot(0, this, [this]() { styleToolbarExtension(); });
+#endif
 
     QLabel* labelMsaa = new QLabel;
     int msaaValue = canvas->getMsaa();
@@ -841,20 +890,53 @@ Window::Window(QWidget *parent) :
     layerPeelButton->setIcon(QIcon(":/qt/icons/resolution_1_32.png")); // layered-planes style icon
     layerPeelButton->setToolTip("Peel back layers");
     layerPeelButton->setFocusPolicy(Qt::NoFocus);
-    layerPeelButton->setIconSize(QSize(64, 64));
+    // Use fixed logical size that Qt will scale appropriately for DPI
+    int iconSize = 48;  // Fixed logical pixels, Qt handles DPI scaling
+    layerPeelButton->setIconSize(QSize(iconSize, iconSize));
     layerPeelButton->setAutoRaise(true);
+    int radius = iconSize / 2;
     layerPeelButton->setStyleSheet(
-        "QToolButton {"
+        QString("QToolButton {"
         "  background-color: rgba(0, 0, 0, 150);"
-        "  border-radius: 32px;"
+        "  border-radius: %1px;"
         "  padding: 8px;"
-        "}"
+        "}").arg(radius)
     );
     connect(layerPeelButton, &QToolButton::clicked, canvas, &Canvas::peelLayerStep);
 #endif
 
     load_persist_settings();
 }
+
+#ifdef Q_OS_ANDROID
+// Style the built-in Qt toolbar overflow button so it's visible and usable
+void Window::styleToolbarExtension()
+{
+    if (!windowToolBar)
+        return;
+
+    if (QToolButton* ext = windowToolBar->findChild<QToolButton*>("qt_toolbar_ext_button")) {
+        int iconPx = windowToolBar->iconSize().width();
+        if (iconPx <= 0)
+            iconPx = 32;
+
+        // Make the chevron itself a touch smaller than other toolbar icons
+        int chevPx = qMax(iconPx - 8, 24);
+
+        ext->setText(QString());
+        ext->setIcon(QIcon(":/qt/icons/toolbar_ext_chevron_white_right.svg"));
+        ext->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        ext->setIconSize(QSize(chevPx, chevPx));
+        ext->setAutoRaise(true);
+        ext->setFocusPolicy(Qt::NoFocus);
+        ext->setStyleSheet(
+            "QToolButton { color: white; background-color: rgba(0,0,0,210);"
+            " border-radius: 6px; margin: 0; padding: 0px; }"
+            "QToolButton::menu-indicator { image: none; width: 0px; }"
+        );
+    }
+}
+#endif
 
 void Window::load_persist_settings(){
     QSettings settings;
@@ -921,7 +1003,7 @@ void Window::load_persist_settings(){
     on_hide_menuBar();
     hide_menuBar_action->blockSignals(false);
 
-    resize(600, 400);
+    // Don't set a hardcoded size - let Qt and Android handle window sizing
     restoreGeometry(settings.value(WINDOW_GEOM_KEY).toByteArray());
     if (this->isFullScreen()) {
         fullscreen_action->blockSignals(true);
@@ -1471,6 +1553,9 @@ void Window::resizeEvent(QResizeEvent *event)
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }
+
+    QWidget::resizeEvent(event);
+
 #ifdef Q_OS_ANDROID
     if (layerPeelButton && canvas) {
         const int margin = 24;
@@ -1479,8 +1564,9 @@ void Window::resizeEvent(QResizeEvent *event)
         layerPeelButton->move(x, y);
         layerPeelButton->raise();
     }
+    // Re-style overflow after resize/orientation changes
+    QTimer::singleShot(0, this, [this]() { styleToolbarExtension(); });
 #endif
-    QWidget::resizeEvent(event);
 }
 
 void Window::moveEvent(QMoveEvent *event)

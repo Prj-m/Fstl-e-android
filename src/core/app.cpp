@@ -12,6 +12,9 @@
 App::App(int& argc, char *argv[]) :
     QApplication(argc, argv), window(new Window())
 {
+#ifdef Q_OS_ANDROID
+    // No global style override; handled per-toolbar in Window
+#endif
     QString fileToOpen;
     
 #ifdef Q_OS_ANDROID

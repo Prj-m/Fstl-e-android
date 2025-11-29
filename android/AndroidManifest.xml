@@ -1,20 +1,23 @@
 <?xml version="1.0"?>
 <manifest package="com.github.prjm.fstl_e" 
           xmlns:android="http://schemas.android.com/apk/res/android" 
-          android:versionName="0.1.0-alpha" 
-          android:versionCode="3"
+android:versionName="0.1.0-alpha.1" 
+          android:versionCode="13"
           android:installLocation="auto">
     <application android:hardwareAccelerated="true" 
                  android:name="org.qtproject.qt.android.bindings.QtApplication" 
                  android:label="fstl-e"
                  android:icon="@mipmap/ic_launcher"
-                 android:roundIcon="@mipmap/ic_launcher_round">
+                 android:roundIcon="@mipmap/ic_launcher_round"
+                 android:resizeableActivity="true"
+                 android:extractNativeLibs="true">
         <activity android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density" 
                   android:name="org.qtproject.qt.android.bindings.QtActivity" 
                   android:label="fstl-e"
                   android:screenOrientation="unspecified" 
                   android:launchMode="singleTop"
                   android:windowSoftInputMode="adjustResize"
+                  android:resizeableActivity="true"
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -32,11 +35,22 @@
                 <data android:host="*"/>
             </intent-filter>
             <meta-data android:name="android.app.lib_name" android:value="fstl_viewer"/>
+            <layout android:defaultWidth="600dp"
+                    android:defaultHeight="800dp"
+                    android:gravity="center"
+                    android:minWidth="450dp"
+                    android:minHeight="500dp"/>
         </activity>
     </application>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
                      android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
                      android:maxSdkVersion="32"/>
-    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34"/>
+    <supports-screens android:resizeable="true"
+                      android:smallScreens="true"
+                      android:normalScreens="true"
+                      android:largeScreens="true"
+                      android:xlargeScreens="true"
+                      android:anyDensity="true"/>
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="35"/>
 </manifest>

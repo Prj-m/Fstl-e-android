@@ -9,6 +9,7 @@
 #include <QToolBar>
 #include <QStatusBar>
 #include <QLabel>
+#include <QTimer>
 
 class Canvas;
 class ShaderLightPrefs;
@@ -34,6 +35,10 @@ protected:
     void moveEvent(QMoveEvent *event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void mousePressEvent(QMouseEvent *event) override;
+#ifdef Q_OS_ANDROID
+    void styleToolbarExtension();
+#endif
+
 
 public slots:
     void on_open();
@@ -166,7 +171,7 @@ private:
 
     // Sequence of specific-view actions (used on Android eye button)
     QList<QAction*> applyViewActions;
-
+ 
     // Android-only floating layer-peel button (bottom-right over canvas)
     QToolButton* layerPeelButton;
 public:
