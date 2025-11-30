@@ -63,7 +63,7 @@ OUTPUT_DIR_DEFAULT="$FSTL_ANDROID_BUILD_DIR/android-build-fstl_viewer"
 
 mkdir -p "$FSTL_ANDROID_OUTPUT_DIR"
 
-echo "[2/3] Running androiddeployqt to generate release App Bundle (.aab)"
+echo "[2/4] Running androiddeployqt to generate release APK(s) for GitHub"
 
 SIGN_ARGS=()
 if [[ "${FSTL_SIGN_WITH_KEYSTORE:-0}" == "1" ]]; then
@@ -74,9 +74,25 @@ if [[ "${FSTL_SIGN_WITH_KEYSTORE:-0}" == "1" ]]; then
   SIGN_ARGS=("--sign" "$FSTL_KEYSTORE" "$FSTL_KEY_ALIAS")
   echo "Signing enabled. androiddeployqt will prompt for keystore/key passwords."
 else
-  echo "Signing disabled (FSTL_SIGN_WITH_KEYSTORE not set). The AAB may need to be"
+  echo "Signing disabled (FSTL_SIGN_WITH_KEYSTORE not set). The APK and AAB may need to be"
   echo "signed separately or used with Google Play App Signing." 
 fi
+
+"$ANDROIDDEPLOYQT" \
+  --input  "$FSTL_DEPLOY_JSON" \
+  --output "$FSTL_ANDROID_OUTPUT_DIR" \
+  --release \
+  "${SIGN_ARGS[@]}"
+
+APK_PATHS=$(find "$FSTL_ANDROID_OUTPUT_DIR" -maxdepth 6 -type f -name "*.apk" || true)
+if [[ -n "$APK_PATHS" ]]; then
+  echo "GitHub APK(s) generated under:"
+  echo "$APK_PATHS"
+else
+  echo "WARNING: No .apk files found under $FSTL_ANDROID_OUTPUT_DIR" >&2
+fi
+
+echo "[3/4] Running androiddeployqt to generate release App Bundle (.aab)"
 
 "$ANDROIDDEPLOYQT" \
   --input  "$FSTL_DEPLOY_JSON" \
@@ -86,9 +102,9 @@ fi
   "${SIGN_ARGS[@]}"
 
 # The resulting AAB is usually under build/outputs/bundle/release/
-AAB_PATH=$(find "$FSTL_ANDROID_OUTPUT_DIR" -maxdepth 5 -type f -name "*.aab" | head -n1 || true)
+AAB_PATH=$(find "$FSTL_ANDROID_OUTPUT_DIR" -maxdepth 6 -type f -name "*.aab" | head -n1 || true)
 
-echo "[3/3] Done."
+echo "[4/4] Done."
 if [[ -n "$AAB_PATH" ]]; then
   echo "Release App Bundle generated at: $AAB_PATH"
 else

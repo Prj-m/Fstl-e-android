@@ -47,9 +47,9 @@ public:
             // Base the width on the toolbar's icon size so it stays proportional
             const QToolBar* tb = qobject_cast<const QToolBar*>(widget);
             int iconExtent = tb ? tb->iconSize().width() : 48;
-            // Make the overflow just a hair narrower than a regular icon cell
-            // so the chevron pill feels tight against the last icon.
-            int extent = qMax(iconExtent - 4, 36);
+            // Make the overflow slightly narrower than a regular icon cell so
+            // it feels compact and close to the last icon.
+            int extent = qMax(iconExtent - 8, 32);
             return extent;
         }
         return QProxyStyle::pixelMetric(metric, option, widget);
@@ -672,17 +672,38 @@ Window::Window(QWidget* parent)
     // Use density-independent sizing for consistent icon size across all devices
     // Physical size calculation: physicalDotsPerInch gives real-world DPI
     QScreen* screen = QGuiApplication::primaryScreen();
-    qreal physicalDpi = screen->physicalDotsPerInch();
-    qreal logicalDpi = screen->logicalDotsPerInch();
+    qreal physicalDpi = screen ? screen->physicalDotsPerInch() : 160.0;
+    qreal logicalDpi = screen ? screen->logicalDotsPerInch() : 160.0;
     qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
     
     // Target: ~6mm (0.24 inches) icons = comfortable tap target
     // At 160 DPI baseline, that's ~38 pixels
     int iconPx = static_cast<int>(38 * scaleFactor);
-    
-    // Clamp to reasonable range: min 32px, slightly below 64px so we can
-    // squeeze one more icon into the row on narrower phones.
-    iconPx = qBound(32, iconPx, 56);
+
+    // Default clamp for phones: 32px–56px
+    int minPx = 32;
+    int maxPx = 56;
+
+    // Detect large / tablet-style layouts using the shortest side in dp so
+    // phones in landscape aren't mis-detected as tablets.
+    if (screen) {
+        QRect geom = screen->geometry();
+        int shortPx = qMin(geom.width(), geom.height());
+        qreal shortDp = (logicalDpi > 0.0)
+                ? (shortPx * 160.0 / logicalDpi)
+                : shortPx;
+        if (shortDp > 720) {
+            // True tablet / external display — bump size a bit
+            iconPx = qMax(iconPx, 52);
+            maxPx = 72;
+        } else if (shortDp > 600) {
+            iconPx = qMax(iconPx, 48);
+            maxPx = 64;
+        }
+    }
+
+    // Clamp to reasonable range: phones unchanged, large screens get slightly bigger icons
+    iconPx = qBound(minPx, iconPx, maxPx);
     
     windowToolBar->setIconSize(QSize(iconPx, iconPx));
     // Base toolbar button styling only
@@ -920,8 +941,8 @@ void Window::styleToolbarExtension()
         if (iconPx <= 0)
             iconPx = 32;
 
-        // Make the chevron itself a touch smaller than other toolbar icons
-        int chevPx = qMax(iconPx - 8, 24);
+        // Make the chevron itself a bit smaller than other toolbar icons
+        int chevPx = qMax(iconPx - 18, 14);
 
         ext->setText(QString());
         ext->setIcon(QIcon(":/qt/icons/toolbar_ext_chevron_white_right.svg"));
