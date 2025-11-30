@@ -7,3 +7,8 @@ build*/
 *.apk
 *.aab
 *.idsig
+
+# Keystores (sensitive)
+*.jks
+*.keystore
+keystore.properties
