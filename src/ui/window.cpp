@@ -47,9 +47,9 @@ public:
             // Base the width on the toolbar's icon size so it stays proportional
             const QToolBar* tb = qobject_cast<const QToolBar*>(widget);
             int iconExtent = tb ? tb->iconSize().width() : 48;
-            // Make the overflow slightly narrower than a regular icon cell so
-            // it feels compact and close to the last icon.
-            int extent = qMax(iconExtent - 8, 32);
+            // Make the chevron button much narrower to fit 6 icons
+            // The chevron icon itself will be smaller inside this button
+            int extent = qMax(iconExtent / 2, 24);
             return extent;
         }
         return QProxyStyle::pixelMetric(metric, option, widget);
@@ -839,7 +839,9 @@ Window::Window(QWidget* parent)
     windowToolBar->addAction(resetTransformOnLoadAction);
 #endif
 
+#ifndef Q_OS_ANDROID
     windowToolBar->addSeparator();
+#endif
     // Third group
 
 #ifndef Q_OS_ANDROID
@@ -872,6 +874,10 @@ Window::Window(QWidget* parent)
     speedMouseButton->setToolTip("Toggle mouse speed adjustment");
     speedMouseButton->setStatusTip(speedMouseButton->toolTip());
     speedMouseButton->setFocusPolicy(Qt::NoFocus);
+#ifdef Q_OS_ANDROID
+    // Remove right margin to eliminate gap before chevron overflow button
+    speedMouseButton->setStyleSheet("QToolButton { margin-right: 0px; }");
+#endif
     windowToolBar->addWidget(speedMouseButton);
     connect(speedMouseButton,SIGNAL(clicked(bool)),this,SLOT(onSpeedMouseButton()));
 
@@ -952,7 +958,7 @@ void Window::styleToolbarExtension()
         ext->setFocusPolicy(Qt::NoFocus);
         ext->setStyleSheet(
             "QToolButton { color: white; background-color: rgba(0,0,0,210);"
-            " border-radius: 6px; margin: 0; padding: 0px; }"
+            " border-radius: 6px; margin: 0; padding: 2px; }"
             "QToolButton::menu-indicator { image: none; width: 0px; }"
         );
     }
