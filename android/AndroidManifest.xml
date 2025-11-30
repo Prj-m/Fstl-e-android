@@ -2,7 +2,7 @@
 <manifest package="com.github.prjm.fstl_e" 
           xmlns:android="http://schemas.android.com/apk/res/android" 
 android:versionName="0.1.0-alpha.1" 
-          android:versionCode="14"
+          android:versionCode="15"
           android:installLocation="auto">
     <application android:hardwareAccelerated="true" 
                  android:name="org.qtproject.qt.android.bindings.QtApplication" 
