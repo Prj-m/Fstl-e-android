@@ -2,3 +2,8 @@ build*/
 *.user
 *.user.*
 .qtcreator/
+
+# Android release binaries
+*.apk
+*.aab
+*.idsig
