@@ -44,13 +44,16 @@ public:
                     const QWidget* widget) const override
     {
         if (metric == QStyle::PM_ToolBarExtensionExtent) {
-            // Base the width on the toolbar's icon size so it stays proportional
             const QToolBar* tb = qobject_cast<const QToolBar*>(widget);
-            int iconExtent = tb ? tb->iconSize().width() : 48;
-            // Make the chevron button much narrower to fit 6 icons
-            // The chevron icon itself will be smaller inside this button
-            int extent = qMax(iconExtent / 2, 24);
-            return extent;
+            if (!tb) return 28;
+            
+            int iconSize = tb->iconSize().width();
+            
+            // Make chevron very narrow to eliminate gap: 50% of icon size, min 24px
+            // This allows maximum visible icons with minimal wasted space
+            int chevronWidth = qMax(static_cast<int>(iconSize * 0.50), 24);
+            
+            return chevronWidth;
         }
         return QProxyStyle::pixelMetric(metric, option, widget);
     }
@@ -678,7 +681,8 @@ Window::Window(QWidget* parent)
     
     // Target: ~6mm (0.24 inches) icons = comfortable tap target
     // At 160 DPI baseline, that's ~38 pixels
-    int iconPx = static_cast<int>(38 * scaleFactor);
+    // Reduced to 32 to fit more icons with minimal gap
+    int iconPx = static_cast<int>(32 * scaleFactor);
 
     // Default clamp for phones: 32px–56px
     int minPx = 32;
@@ -706,9 +710,9 @@ Window::Window(QWidget* parent)
     iconPx = qBound(minPx, iconPx, maxPx);
     
     windowToolBar->setIconSize(QSize(iconPx, iconPx));
-    // Base toolbar button styling only
+    // Remove all padding/margins to maximize space
     windowToolBar->setStyleSheet(
-        "QToolButton { margin: 0px; padding: 2px; }"
+        "QToolButton { margin: 0px; padding: 0px; }"
     );
     // Popup menus are disabled on Android to avoid Qt accessibility deadlock
     // The crash happens when QToolButton popup menus try to access OpenGL context
@@ -947,8 +951,8 @@ void Window::styleToolbarExtension()
         if (iconPx <= 0)
             iconPx = 32;
 
-        // Make the chevron itself a bit smaller than other toolbar icons
-        int chevPx = qMax(iconPx - 18, 14);
+        // Make the chevron icon slightly smaller than toolbar icons
+        int chevPx = qMax(iconPx + 6, 30);
 
         ext->setText(QString());
         ext->setIcon(QIcon(":/qt/icons/toolbar_ext_chevron_white_right.svg"));

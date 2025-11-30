@@ -17,14 +17,19 @@ set -euo pipefail
 #   QT_CMAKE                 - path to CMake from Qt
 #
 # Optional signing (manual password entry):
-#   If FSTL_SIGN_WITH_KEYSTORE=1 is set, the script will pass --sign
-#   arguments to androiddeployqt using:
-#     FSTL_KEYSTORE  - path to JKS keystore
-#     FSTL_KEY_ALIAS - key alias inside keystore
-#   Passwords will NOT be passed on the command line; androiddeployqt
-#   will prompt interactively.
+#   By default this script ENABLES signing using:
+#     FSTL_SIGN_WITH_KEYSTORE=1
+#     FSTL_KEYSTORE  = $REPO_ROOT/android-keystore/fstle-android-release.jks
+#     FSTL_KEY_ALIAS = fstle_release
+#   You can override or disable this by exporting FSTL_SIGN_WITH_KEYSTORE=0
+#   before running the script. Passwords will NOT be passed on the command
+#   line; androiddeployqt will prompt interactively.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+: "${FSTL_SIGN_WITH_KEYSTORE:=1}"
+: "${FSTL_KEYSTORE:=$REPO_ROOT/android-keystore/fstle-android-release.jks}"
+: "${FSTL_KEY_ALIAS:=fstle_release}"
 
 : "${FSTL_ANDROID_BUILD_DIR:=/path/to/AndroidApp/build/Qt_6_10_0_for_Android_arm64_v8a-Debug}"
 DEPLOY_JSON_DEFAULT="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-settings.json"
@@ -33,14 +38,10 @@ DEPLOY_JSON_DEFAULT="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-sett
 QT_CMAKE_DEFAULT="/path/to/Qt/Tools/CMake/bin/cmake"
 : "${QT_CMAKE:=$QT_CMAKE_DEFAULT}"
 
-# Try to infer androiddeployqt from the deployment JSON if not provided
+# Select androiddeployqt if not provided via environment.
+# For this dev setup we default to the host-side tool under gcc_64.
 if [[ -z "${ANDROIDDEPLOYQT:-}" ]]; then
-  if [[ -f "$FSTL_DEPLOY_JSON" ]]; then
-    QT_ANDROID_ROOT=$(grep '"arm64-v8a"' "$FSTL_DEPLOY_JSON" | head -n1 | sed -E 's/.*"arm64-v8a"\s*:\s*"([^"]+)".*/\1/')
-    ANDROIDDEPLOYQT="$QT_ANDROID_ROOT/bin/androiddeployqt"
-  else
-    ANDROIDDEPLOYQT="/path/to/Qt/6.10.0/android_arm64_v8a/bin/androiddeployqt"
-  fi
+  ANDROIDDEPLOYQT="/path/to/Qt/6.10.0/gcc_64/bin/androiddeployqt"
 fi
 
 if [[ ! -x "$ANDROIDDEPLOYQT" ]]; then
@@ -66,7 +67,7 @@ mkdir -p "$FSTL_ANDROID_OUTPUT_DIR"
 echo "[2/4] Running androiddeployqt to generate release APK(s) for GitHub"
 
 SIGN_ARGS=()
-if [[ "${FSTL_SIGN_WITH_KEYSTORE:-0}" == "1" ]]; then
+if [[ "${FSTL_SIGN_WITH_KEYSTORE:-1}" == "1" ]]; then
   if [[ -z "${FSTL_KEYSTORE:-}" || -z "${FSTL_KEY_ALIAS:-}" ]]; then
     echo "ERROR: FSTL_SIGN_WITH_KEYSTORE=1 but FSTL_KEYSTORE or FSTL_KEY_ALIAS not set" >&2
     exit 1
@@ -74,7 +75,7 @@ if [[ "${FSTL_SIGN_WITH_KEYSTORE:-0}" == "1" ]]; then
   SIGN_ARGS=("--sign" "$FSTL_KEYSTORE" "$FSTL_KEY_ALIAS")
   echo "Signing enabled. androiddeployqt will prompt for keystore/key passwords."
 else
-  echo "Signing disabled (FSTL_SIGN_WITH_KEYSTORE not set). The APK and AAB may need to be"
+  echo "Signing disabled (FSTL_SIGN_WITH_KEYSTORE=0). The APK and AAB may need to be"
   echo "signed separately or used with Google Play App Signing." 
 fi
 
