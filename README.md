@@ -17,8 +17,8 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 For users who prefer sideloading or don't have access to Google Play:
 
-- **Lite APK** (STL + 3MF support only, ~35MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-arm64-v8a.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk.sha256)
-- **Full APK** (includes STEP support via OCCT, ~35MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-step.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-debug_20251125_191624.apk.sha256)
+- **Lite APK** (STL + 3MF support only, ~15MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-arm64-v8a.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk.sha256)
+- **Full APK** (includes STEP support via OCCT, ~35MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-debug_20251125_191624.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-debug_20251125_191624.apk.sha256)
 
 > **Note:** Google Play version includes all features (STEP support) and receives automatic updates.
 
