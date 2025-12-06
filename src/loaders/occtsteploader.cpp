@@ -44,7 +44,7 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
 #ifdef Q_OS_ANDROID
     if (filename.startsWith("content://") || filename.startsWith(":/")) {
         QTemporaryFile tmp(QDir::tempPath() + "/fstl_step_XXXXXX.stp");
-        tmp.setAutoRemove(false); // remove manually after OCCT is done
+        tmp.setAutoRemove(false); // Will be removed manually after OCCT processing
         if (!tmp.open()) {
             qWarning() << "OCCT STEP: Failed to create temporary STEP file" << tmp.errorString();
             return false;
