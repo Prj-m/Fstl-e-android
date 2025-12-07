@@ -1022,7 +1022,11 @@ void Canvas::setBackdropCorners(const QColor& tl, const QColor& tr,
     if (backdrop) {
         backdrop->setColors(tl, tr, bl, br);
     }
+#ifndef Q_OS_ANDROID
+    // On Android, skip update() to avoid Qt 6 RHI deadlock (QTBUG-108762)
+    // Background will update on next natural repaint (touch, rotation, etc.)
     update();
+#endif
 }
 
 void Canvas::setBackdropTLCorner(const QColor& color) {
@@ -1032,7 +1036,9 @@ void Canvas::setBackdropTLCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setTopLeft(color);
     }
+#ifndef Q_OS_ANDROID
     update();
+#endif
 }
 
 void Canvas::setBackdropTRCorner(const QColor& color) {
@@ -1042,7 +1048,9 @@ void Canvas::setBackdropTRCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setTopRight(color);
     }
+#ifndef Q_OS_ANDROID
     update();
+#endif
 }
 
 void Canvas::setBackdropBLCorner(const QColor& color) {
@@ -1052,7 +1060,9 @@ void Canvas::setBackdropBLCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setBottomLeft(color);
     }
+#ifndef Q_OS_ANDROID
     update();
+#endif
 }
 
 void Canvas::setBackdropBRCorner(const QColor& color) {
@@ -1062,7 +1072,9 @@ void Canvas::setBackdropBRCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setBottomRight(color);
     }
+#ifndef Q_OS_ANDROID
     update();
+#endif
 }
 
 void Canvas::loadBackdropFromSettings() {

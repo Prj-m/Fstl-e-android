@@ -5,6 +5,8 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QStringList>
+#include <QListWidget>
 
 class Canvas;
 #ifdef Q_OS_ANDROID
@@ -30,6 +32,10 @@ private slots:
     void onBRColorButtonClicked();
     void onResetButtonClicked();
     void okButtonClicked();
+#ifdef Q_OS_ANDROID
+    void onPresetButtonClicked();
+    void onPresetItemClicked(QListWidgetItem* item);
+#endif
 
 public:
 #ifdef Q_OS_ANDROID
@@ -45,7 +51,6 @@ private:
 
 private:
     Canvas* canvas;
-    QComboBox* comboBackdropPresets;
     QPushButton* buttonColorTL;
     QPushButton* buttonColorTR;
     QPushButton* buttonColorBL;
@@ -55,6 +60,13 @@ private:
     enum PlaneTargetCorner { CornerTL, CornerTR, CornerBL, CornerBR };
     BackdropColorPlane* colorPlane;
     PlaneTargetCorner planeTarget;
+    QStringList presetNames;
+    int currentPresetIndex;
+    QWidget* presetContainer;
+    QPushButton* presetButton;
+    QListWidget* presetListWidget;
+#else
+    QComboBox* comboBackdropPresets;
 #endif
 
     const static QString BACKDROP_TOP_LEFT_CUSTOM;

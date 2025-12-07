@@ -85,7 +85,6 @@ private:
 BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas) : QWidget(parent)
 {
     canvas = _canvas;
-
     this->setMinimumWidth(400);
 
     auto* mainLayout = new QVBoxLayout(this);
@@ -128,8 +127,38 @@ BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas)
     presetLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     mainGrid->addWidget(presetLabel, 0, 0);
 
+#ifdef Q_OS_ANDROID
+    // On Android: Use custom inline list widget to avoid OpenGL conflicts with dialogs/popups
+    presetNames << "Custom Colors" << "Standard" << "Neutral" << "Light Grey" << "Blueprint" 
+                << "Dark Studio" << "Warm" << "Neon Studio" << "Sunset" << "Cyber Tech" 
+                << "Chocolate" << "Extreme RGB";
+    currentPresetIndex = canvas->getBackdropPresetIndex();
+    
+    // Container for button + list
+    presetContainer = new QWidget;
+    auto* presetLayout = new QVBoxLayout(presetContainer);
+    presetLayout->setContentsMargins(0, 0, 0, 0);
+    presetLayout->setSpacing(0);
+    
+    presetButton = new QPushButton(presetNames.at(currentPresetIndex));
+    presetButton->setFocusPolicy(Qt::NoFocus);
+    connect(presetButton, &QPushButton::clicked, this, &BackdropSettingsDialog::onPresetButtonClicked);
+    presetLayout->addWidget(presetButton);
+    
+    // Inline list widget (hidden by default)
+    presetListWidget = new QListWidget;
+    presetListWidget->addItems(presetNames);
+    presetListWidget->setCurrentRow(currentPresetIndex);
+    presetListWidget->setMaximumHeight(200);
+    presetListWidget->setVisible(false);
+    connect(presetListWidget, &QListWidget::itemClicked, this, &BackdropSettingsDialog::onPresetItemClicked);
+    presetLayout->addWidget(presetListWidget);
+    
+    mainGrid->addWidget(presetContainer, 0, 1);
+#else
     comboBackdropPresets = new QComboBox;
     comboBackdropPresets->setFocusPolicy(Qt::NoFocus);
+    
     comboBackdropPresets->addItem("Custom Colors", 0);
     comboBackdropPresets->addItem("Standard", 1);
     comboBackdropPresets->addItem("Neutral", 2);
@@ -146,6 +175,7 @@ BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas)
 
     mainGrid->addWidget(comboBackdropPresets, 0, 1);
     connect(comboBackdropPresets,SIGNAL(currentIndexChanged(int)), this, SLOT(onPresetChanged(int)));
+#endif
 
     canvas->loadBackdropFromSettings();
 
@@ -205,7 +235,12 @@ BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas)
 
 void BackdropSettingsDialog::onPresetChanged(const int index)
 {
+#ifdef Q_OS_ANDROID
+    // On Android, index is the preset ID directly
+    const int presetId = index;
+#else
     const int presetId = comboBackdropPresets->itemData(index).toInt();
+#endif
     canvas->setBackdropPresetIndex(presetId);
 
     switch (presetId)
@@ -302,6 +337,7 @@ void BackdropSettingsDialog::onPresetChanged(const int index)
     default: ;
     }
 
+    // Update button icons immediately
     buttonColorTL->setIcon(createColorPatch(canvas->backdropTL));
     buttonColorTR->setIcon(createColorPatch(canvas->backdropTR));
     buttonColorBL->setIcon(createColorPatch(canvas->backdropBL));
@@ -413,7 +449,14 @@ void BackdropSettingsDialog::applyCustomPreset() const
 {
     setCustomBackdropCorners(canvas->backdropTL, canvas->backdropTR,
                              canvas->backdropBL, canvas->backdropBR);
-    comboBackdropPresets->setCurrentIndex(0); // Custom Colors
+#ifndef Q_OS_ANDROID
+    if (comboBackdropPresets) {
+        // Block signals to prevent triggering onPresetChanged() recursion
+        comboBackdropPresets->blockSignals(true);
+        comboBackdropPresets->setCurrentIndex(0); // Custom Colors
+        comboBackdropPresets->blockSignals(false);
+    }
+#endif
 }
 
 #ifdef Q_OS_ANDROID
@@ -438,19 +481,54 @@ void BackdropSettingsDialog::applyPlaneColor(const QColor& c)
         buttonColorBR->setIcon(createColorPatch(c));
         break;
     }
-    canvas->update();
+    // Note: canvas->update() removed to avoid Qt 6 Android OpenGL deadlock
+    // Background will update on next natural repaint event
     applyCustomPreset();
+}
+
+void BackdropSettingsDialog::onPresetButtonClicked()
+{
+    // Toggle inline list visibility
+    if (presetListWidget) {
+        presetListWidget->setVisible(!presetListWidget->isVisible());
+    }
+}
+
+void BackdropSettingsDialog::onPresetItemClicked(QListWidgetItem* item)
+{
+    if (!item) return;
+    
+    int newIndex = presetListWidget->row(item);
+    if (newIndex >= 0 && newIndex < presetNames.size() && newIndex != currentPresetIndex) {
+        currentPresetIndex = newIndex;
+        
+        // Update button text
+        if (presetButton) {
+            presetButton->setText(presetNames.at(newIndex));
+        }
+        
+        // Apply preset
+        onPresetChanged(newIndex);
+    }
+    
+    // Hide list after selection
+    if (presetListWidget) {
+        presetListWidget->setVisible(false);
+    }
 }
 #endif
 
 bool BackdropSettingsDialog::confirmCustomColorChange()
 {
-    // If current preset is not "Custom Colors", switching to a manual color
-    // change will flip the preset back to Custom. We just do it silently.
-    if (comboBackdropPresets->currentIndex() != 0) {
+#ifndef Q_OS_ANDROID
+    if (comboBackdropPresets && comboBackdropPresets->currentIndex() != 0) {
+        // Block signals to prevent triggering onPresetChanged() recursion
+        comboBackdropPresets->blockSignals(true);
         comboBackdropPresets->setCurrentIndex(0);
+        comboBackdropPresets->blockSignals(false);
         restoreCustomBackdropCorners();
     }
+#endif
     return true;
 }
 
@@ -468,6 +546,11 @@ void BackdropSettingsDialog::moveEvent(QMoveEvent *event)
 
 void BackdropSettingsDialog::onResetButtonClicked()
 {
+#ifdef Q_OS_ANDROID
+    // On Android, reset to Standard preset directly
+    currentPresetIndex = 1; // Standard
+    onPresetChanged(1);
+#else
     // Reset to the Standard preset (id 1) which restores default backdrop colors
     int standardIndex = -1;
     for (int i = 0; i < comboBackdropPresets->count(); ++i) {
@@ -479,6 +562,7 @@ void BackdropSettingsDialog::onResetButtonClicked()
     if (standardIndex >= 0) {
         comboBackdropPresets->setCurrentIndex(standardIndex);
     }
+#endif
 }
 
 void BackdropSettingsDialog::okButtonClicked()
@@ -486,3 +570,4 @@ void BackdropSettingsDialog::okButtonClicked()
     // Close/hide the settings panel after user confirms selection
     this->close();
 }
+
