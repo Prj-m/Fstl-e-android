@@ -3,7 +3,7 @@
 <p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="600"></p>
 
 
-**Status: Alpha** - Core functionality working, but still in active development.
+**Status: Beta** - Stable with all core features working. Ready for production use.
 
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
 
@@ -17,10 +17,15 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 For users who prefer sideloading or don't have access to Google Play:
 
-- **Lite APK** (STL + 3MF support only, ~15MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-arm64-v8a.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-arm64-v8a.apk.sha256)
-- **Full APK** (includes STEP support via OCCT, ~35MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/latest/download/fstl-e-android-debug_20251125_191624.apk) | [SHA-256](https://github.com/Prj-m/fstl-e-android/raw/main/dist/fstl-e-android-debug_20251125_191624.apk.sha256)
+- **ARM64 APK** (v1.0.3, ~16MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-arm64-v8a.apk)
 
-> **Note:** Google Play version includes all features (STEP support) and receives automatic updates.
+> **Note:** Google Play version includes all features and receives automatic updates.
+
+### What's New in v1.0.3
+
+- **Fixed critical crash** in Background Color Settings preset dropdown
+- Replaced problematic QComboBox with stable inline list widget on Android
+- Improved stability and reliability across all Android devices
 
 ## Features
 
