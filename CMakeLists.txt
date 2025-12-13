@@ -150,34 +150,57 @@ target_link_libraries(fstl_viewer
 
 # Optional: full STEP support via Open CASCADE (desktop or heavy Android build)
 if(ENABLE_OCCT_STEP)
-    # If OpenCASCADE_DIR was not provided, try a default sibling directory
-    # where occt-android is commonly built/installed on this project layout.
-    if(NOT OpenCASCADE_DIR)
-        set(_OCCT_DEFAULT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/lib/cmake/opencascade")
-        if(EXISTS "${_OCCT_DEFAULT_DIR}")
-            set(OpenCASCADE_DIR "${_OCCT_DEFAULT_DIR}" CACHE PATH "OpenCASCADE install directory" FORCE)
+    if(ANDROID)
+        # For Android, manually link OCCT libraries from android/libs
+        set(OCCT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/libs/${ANDROID_ABI}")
+        set(OCCT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/include/opencascade")
+        if(EXISTS "${OCCT_LIB_DIR}" AND EXISTS "${OCCT_INCLUDE_DIR}")
+            message(STATUS "Linking OCCT libraries from ${OCCT_LIB_DIR}")
+            target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
+            target_include_directories(fstl_viewer PRIVATE "${OCCT_INCLUDE_DIR}")
+            
+            # Core OCCT libraries for STEP support
+            target_link_libraries(fstl_viewer PRIVATE
+                ${OCCT_LIB_DIR}/libTKDESTEP.so
+                ${OCCT_LIB_DIR}/libTKXSBase.so
+                ${OCCT_LIB_DIR}/libTKBRep.so
+                ${OCCT_LIB_DIR}/libTKGeomBase.so
+                ${OCCT_LIB_DIR}/libTKGeomAlgo.so
+                ${OCCT_LIB_DIR}/libTKMesh.so
+                ${OCCT_LIB_DIR}/libTKTopAlgo.so
+                ${OCCT_LIB_DIR}/libTKG3d.so
+                ${OCCT_LIB_DIR}/libTKG2d.so
+                ${OCCT_LIB_DIR}/libTKMath.so
+                ${OCCT_LIB_DIR}/libTKernel.so
+            )
+        else()
+            message(WARNING "OCCT libraries not found in ${OCCT_LIB_DIR} - using internal STEP parser")
         endif()
-        unset(_OCCT_DEFAULT_DIR)
-    endif()
-
-    # OpenCASCADE 8.x exposes modules like FoundationClasses / DataExchange, and
-    # defines imported library targets such as TKDESTEP, TKXSBase, TKBRep, etc.
-    # We don't request individual components here; we just need the libraries
-    # necessary for STEP import and meshing.
-    find_package(OpenCASCADE QUIET)
-    if(OpenCASCADE_FOUND)
-        message(STATUS "OpenCASCADE found - enabling full STEP support")
-        target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
-        target_link_libraries(fstl_viewer PRIVATE
-            TKDESTEP
-            TKXSBase
-            TKBRep
-            TKGeomBase
-            TKGeomAlgo
-            TKMesh
-        )
     else()
-        message(WARNING "ENABLE_OCCT_STEP=ON but OpenCASCADE not found - falling back to internal STEP parser")
+        # Desktop: use find_package
+        if(NOT OpenCASCADE_DIR)
+            set(_OCCT_DEFAULT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/lib/cmake/opencascade")
+            if(EXISTS "${_OCCT_DEFAULT_DIR}")
+                set(OpenCASCADE_DIR "${_OCCT_DEFAULT_DIR}" CACHE PATH "OpenCASCADE install directory" FORCE)
+            endif()
+            unset(_OCCT_DEFAULT_DIR)
+        endif()
+
+        find_package(OpenCASCADE QUIET)
+        if(OpenCASCADE_FOUND)
+            message(STATUS "OpenCASCADE found - enabling full STEP support")
+            target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
+            target_link_libraries(fstl_viewer PRIVATE
+                TKDESTEP
+                TKXSBase
+                TKBRep
+                TKGeomBase
+                TKGeomAlgo
+                TKMesh
+            )
+        else()
+            message(WARNING "ENABLE_OCCT_STEP=ON but OpenCASCADE not found - falling back to internal STEP parser")
+        endif()
     endif()
 endif()
 
