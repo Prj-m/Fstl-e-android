@@ -17,14 +17,13 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 For users who prefer sideloading or don't have access to Google Play:
 
-- **Lite APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-lite.apk)
-- **Full APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-full.apk)
+- **ARM64 APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-arm64.apk)
 
-Both APKs are functionally identical and include full OCCT STEP support.
+Includes full OCCT STEP support for enhanced geometry loading.
 
 > **Note:** Google Play version includes all features and receives automatic updates.
 > 
-> **Important:** Users upgrading from v1.0.2 must uninstall the old version first due to signing certificate change.
+> **Important:** Users upgrading from v1.0.2 may need to uninstall the old version first.
 
 ### What's New in v1.0.3
 
