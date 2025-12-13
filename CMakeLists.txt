@@ -94,6 +94,7 @@ if(ANDROID)
         QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION 35
         QT_ANDROID_ABIS "arm64-v8a"
+        QT_ANDROID_NO_COMPRESS_RESOURCES_ARS YES
     )
     
     # Disable Qt Accessibility on Android to prevent OpenGL deadlock crashes
