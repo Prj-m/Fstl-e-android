@@ -17,13 +17,19 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and 
 
 For users who prefer sideloading or don't have access to Google Play:
 
-- **ARM64 APK** (v1.0.3, ~16MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-arm64-v8a.apk)
+- **Lite APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-lite.apk)
+- **Full APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-full.apk)
+
+Both APKs are functionally identical and include full OCCT STEP support.
 
 > **Note:** Google Play version includes all features and receives automatic updates.
+> 
+> **Important:** Users upgrading from v1.0.2 must uninstall the old version first due to signing certificate change.
 
 ### What's New in v1.0.3
 
 - **Fixed critical crash** in Background Color Settings preset dropdown
+- **Integrated OCCT libraries** for enhanced STEP file support
 - Replaced problematic QComboBox with stable inline list widget on Android
 - Improved stability and reliability across all Android devices
 
@@ -37,13 +43,13 @@ For users who prefer sideloading or don't have access to Google Play:
 - Displays mesh information (triangle count, dimensions)
 - Supports Android's scoped storage (content URIs)
 
-**Note:** STEP file support is experimental and limited to basic geometry. Complex STEP files may not load correctly.
+**Note:** STEP file support uses OpenCASCADE (OCCT) libraries and supports most standard STEP geometry.
 
 ## Building
 
-### Android (lite build, no OCCT)
+### Android (with OCCT)
 
-Requires Qt 6.5+ for Android (tested with Qt 6.10).
+Requires Qt 6.5+ for Android (tested with Qt 6.10). OCCT libraries are bundled in the `android/libs` directory.
 
 ```bash
 mkdir build && cd build
