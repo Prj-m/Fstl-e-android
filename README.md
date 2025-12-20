@@ -3,8 +3,7 @@
 <p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="600"></p>
 
 
-**Status: Beta** - Stable with all core features working. Ready for production use.
-
+**Status: Beta** - Stable with all core features working.
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
 
 ## Download
