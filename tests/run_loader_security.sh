@@ -24,7 +24,7 @@ read -r -a qt_flags <<< "$(pkg-config --cflags --libs Qt6Core Qt6Gui Qt6OpenGL)"
     "$root/tests/loader_security.cpp" "$root/src/core/loader.cpp" \
     "$root/src/core/mesh.cpp" "$root/src/loaders/stepmeshloader.cpp" \
     "$root/src/loaders/occtsteploader.cpp" "$build_dir/moc_loader.cpp" \
-    "${qt_flags[@]}" -pthread -o "$build_dir/loader_security"
+    "${qt_flags[@]}" -lz -pthread -o "$build_dir/loader_security"
 # LeakSanitizer cannot run under ptrace in some managed workspaces.
 # Address and undefined-behavior checks remain enabled.
 ASAN_OPTIONS="detect_leaks=0${ASAN_OPTIONS:+:$ASAN_OPTIONS}" "$build_dir/loader_security"

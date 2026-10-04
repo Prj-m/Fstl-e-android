@@ -4,13 +4,13 @@
 
 #include "core/loader.h"
 #include "core/importlimits.h"
+#include "core/boundedzip.h"
 #include "core/vertex.h"
 #include "loaders/stepmeshloader.h"
 #include "loaders/occtsteploader.h"
 #include <QXmlStreamReader>
 #include <QFile>
 #include <QVector3D>
-#include <QtCore/private/qzipreader_p.h>
 
 #ifdef Q_OS_ANDROID
 #include <android/log.h>
@@ -384,45 +384,10 @@ Mesh* Loader::load_3mf()
     }
     ALOG("File opened successfully, size: %lld", file.size());
     
-    // Use Qt's built-in ZIP reader
-    QZipReader zip(&file);
-    if (!zip.isReadable())
+    QByteArray modelData;
+    if (!readBounded3mfModel(file, modelData))
     {
-        ALOG("3MF file is NOT readable as ZIP");
-        emit error_bad_stl();
-        return nullptr;
-    }
-    
-    ALOG("ZIP is readable, listing entries...");
-    auto entries = zip.fileInfoList();
-    ALOG("ZIP contains %d entries", int(entries.size()));
-    for (const auto& entry : entries)
-    {
-        if ((entry.filePath == "3D/3dmodel.model" || entry.filePath == "3d/3dmodel.model") &&
-            (entry.size < 0 || entry.size > ImportLimits::ModelXmlBytes))
-        {
-            emit error_bad_stl();
-            return nullptr;
-        }
-    }
-    
-    // Read the 3D model XML from the ZIP
-    QByteArray modelData = zip.fileData("3D/3dmodel.model");
-    if (modelData.isEmpty())
-    {
-        ALOG("Failed to find 3D/3dmodel.model, trying case variations...");
-        // Try alternative paths
-        modelData = zip.fileData("3d/3dmodel.model");
-        if (modelData.isEmpty())
-        {
-            ALOG("FAILED to find model file in 3MF");
-            emit error_bad_stl();
-            return nullptr;
-        }
-    }
-    
-    if (modelData.size() > ImportLimits::ModelXmlBytes)
-    {
+        ALOG("Invalid or oversized 3MF model archive");
         emit error_bad_stl();
         return nullptr;
     }
@@ -435,15 +400,32 @@ Mesh* Loader::load_3mf()
     QVector<float> vertex_coords;  // Store all vertex coordinates
     uint32_t tri_count = 0;
     int vertex_count = 0;
+    int object_count = 0, mesh_count = 0, item_count = 0;
     
     while (!xml.atEnd())
     {
         xml.readNext();
+        if (xml.tokenType() == QXmlStreamReader::DTD)
+        {
+            emit error_bad_stl();
+            return nullptr;
+        }
         
         if (xml.isStartElement())
         {
             // Use localName() to ignore namespaces
             QString elemName = xml.name().toString();
+            // This viewer supports a single untransformed mesh. Reject
+            // assemblies instead of silently rendering the wrong geometry.
+            if ((elemName == "object" && ++object_count > 1)
+                || (elemName == "mesh" && ++mesh_count > 1)
+                || (elemName == "item" && ++item_count > 1)
+                || elemName == "components" || elemName == "component"
+                || xml.attributes().hasAttribute("transform"))
+            {
+                emit error_bad_stl();
+                return nullptr;
+            }
             
             if (elemName == "vertex" || elemName.endsWith(":vertex"))
             {
@@ -654,4 +636,3 @@ Mesh* Loader::read_stl_ascii(QFile& file)
         return NULL;
     }
 }
-

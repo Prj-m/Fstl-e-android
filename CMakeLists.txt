@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
+find_package(ZLIB REQUIRED)
 
 # Find required Qt packages for Android
 find_package(Qt6 REQUIRED COMPONENTS 
@@ -54,6 +55,7 @@ set(PROJECT_SOURCES
     src/core/loader.cpp
     include/core/app.h
     include/core/loader.h
+    include/core/boundedzip.h
     include/core/mesh.h
     include/core/vertex.h
     
@@ -148,6 +150,7 @@ endforeach()
 # Link required Qt modules
 target_link_libraries(fstl_viewer
     PRIVATE
+        ZLIB::ZLIB
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
