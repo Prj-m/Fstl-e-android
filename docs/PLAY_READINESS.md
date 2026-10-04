@@ -12,6 +12,7 @@ Status on 2026-10-04: **not ready for production**. Local checks are evidence of
 | API target | Installed APK targets 35; source now targets 36 | Confirm packaged manifest and Android 16 behavior |
 | Parser safety | 25 host sanitizer checks pass for malformed STL/3MF; arithmetic/indexing and STEP temporary-file fixes prepared | Bound file/decompression/mesh resources and test malformed/large inputs on device; review fallback STEP and multi-object 3MF correctness |
 | CI | 16 local pipeline unit tests and host viewer compile pass | Hosted desktop and Android workflows must pass on the exact reviewed commit |
+| Dependency updates | Qt pin updated from 6.10.0 to 6.11.3 after checking official advisories | Verify packaged modules/SBOM against relevant advisories and third-party vulnerabilities |
 | Package hardening | Release Gradle configuration disables debugging; source disables backup and cleartext traffic | Confirm the merged release manifest, permissions, component exports and packaged SDKs |
 | Privacy/licensing | Source has no INTERNET permission or identified analytics/ads integration | Verify final package; publish accurate privacy policy, Data safety and Qt/OCCT notices |
 | Play delivery | Console account, track state, highest code and credentials unknown | Establish signing identity, increment version code, use internal testing and examine the pre-launch report |
@@ -40,3 +41,5 @@ Signed delivery should be a separate protected workflow using environment secret
 - [Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756)
 - [Pre-launch reports](https://support.google.com/googleplay/android-developer/answer/9842757)
 - [Personal-account testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465)
+
+Dependency advisory source: [Qt known vulnerabilities](https://wiki.qt.io/List_of_known_vulnerabilities_in_Qt_products). The version update does not prove every advisory is resolved or relevant; reachability and bundled third-party dependencies still require review.
