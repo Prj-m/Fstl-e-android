@@ -8,10 +8,11 @@ Status on 2026-10-04: **not ready for production**. Local checks are evidence of
 | --- | --- | --- |
 | Existing installation | Samsung SM-F936U, Android 14/API 34, arm64, 4 KB pages; v1.0.3/code 19 launched successfully | Test the new release candidate, including Play installation and upgrades |
 | Native compatibility | Installed APK fails 16 KB ELF alignment at `libTKBO.so` | Rebuild all native dependencies; verify AAB, generated APK ZIP alignment and 16 KB runtime |
-| Signing | Installed APK is debuggable; extracted v2 certificate subject is Android Debug | Verify signatures with apksigner; compare Play upload and app-signing fingerprints; preserve the existing keys |
+| Signing | Installed APK is debuggable; extracted v2 certificate subject is Android Debug | Installed APK signature verified with apksigner; compare Play upload and app-signing fingerprints; preserve the existing keys |
 | API target | Installed APK targets 35; source now targets 36 | Confirm packaged manifest and Android 16 behavior |
-| Parser safety | 25 host sanitizer checks pass for malformed STL/3MF; arithmetic/indexing and STEP temporary-file fixes prepared | Bound file/decompression/mesh resources and test malformed/large inputs on device; review fallback STEP and multi-object 3MF correctness |
-| CI | 16 local pipeline unit tests and host viewer compile pass | Hosted desktop and Android workflows must pass on the exact reviewed commit |
+| Parser safety | 30 host import/URI sanitizer checks pass for malformed STL/3MF; arithmetic/indexing and STEP temporary-file fixes prepared | Input, declared XML and output mesh budgets added; test device memory/CPU behavior and deceptive ZIP metadata, and review multi-object 3MF correctness |
+| Branch protection | GitHub reports `main` unprotected and no rulesets | Require PRs and desktop/Android checks; block force pushes and deletion; current connector cannot change administration settings |
+| CI | 25 local pipeline unit tests and host viewer compile pass | Hosted desktop and Android workflows must pass on the exact reviewed commit |
 | Dependency updates | Qt pin updated from 6.10.0 to 6.11.3 after checking official advisories | Verify packaged modules/SBOM against relevant advisories and third-party vulnerabilities |
 | Package hardening | Release Gradle configuration disables debugging; source disables backup and cleartext traffic | Confirm the merged release manifest, permissions, component exports and packaged SDKs |
 | Privacy/licensing | Source has no INTERNET permission or identified analytics/ads integration | Verify final package; publish accurate privacy policy, Data safety and Qt/OCCT notices |
@@ -21,7 +22,7 @@ Installed APK extracted public certificate SHA-256:
 
 `e79cd0680f942ce50dfd44041aae51fd4d29a8a3b65bcbda22e0208b5e2f5c35`
 
-Extraction does not verify an APK signature and does not establish which identity Play uses. Never upload debug-signed `.dev` APKs to Play. The CI phone package uses a separate application ID; testing it cannot establish upgrade compatibility for the release package.
+The installed APK signature was subsequently verified with apksigner. This does not establish which identity Play uses. Never upload debug-signed `.dev` APKs to Play. The CI phone package uses a separate application ID; testing it cannot establish upgrade compatibility for the release package.
 
 ## Production acceptance
 
@@ -43,3 +44,9 @@ Signed delivery should be a separate protected workflow using environment secret
 - [Personal-account testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465)
 
 Dependency advisory source: [Qt known vulnerabilities](https://wiki.qt.io/List_of_known_vulnerabilities_in_Qt_products). The version update does not prove every advisory is resolved or relevant; reachability and bundled third-party dependencies still require review.
+
+The Android workflow uses checksummed bundletool 1.18.3 to validate the AAB structure and dump the actual packaged manifest. Automated checks reject a debug release, wrong package, target API below 36, enabled backup/cleartext, new unreviewed permissions and additional exported components. Set `FSTL_PLAY_HIGHEST_VERSION_CODE` when running `bash scripts/check_android_release.sh <release.aab>` to enforce the Console version floor. This validator does not authenticate the upload signing identity or authorize production.
+
+Import limits now reject source files over 128 MiB, declared/extracted 3MF model XML over 32 MiB, over 1,000,000 3MF coordinates and over 1,000,000 output triangles. STEP staging counts bytes as it copies. STL file stability polling is bounded. These limits do not bound OCCT internal allocation/meshing time or guarantee a hard decompression memory limit when ZIP size metadata lies. The full-OCCT release rejects failed STEP imports instead of invoking the reduced fallback that can invent geometry from points. Import-thread exceptions are converted to an error signal; process termination and library aborts remain outside that mechanism.
+
+Branch policy should enforce checks for administrators as well. Require an independent approval when a second maintainer is available; the owner cannot approve their own PR. Requiring an unavailable reviewer would lock a solo-maintainer workflow. No protection setting has been changed.

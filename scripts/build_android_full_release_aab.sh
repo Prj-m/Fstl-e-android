@@ -64,6 +64,10 @@ deploy_json="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-settings.jso
 [[ -s "$deploy_json" ]] || fail "Qt deployment settings were not generated"
 # A new packaging directory prevents an old AAB from passing artifact checks.
 output_dir="$(mktemp -d "$FSTL_ANDROID_BUILD_DIR/android-release.XXXXXX")"
+native_library="$FSTL_ANDROID_BUILD_DIR/libfstl_viewer_arm64-v8a.so"
+[[ -s "$native_library" ]] || { echo "Missing compiled arm64 viewer library" >&2; exit 1; }
+mkdir -p "$output_dir/libs/arm64-v8a"
+cp "$native_library" "$output_dir/libs/arm64-v8a/"
 "$ANDROIDDEPLOYQT" --input "$deploy_json" --output "$output_dir" --release --aab "${sign_args[@]}"
 [[ -f "$output_dir/gradlew" ]] || fail "Qt did not generate a Gradle wrapper"
 (cd "$output_dir" && bash ./gradlew --no-daemon lintRelease)

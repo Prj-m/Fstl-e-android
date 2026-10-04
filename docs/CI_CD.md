@@ -23,6 +23,8 @@ The first Android run can take considerably longer while compiling OCCT. Later r
 4. Verify the artifact checksum. The AAB is unsigned: it cannot be uploaded to Play or installed directly. For phone testing, generate APKs from it with bundletool using a local test key, or produce a signed local build using the confirmed production/upload identity. APKs signed with a different key cannot upgrade an existing installation; use a spare test device/profile rather than uninstalling an app with settings you want to keep.
 5. Once the hosted workflows have passed, make **Build and regression checks** a required pull-request check in the repository rules. Keep changes on branches and merge after checks pass.
 
+The workflow also validates the actual AAB manifest with checksummed bundletool before artifact upload. `FSTL_PLAY_HIGHEST_VERSION_CODE` can enforce the Play version floor during local validation.
+
 No branch rules, signing keys, Play Console state or GitHub releases are changed by these workflows. They build and retain validation artifacts for 14 days.
 
 ## Local Android build
@@ -38,6 +40,7 @@ export FSTL_OCCT_SOURCE="/path/to/occt-source"
 export FSTL_OCCT_ROOT="/path/to/occt-install"
 bash scripts/build_occt_android.sh
 bash scripts/build_android_full_release_aab.sh
+bash scripts/check_android_release.sh build/android-release/artifacts/fstl-e-arm64-release.aab
 ```
 
 For an interactive local signing build, set `FSTL_SIGN_WITH_KEYSTORE=1`, `FSTL_KEYSTORE` and `FSTL_KEY_ALIAS`. The deploy tool prompts for passwords. Keep signing files outside the repository; do not put passwords in scripts, command arguments or workflow files. Preserve the original key and encrypted backups until its role is confirmed.
@@ -56,6 +59,16 @@ bash scripts/deploy_android_phone.sh build/android-release/phone-artifacts/fstl-
 
 Packaging requires lint, native alignment, APK signature and ZIP alignment checks, and verifies the separate package ID before exporting. Deployment rejects release package IDs and uses `adb install -r -t`; it does not uninstall or clear app data. Files opened through startup intents or subsequent file-open events retain their complete content URI. STEP/STP filename filters are now included. Provider URIs without extensions and permission persistence still require device testing.
 
+On this CachyOS workstation, the inspection/install tools can be enabled in the current shell with:
+
+```bash
+export JAVA_HOME="$HOME/.local/share/fstle-android/jdk17"
+export PATH="$JAVA_HOME/bin:$PATH"
+export ANDROID_SDK_ROOT="$HOME/.local/share/fstle-android/sdk"
+```
+
+The CI download can be installed directly with the deployment script after verifying its checksum. For local builds, also set the Qt/OCCT paths from the build section below.
+
 ## Next stage: signed testing delivery
 
 After the unsigned pipeline passes and a phone confirms the build behaves correctly:
@@ -71,6 +84,6 @@ This stage is intentionally not wired to unknown credentials. Google's [Play App
 
 ## Phone testing
 
-On the development computer with Android platform tools installed, connect your phone with USB debugging enabled and accept the phone's authorization prompt. Confirm it appears with `adb devices -l`. The current CachyOS workstation has ADB access to an authorized Samsung SM-F936U running Android 14 (API 34), arm64-v8a, with 4 KB pages. The installed v1.0.3 is debuggable and an OCCT library fails the native 16 KB alignment check. It is a baseline only, not a release candidate. Android SDK/NDK, Qt Android kit and Java are still missing locally. CMake, Ninja and ShellCheck have now been installed in a temporary user tool environment for validation.
+On the development computer with Android platform tools installed, connect your phone with USB debugging enabled and accept the phone's authorization prompt. Confirm it appears with `adb devices -l`. The current CachyOS workstation has ADB access to an authorized Samsung SM-F936U running Android 14 (API 34), arm64-v8a, with 4 KB pages. The installed v1.0.3 is debuggable and an OCCT library fails the native 16 KB alignment check. It is a baseline only, not a release candidate. The matching Qt 6.11.3 Android/host kits, API 36 platform, NDK 27.2.12479018, JDK 17 and Android build-tools 36.0.0 are installed under `~/.local/share/fstle-android`. The pinned OCCT source is checked out there and its Android build is in progress. CMake, Ninja and ShellCheck are installed in a temporary user tool environment for validation.
 
 Test cold launch, settings, rotation/zoom, STL/3MF/STEP imports through local and cloud file providers, malformed files, reload/restart, screenshots, background/foreground, second file-open intents, Android 16 insets and a 16 KB device/emulator. Preserve reference screenshots of the current GUI.

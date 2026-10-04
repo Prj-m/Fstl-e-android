@@ -8,6 +8,7 @@
 #endif
 
 #include "core/app.h"
+#include "core/fileopenpath.h"
 #include "ui/window.h"
 
 App::App(int& argc, char *argv[]) :
@@ -39,7 +40,7 @@ App::App(int& argc, char *argv[]) :
                     "toString",
                     "()Ljava/lang/String;");
                 if (path.isValid()) {
-                    fileToOpen = path.toString();
+                    fileToOpen = fileOpenPath(QUrl(path.toString()));
                 }
             }
         }
@@ -72,8 +73,7 @@ bool App::event(QEvent* e)
     {
         const auto* openEvent = static_cast<QFileOpenEvent*>(e);
         const QUrl url = openEvent->url();
-        const QString filename = url.isLocalFile() ? url.toLocalFile()
-            : (url.isEmpty() ? openEvent->file() : url.toString(QUrl::FullyEncoded));
+        const QString filename = url.isEmpty() ? openEvent->file() : fileOpenPath(url);
         if (!filename.isEmpty())
             window->load_stl(filename);
         return true;

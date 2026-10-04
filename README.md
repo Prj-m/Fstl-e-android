@@ -3,14 +3,14 @@
 <p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="600"></p>
 
 
-**Status: Beta** - Stable with all core features working.
+**Status: Beta — release readiness under review.**
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
 
 ## Download
 
-**Google Play (Recommended):**
+**Google Play:**
 
-[![Get it on Google Play](https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e)
+[App listing](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e) — current track and public availability still require Play Console verification.
 
 **Direct APK Downloads:**
 
@@ -20,9 +20,9 @@ For users who prefer sideloading or don't have access to Google Play:
 
 Includes full OCCT STEP support for enhanced geometry loading.
 
-> **Note:** Google Play version includes all features and receives automatic updates.
+> **Release validation:** A replacement build is being validated. See [Play readiness](docs/PLAY_READINESS.md) for the remaining signing, device and release checks.
 > 
-> **Important:** Users upgrading from v1.0.2 may need to uninstall the old version first.
+> APK upgrades require a compatible signing identity. Preserve app settings while checking signing compatibility.
 
 ### What's New in v1.0.3
 
@@ -65,8 +65,8 @@ cmake --build .
 ```
 
 When `ENABLE_OCCT_STEP=ON` and OpenCASCADE is found, the viewer will use the
-OCCT kernel for STEP files first, and fall back to the internal parser only if
-OCCT cannot generate any triangles.
+OCCT kernel for STEP files and reject imports that OCCT cannot triangulate.
+The reduced internal parser is used only in builds without OCCT.
 
 ## License
 

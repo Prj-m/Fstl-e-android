@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "core/loader.h"
+#include "core/importlimits.h"
 #include "core/vertex.h"
 #include "loaders/stepmeshloader.h"
 #include "loaders/occtsteploader.h"
@@ -26,6 +27,7 @@ Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
 }
 
 void Loader::run()
+try
 {
     Mesh* mesh = nullptr;
     
@@ -40,6 +42,11 @@ void Loader::run()
     
     if (file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        if (file.size() > ImportLimits::SourceBytes)
+        {
+            emit error_bad_stl();
+            return;
+        }
         // Read a reasonably sized header window so we can detect both ZIP magic
         // and typical STEP headers even if there are leading comments.
         QByteArray header = file.read(4096);
@@ -113,6 +120,12 @@ void Loader::run()
             emit loaded_file(filename);
         }
     }
+}
+
+catch (...)
+{
+    ALOG("Import failed with an exception");
+    emit error_bad_stl();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -254,10 +267,16 @@ Mesh* Loader::load_stl()
 
     qint64 file_size, file_size_old;
     file_size = file.size();
+    int stabilityChecks = 0;
     do {
         file_size_old = file_size;
         QThread::usleep(100000);
         file_size = file.size();
+        if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
+        {
+            emit error_bad_stl();
+            return nullptr;
+        }
     }
     while(file_size != file_size_old);
 
@@ -295,7 +314,7 @@ Mesh* Loader::read_stl_binary(QFile& file)
 
     // Verify that the file is the right size
     const qint64 payloadSize = qint64(tri_count) * 50;
-    if (data.status() != QDataStream::Ok ||
+    if (tri_count > ImportLimits::Triangles || data.status() != QDataStream::Ok ||
         file.size() != 84 + payloadSize ||
         quint64(tri_count) * 3 > quint64(std::numeric_limits<int>::max()))
     {
@@ -358,6 +377,11 @@ Mesh* Loader::load_3mf()
         return nullptr;
     }
     
+    if (file.size() > ImportLimits::SourceBytes)
+    {
+        emit error_bad_stl();
+        return nullptr;
+    }
     ALOG("File opened successfully, size: %lld", file.size());
     
     // Use Qt's built-in ZIP reader
@@ -374,7 +398,12 @@ Mesh* Loader::load_3mf()
     ALOG("ZIP contains %d entries", int(entries.size()));
     for (const auto& entry : entries)
     {
-        ALOG("  Entry: %s (size: %lld)", entry.filePath.toStdString().c_str(), entry.size);
+        if ((entry.filePath == "3D/3dmodel.model" || entry.filePath == "3d/3dmodel.model") &&
+            (entry.size < 0 || entry.size > ImportLimits::ModelXmlBytes))
+        {
+            emit error_bad_stl();
+            return nullptr;
+        }
     }
     
     // Read the 3D model XML from the ZIP
@@ -392,6 +421,11 @@ Mesh* Loader::load_3mf()
         }
     }
     
+    if (modelData.size() > ImportLimits::ModelXmlBytes)
+    {
+        emit error_bad_stl();
+        return nullptr;
+    }
     ALOG("Model data loaded, size: %d bytes", int(modelData.size()));
     
     // Parse XML content
@@ -413,6 +447,11 @@ Mesh* Loader::load_3mf()
             
             if (elemName == "vertex" || elemName.endsWith(":vertex"))
             {
+                if (vertex_count >= ImportLimits::Coordinates)
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
                 // Read vertex coordinates
                 QXmlStreamAttributes attrs = xml.attributes();
                 bool validX = false, validY = false, validZ = false;
@@ -432,6 +471,11 @@ Mesh* Loader::load_3mf()
             }
             else if (elemName == "triangle" || elemName.endsWith(":triangle"))
             {
+                if (tri_count >= ImportLimits::Triangles)
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
                 // Read triangle vertex indices
                 QXmlStreamAttributes attrs = xml.attributes();
                 bool valid1 = false, valid2 = false, valid3 = false;
@@ -501,9 +545,9 @@ Mesh* Loader::load_step()
         }
         else
         {
-            ALOG("OCCT STEP loader failed or returned empty geometry - falling back to internal parser");
-            stepVerts.clear();
-            tri_count = 0;
+            ALOG("OCCT STEP loader failed or returned empty geometry");
+            emit error_bad_stl();
+            return nullptr;
         }
     }
 #endif
@@ -527,6 +571,12 @@ Mesh* Loader::load_step()
             emit error_empty_mesh();
             return nullptr;
         }
+    }
+
+    if (tri_count > ImportLimits::Triangles || stepVerts.size() != qsizetype(tri_count) * 3)
+    {
+        emit error_bad_stl();
+        return nullptr;
     }
 
     // Convert QVector3D to Vertex
@@ -562,6 +612,11 @@ Mesh* Loader::read_stl_ascii(QFile& file)
             break;
         }
 
+        if (tri_count >= ImportLimits::Triangles)
+        {
+            okay = false;
+            break;
+        }
         for (int i=0; i < 3; ++i)
         {
             auto line = file.readLine().simplified().split(' ');
