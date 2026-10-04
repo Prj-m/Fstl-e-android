@@ -1,0 +1,100 @@
+name: Android validation bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      phone_apk:
+        description: Build a separate debug-signed phone test APK
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+  android:
+    name: Unsigned arm64 bundle with full STEP support
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      QT_VERSION: '6.10.0'
+      NDK_VERSION: '27.2.12479018'
+      OCCT_COMMIT: a016080bf6738d6aeae020badee4e888ad1540a5 # OCCT 7.9.3
+      FSTL_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install build tools and Android SDK packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' "ndk;$NDK_VERSION"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "FSTL_OCCT_ROOT=$RUNNER_TEMP/occt-install" >> "$GITHUB_ENV"
+          echo "FSTL_OCCT_SOURCE=$RUNNER_TEMP/occt-source" >> "$GITHUB_ENV"
+      - name: Install Qt for Android and its host tools
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: '6.10.0'
+          host: all_os
+          target: android
+          arch: android_arm64_v8a
+          extra: --autodesktop
+          cache: true
+      - name: Cache compiled Android OCCT
+        id: occt-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/occt-install
+          key: occt-${{ runner.os }}-arm64-${{ env.OCCT_COMMIT }}-ndk-${{ env.NDK_VERSION }}-${{ hashFiles('scripts/build_occt_android.sh') }}
+      - name: Obtain the pinned OCCT source
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: |
+          git init "$FSTL_OCCT_SOURCE"
+          git -C "$FSTL_OCCT_SOURCE" remote add origin https://github.com/Open-Cascade-SAS/OCCT.git
+          git -C "$FSTL_OCCT_SOURCE" fetch --depth 1 origin "$OCCT_COMMIT"
+          git -C "$FSTL_OCCT_SOURCE" checkout --detach FETCH_HEAD
+          test "$(git -C "$FSTL_OCCT_SOURCE" rev-parse HEAD)" = "$OCCT_COMMIT"
+      - name: Build the STEP library and its dependencies
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: bash scripts/build_occt_android.sh
+      - name: Build, lint and verify unsigned bundle
+        env:
+          FSTL_SIGN_WITH_KEYSTORE: '0'
+        run: |
+          export QT_ANDROID_ROOT="$QT_ROOT_DIR"
+          export FSTL_ANDROID_BUILD_DIR="$GITHUB_WORKSPACE/build/android-release"
+          bash scripts/build_android_full_release_aab.sh
+      - name: Package phone test APK
+        if: inputs.phone_apk
+        run: |
+          export QT_ANDROID_ROOT="$QT_ROOT_DIR"
+          export FSTL_ANDROID_BUILD_DIR="$GITHUB_WORKSPACE/build/android-release"
+          bash scripts/package_android_phone_apk.sh
+      - name: Save phone test APK
+        if: inputs.phone_apk
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fstl-e-phone-arm64-${{ github.sha }}
+          path: build/android-release/phone-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Save unsigned bundle and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fstl-e-unsigned-arm64-${{ github.sha }}
+          path: build/android-release/artifacts/*
+          if-no-files-found: error
+          retention-days: 14

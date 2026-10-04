@@ -4,7 +4,9 @@
 android:versionName="1.0.3"
           android:versionCode="19"
           android:installLocation="auto">
-    <application android:hardwareAccelerated="true"
+    <application android:allowBackup="false"
+                 android:usesCleartextTraffic="false"
+                 android:hardwareAccelerated="true"
                  android:name="org.qtproject.qt.android.bindings.QtApplication"
                  android:label="fstl-e"
                  android:icon="@mipmap/ic_launcher"
@@ -32,6 +34,8 @@ android:versionName="1.0.3"
                 <data android:mimeType="*/*"/>
                 <data android:pathPattern=".*\\.stl"/>
                 <data android:pathPattern=".*\\.3mf"/>
+                <data android:pathPattern=".*\\.step"/>
+                <data android:pathPattern=".*\\.stp"/>
                 <data android:host="*"/>
             </intent-filter>
             <meta-data android:name="android.app.lib_name" android:value="fstl_viewer"/>
@@ -52,5 +56,5 @@ android:versionName="1.0.3"
                       android:largeScreens="true"
                       android:xlargeScreens="true"
                       android:anyDensity="true"/>
-    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="35"/>
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="36"/>
 </manifest>

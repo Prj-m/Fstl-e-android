@@ -19,7 +19,7 @@ The app can access 3D files that you choose to open (for example from device sto
 
 - read locally on your device for the sole purpose of rendering them,
 - not uploaded or transmitted by the app,
-- not copied or modified unless you explicitly save screenshots.
+- not modified by the viewer. For STEP imports, the app may create a temporary local copy so the geometry library can read a file selected through Android's file picker. The copy is removed when the import finishes or fails. Screenshots are saved only when you request them.
 
 You are responsible for the content of the files you open with the app.
 

@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QFileOpenEvent>
+#include <QUrl>
 
 #ifdef Q_OS_ANDROID
 #include <QJniObject>
@@ -35,7 +36,7 @@ App::App(int& argc, char *argv[]) :
             
             if (data.isValid()) {
                 QJniObject path = data.callObjectMethod(
-                    "getPath",
+                    "toString",
                     "()Ljava/lang/String;");
                 if (path.isValid()) {
                     fileToOpen = path.toString();
@@ -69,7 +70,12 @@ bool App::event(QEvent* e)
 {
     if (e->type() == QEvent::FileOpen)
     {
-        window->load_stl(static_cast<QFileOpenEvent*>(e)->file());
+        const auto* openEvent = static_cast<QFileOpenEvent*>(e);
+        const QUrl url = openEvent->url();
+        const QString filename = url.isLocalFile() ? url.toLocalFile()
+            : (url.isEmpty() ? openEvent->file() : url.toString(QUrl::FullyEncoded));
+        if (!filename.isEmpty())
+            window->load_stl(filename);
         return true;
     }
     else

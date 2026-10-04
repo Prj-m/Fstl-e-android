@@ -27,6 +27,12 @@ option(ENABLE_3MF "Enable 3MF file support (requires Qt private headers)" ON)
 # Enabled by default; if OCCT is not found, the build falls back to the
 # internal STEP parser and prints a warning.
 option(ENABLE_OCCT_STEP "Enable Open CASCADE-based STEP support (larger binary)" ON)
+option(FSTL_REQUIRE_OCCT "Fail configuration if full STEP support is unavailable" OFF)
+set(FSTL_OCCT_ROOT "" CACHE PATH "OCCT installation prefix for the target platform")
+set(FSTL_ANDROID_TARGET_SDK 36 CACHE STRING "Android target SDK API level")
+if(FSTL_REQUIRE_OCCT AND NOT ENABLE_OCCT_STEP)
+    message(FATAL_ERROR "FSTL_REQUIRE_OCCT requires ENABLE_OCCT_STEP=ON")
+endif()
 
 if(ENABLE_3MF)
     message(STATUS "3MF support enabled - will attempt to use QtCore private headers")
@@ -86,13 +92,13 @@ if(ANDROID)
     message(STATUS "Building for Android ABI: ${ANDROID_ABI}")
     
     # Set minimum Android API level - use qt6_add_executable for Android
-    qt6_add_executable(fstl_viewer ${PROJECT_SOURCES})
+    qt6_add_executable(fstl_viewer MANUAL_FINALIZATION ${PROJECT_SOURCES})
     
     # Android-specific properties
     set_target_properties(fstl_viewer PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/android
         QT_ANDROID_MIN_SDK_VERSION 28
-        QT_ANDROID_TARGET_SDK_VERSION 35
+        QT_ANDROID_TARGET_SDK_VERSION ${FSTL_ANDROID_TARGET_SDK}
         QT_ANDROID_ABIS "arm64-v8a"
         QT_ANDROID_NO_COMPRESS_RESOURCES_ARS YES
     )
@@ -102,11 +108,8 @@ if(ANDROID)
     # Log Android architecture for debugging
     message(STATUS "Building for Android architecture: ${ANDROID_ABI}")
 else()
-    qt6_add_executable(fstl_viewer ${PROJECT_SOURCES})
+    qt6_add_executable(fstl_viewer MANUAL_FINALIZATION ${PROJECT_SOURCES})
 endif()
-
-# Finalize the executable for all platforms
-qt_finalize_executable(fstl_viewer)
 
 # Set target properties for deployment
 set_target_properties(fstl_viewer PROPERTIES
@@ -153,9 +156,14 @@ target_link_libraries(fstl_viewer
 if(ENABLE_OCCT_STEP)
     if(ANDROID)
         # For Android, manually link OCCT libraries from android/libs
-        set(OCCT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/libs/${ANDROID_ABI}")
-        set(OCCT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/include/opencascade")
-        if(EXISTS "${OCCT_LIB_DIR}" AND EXISTS "${OCCT_INCLUDE_DIR}")
+        if(FSTL_OCCT_ROOT)
+            set(OCCT_LIB_DIR "${FSTL_OCCT_ROOT}/lib")
+            set(OCCT_INCLUDE_DIR "${FSTL_OCCT_ROOT}/include/opencascade")
+        else()
+            set(OCCT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/libs/${ANDROID_ABI}")
+            set(OCCT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/include/opencascade")
+        endif()
+        if(EXISTS "${OCCT_LIB_DIR}/libTKDESTEP.so" AND EXISTS "${OCCT_INCLUDE_DIR}/STEPControl_Reader.hxx")
             message(STATUS "Linking OCCT libraries from ${OCCT_LIB_DIR}")
             target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
             target_include_directories(fstl_viewer PRIVATE "${OCCT_INCLUDE_DIR}")
@@ -174,23 +182,25 @@ if(ENABLE_OCCT_STEP)
                 ${OCCT_LIB_DIR}/libTKMath.so
                 ${OCCT_LIB_DIR}/libTKernel.so
             )
+            # Include the complete OCCT dependency closure in the Android package.
+            file(GLOB OCCT_ANDROID_LIBRARIES "${OCCT_LIB_DIR}/libTK*.so")
+            set_property(TARGET fstl_viewer APPEND PROPERTY
+                QT_ANDROID_EXTRA_LIBS ${OCCT_ANDROID_LIBRARIES})
+            set(FSTL_OCCT_ENABLED TRUE)
         else()
             message(WARNING "OCCT libraries not found in ${OCCT_LIB_DIR} - using internal STEP parser")
         endif()
     else()
         # Desktop: use find_package
-        if(NOT OpenCASCADE_DIR)
-            set(_OCCT_DEFAULT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../occt-android/install-android-arm64-ndk/lib/cmake/opencascade")
-            if(EXISTS "${_OCCT_DEFAULT_DIR}")
-                set(OpenCASCADE_DIR "${_OCCT_DEFAULT_DIR}" CACHE PATH "OpenCASCADE install directory" FORCE)
-            endif()
-            unset(_OCCT_DEFAULT_DIR)
+        if(FSTL_OCCT_ROOT)
+            list(PREPEND CMAKE_PREFIX_PATH "${FSTL_OCCT_ROOT}")
         endif()
 
         find_package(OpenCASCADE QUIET)
         if(OpenCASCADE_FOUND)
             message(STATUS "OpenCASCADE found - enabling full STEP support")
             target_compile_definitions(fstl_viewer PRIVATE FSTL_USE_OCCT_STEP)
+            target_include_directories(fstl_viewer PRIVATE ${OpenCASCADE_INCLUDE_DIR})
             target_link_libraries(fstl_viewer PRIVATE
                 TKDESTEP
                 TKXSBase
@@ -199,10 +209,14 @@ if(ENABLE_OCCT_STEP)
                 TKGeomAlgo
                 TKMesh
             )
+            set(FSTL_OCCT_ENABLED TRUE)
         else()
             message(WARNING "ENABLE_OCCT_STEP=ON but OpenCASCADE not found - falling back to internal STEP parser")
         endif()
     endif()
+endif()
+if(FSTL_REQUIRE_OCCT AND NOT FSTL_OCCT_ENABLED)
+    message(FATAL_ERROR "Full STEP support is required. Set FSTL_OCCT_ROOT to the target OCCT installation.")
 endif()
 
 # Link Android log library for logging
@@ -211,6 +225,8 @@ if(ANDROID)
     target_link_libraries(fstl_viewer PRIVATE ${log-lib})
 endif()
 
+# Resolve deployment dependencies after every library and property is set.
+qt_finalize_executable(fstl_viewer)
 
 include(GNUInstallDirs)
 install(TARGETS fstl_viewer

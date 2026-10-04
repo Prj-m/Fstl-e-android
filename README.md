@@ -47,11 +47,12 @@ Includes full OCCT STEP support for enhanced geometry loading.
 
 ### Android (with OCCT)
 
-Requires Qt 6.5+ for Android (tested with Qt 6.10). OCCT libraries are bundled in the `android/libs` directory.
+The CI build pins Qt 6.10.0 and builds OCCT from source; OCCT binaries are not bundled in this repository. See [CI/CD and local build instructions](docs/CI_CD.md) for the SDK paths, full STEP dependency build and release checks.
 
 ```bash
 mkdir build && cd build
-cmake -DCMAKE_TOOLCHAIN_FILE=$QT_ROOT/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake ..
+cmake -DCMAKE_TOOLCHAIN_FILE=$QT_ROOT/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake \
+  -DFSTL_OCCT_ROOT=/path/to/android/occt-install -DFSTL_REQUIRE_OCCT=ON ..
 cmake --build .
 ```
 
