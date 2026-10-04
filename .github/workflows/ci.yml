@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build and regression checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build shellcheck
+      - name: Install the tested Qt series
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: '6.10.0'
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+      - name: Shell and Python checks
+        run: |
+          shellcheck scripts/*.sh tests/*.sh
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Loader security regression tests
+        run: bash tests/run_loader_security.sh
+      - name: Build existing viewer without optional OCCT
+        run: |
+          cmake -S . -B build/desktop -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_OCCT_STEP=OFF
+          cmake --build build/desktop --parallel 2

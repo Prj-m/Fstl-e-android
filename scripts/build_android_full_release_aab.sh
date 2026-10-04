@@ -1,113 +1,78 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build a full STEP-enabled Android release App Bundle (.aab) using the
-# existing Qt 6.10 Android build configuration.
-#
-# This script is designed around the current dev environment layout:
-#   - Source:      /home/fuzzy/Fstl-e-android
-#   - Build dir:   /home/fuzzy/AndroidApp/build/Qt_6_10_0_for_Android_arm64_v8a-Debug
-#   - Qt Android:  /home/fuzzy/Qt/6.10.0/android_arm64_v8a
-#   - Qt CMake:    /home/fuzzy/Qt/Tools/CMake/bin/cmake
-#
-# You can override paths via environment variables if needed:
-#   FSTL_ANDROID_BUILD_DIR   - CMake build dir (default: Qt_6_10_0_for_Android_arm64_v8a-Debug)
-#   FSTL_DEPLOY_JSON         - androiddeployqt deployment JSON
-#   ANDROIDDEPLOYQT          - path to androiddeployqt executable
-#   QT_CMAKE                 - path to CMake from Qt
-#
-# Optional signing (manual password entry):
-#   By default this script ENABLES signing using:
-#     FSTL_SIGN_WITH_KEYSTORE=1
-#     FSTL_KEYSTORE  = $REPO_ROOT/android-keystore/fstle-android-release.jks
-#     FSTL_KEY_ALIAS = fstle_release
-#   You can override or disable this by exporting FSTL_SIGN_WITH_KEYSTORE=0
-#   before running the script. Passwords will NOT be passed on the command
-#   line; androiddeployqt will prompt interactively.
-
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-: "${FSTL_SIGN_WITH_KEYSTORE:=1}"
-: "${FSTL_KEYSTORE:=$REPO_ROOT/android-keystore/fstle-android-release.jks}"
-: "${FSTL_KEY_ALIAS:=fstle_release}"
-
-: "${FSTL_ANDROID_BUILD_DIR:=/home/fuzzy/AndroidApp/build/Qt_6_10_0_for_Android_arm64_v8a-Debug}"
-DEPLOY_JSON_DEFAULT="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-settings.json"
-: "${FSTL_DEPLOY_JSON:=$DEPLOY_JSON_DEFAULT}"
-
-QT_CMAKE_DEFAULT="/home/fuzzy/Qt/Tools/CMake/bin/cmake"
-: "${QT_CMAKE:=$QT_CMAKE_DEFAULT}"
-
-# Select androiddeployqt if not provided via environment.
-# For this dev setup we default to the host-side tool under gcc_64.
-if [[ -z "${ANDROIDDEPLOYQT:-}" ]]; then
-  ANDROIDDEPLOYQT="/home/fuzzy/Qt/6.10.0/gcc_64/bin/androiddeployqt"
+# Build full STEP support from explicit SDK/dependency paths. See docs/CI_CD.md.
+if [[ "${1:-}" == "--help" ]]; then
+    cat <<'HELP'
+Required: QT_ANDROID_ROOT, ANDROID_SDK_ROOT, ANDROID_NDK_ROOT, FSTL_OCCT_ROOT
+Optional: QT_HOST_ROOT (defaults to sibling gcc_64), QT_CMAKE (defaults to cmake),
+          FSTL_ANDROID_BUILD_DIR, ANDROIDDEPLOYQT, FSTL_BUILD_JOBS
+Signing:  FSTL_SIGN_WITH_KEYSTORE=1 requires FSTL_KEYSTORE and FSTL_KEY_ALIAS.
+          Passwords are prompted interactively, never passed as command arguments.
+          Default is 0: produce an unsigned AAB for validation, not Play upload.
+HELP
+    exit 0
 fi
 
-if [[ ! -x "$ANDROIDDEPLOYQT" ]]; then
-  echo "ERROR: androiddeployqt not found or not executable at: $ANDROIDDEPLOYQT" >&2
-  echo "Set ANDROIDDEPLOYQT to the correct path and re-run." >&2
-  exit 1
-fi
+fail() { echo "ERROR: $*" >&2; exit 1; }
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${QT_ANDROID_ROOT:?Set QT_ANDROID_ROOT to the Qt Android arm64 kit}"
+: "${ANDROID_SDK_ROOT:?Set ANDROID_SDK_ROOT}"
+: "${ANDROID_NDK_ROOT:?Set ANDROID_NDK_ROOT}"
+: "${FSTL_OCCT_ROOT:?Set FSTL_OCCT_ROOT to the Android OCCT installation}"
+: "${QT_HOST_ROOT:=$(dirname "$QT_ANDROID_ROOT")/gcc_64}"
+: "${QT_CMAKE:=cmake}"
+: "${ANDROIDDEPLOYQT:=$QT_HOST_ROOT/bin/androiddeployqt}"
+: "${FSTL_ANDROID_BUILD_DIR:=$repo_root/build/android-release}"
+: "${FSTL_BUILD_JOBS:=2}"
+: "${FSTL_SIGN_WITH_KEYSTORE:=0}"
 
-if [[ ! -f "$FSTL_DEPLOY_JSON" ]]; then
-  echo "ERROR: Deployment JSON not found: $FSTL_DEPLOY_JSON" >&2
-  echo "Make sure the Android CMake build has been configured at: $FSTL_ANDROID_BUILD_DIR" >&2
-  exit 1
-fi
+command -v "$QT_CMAKE" >/dev/null || fail "CMake not found: $QT_CMAKE"
+command -v ninja >/dev/null || fail "Ninja is required"
+[[ -x "$ANDROIDDEPLOYQT" ]] || fail "androiddeployqt not executable: $ANDROIDDEPLOYQT"
+[[ -f "$QT_ANDROID_ROOT/lib/cmake/Qt6/qt.toolchain.cmake" ]] || fail "Invalid Qt Android kit"
+[[ -f "$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" ]] || fail "Invalid Android NDK"
+[[ -d "$ANDROID_SDK_ROOT/platforms/android-36" ]] || fail "Install Android SDK platform 36"
+[[ -f "$FSTL_OCCT_ROOT/lib/libTKDESTEP.so" ]] || fail "Android OCCT STEP library is missing"
+[[ -f "$FSTL_OCCT_ROOT/include/opencascade/STEPControl_Reader.hxx" ]] || fail "OCCT headers are missing"
+[[ "$FSTL_BUILD_JOBS" =~ ^[1-9][0-9]*$ ]] || fail "FSTL_BUILD_JOBS must be a positive integer"
 
-echo "[1/3] Building native code (fstl_viewer) in: $FSTL_ANDROID_BUILD_DIR"
-"$QT_CMAKE" --build "$FSTL_ANDROID_BUILD_DIR" --target fstl_viewer -j"$(nproc)"
+sign_args=()
+case "$FSTL_SIGN_WITH_KEYSTORE" in
+    0) echo "Building unsigned validation bundle." ;;
+    1)
+        [[ -n "${FSTL_KEYSTORE:-}" && -n "${FSTL_KEY_ALIAS:-}" ]] || fail "Set FSTL_KEYSTORE and FSTL_KEY_ALIAS"
+        [[ -f "$FSTL_KEYSTORE" ]] || fail "Signing keystore is missing"
+        sign_args=(--sign "$FSTL_KEYSTORE" "$FSTL_KEY_ALIAS")
+        ;;
+    *) fail "FSTL_SIGN_WITH_KEYSTORE must be 0 or 1" ;;
+esac
 
-OUTPUT_DIR_DEFAULT="$FSTL_ANDROID_BUILD_DIR/android-build-fstl_viewer"
-: "${FSTL_ANDROID_OUTPUT_DIR:=$OUTPUT_DIR_DEFAULT}"
+"$QT_CMAKE" -S "$repo_root" -B "$FSTL_ANDROID_BUILD_DIR" -G Ninja \
+    -DCMAKE_TOOLCHAIN_FILE="$QT_ANDROID_ROOT/lib/cmake/Qt6/qt.toolchain.cmake" \
+    -DQT_HOST_PATH="$QT_HOST_ROOT" \
+    -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
+    -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
+    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28 \
+    -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+    -DCMAKE_BUILD_TYPE=Release -DFSTL_ANDROID_TARGET_SDK=36 \
+    -DENABLE_OCCT_STEP=ON -DFSTL_REQUIRE_OCCT=ON \
+    -DFSTL_OCCT_ROOT="$FSTL_OCCT_ROOT"
+"$QT_CMAKE" --build "$FSTL_ANDROID_BUILD_DIR" --target fstl_viewer --parallel "$FSTL_BUILD_JOBS"
 
-mkdir -p "$FSTL_ANDROID_OUTPUT_DIR"
+deploy_json="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-settings.json"
+[[ -s "$deploy_json" ]] || fail "Qt deployment settings were not generated"
+# A new packaging directory prevents an old AAB from passing artifact checks.
+output_dir="$(mktemp -d "$FSTL_ANDROID_BUILD_DIR/android-release.XXXXXX")"
+"$ANDROIDDEPLOYQT" --input "$deploy_json" --output "$output_dir" --release --aab "${sign_args[@]}"
+[[ -f "$output_dir/gradlew" ]] || fail "Qt did not generate a Gradle wrapper"
+(cd "$output_dir" && bash ./gradlew --no-daemon lintRelease)
 
-echo "[2/4] Running androiddeployqt to generate release APK(s) for GitHub"
-
-SIGN_ARGS=()
-if [[ "${FSTL_SIGN_WITH_KEYSTORE:-1}" == "1" ]]; then
-  if [[ -z "${FSTL_KEYSTORE:-}" || -z "${FSTL_KEY_ALIAS:-}" ]]; then
-    echo "ERROR: FSTL_SIGN_WITH_KEYSTORE=1 but FSTL_KEYSTORE or FSTL_KEY_ALIAS not set" >&2
-    exit 1
-  fi
-  SIGN_ARGS=("--sign" "$FSTL_KEYSTORE" "$FSTL_KEY_ALIAS")
-  echo "Signing enabled. androiddeployqt will prompt for keystore/key passwords."
-else
-  echo "Signing disabled (FSTL_SIGN_WITH_KEYSTORE=0). The APK and AAB may need to be"
-  echo "signed separately or used with Google Play App Signing." 
-fi
-
-"$ANDROIDDEPLOYQT" \
-  --input  "$FSTL_DEPLOY_JSON" \
-  --output "$FSTL_ANDROID_OUTPUT_DIR" \
-  --release \
-  "${SIGN_ARGS[@]}"
-
-APK_PATHS=$(find "$FSTL_ANDROID_OUTPUT_DIR" -maxdepth 6 -type f -name "*.apk" || true)
-if [[ -n "$APK_PATHS" ]]; then
-  echo "GitHub APK(s) generated under:"
-  echo "$APK_PATHS"
-else
-  echo "WARNING: No .apk files found under $FSTL_ANDROID_OUTPUT_DIR" >&2
-fi
-
-echo "[3/4] Running androiddeployqt to generate release App Bundle (.aab)"
-
-"$ANDROIDDEPLOYQT" \
-  --input  "$FSTL_DEPLOY_JSON" \
-  --output "$FSTL_ANDROID_OUTPUT_DIR" \
-  --release \
-  --aab \
-  "${SIGN_ARGS[@]}"
-
-# The resulting AAB is usually under build/outputs/bundle/release/
-AAB_PATH=$(find "$FSTL_ANDROID_OUTPUT_DIR" -maxdepth 6 -type f -name "*.aab" | head -n1 || true)
-
-echo "[4/4] Done."
-if [[ -n "$AAB_PATH" ]]; then
-  echo "Release App Bundle generated at: $AAB_PATH"
-else
-  echo "WARNING: No .aab file found under $FSTL_ANDROID_OUTPUT_DIR" >&2
-fi
+mapfile -t bundles < <(find "$output_dir" -type f -path '*/outputs/bundle/release/*.aab')
+[[ "${#bundles[@]}" == 1 && -s "${bundles[0]}" ]] || fail "Expected exactly one nonempty release AAB"
+python3 "$repo_root/scripts/verify_android_bundle.py" "${bundles[0]}"
+artifact_dir="$FSTL_ANDROID_BUILD_DIR/artifacts"
+mkdir -p "$artifact_dir"
+cp "${bundles[0]}" "$artifact_dir/fstl-e-arm64-release.aab"
+(cd "$artifact_dir" && sha256sum fstl-e-arm64-release.aab > fstl-e-arm64-release.aab.sha256)
+echo "Validated release bundle: $artifact_dir/fstl-e-arm64-release.aab"

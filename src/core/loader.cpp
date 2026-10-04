@@ -1,4 +1,6 @@
 #include <future>
+#include <cmath>
+#include <limits>
 
 #include "core/loader.h"
 #include "core/vertex.h"
@@ -52,9 +54,6 @@ void Loader::run()
         if (!is_3mf)
         {
             QByteArray upper = header.toUpper();
-            // Log a short preview to help diagnose mis-detection cases
-            QByteArray preview = upper.left(120);
-            ALOG("Header preview (uppercased): %s", preview.constData());
             
             if (upper.contains("ISO-10303-21"))
             {
@@ -150,8 +149,8 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
     // Android: Calculate per-triangle normals for flat shading
     std::vector<GLfloat> flat_verts;
     std::vector<GLfloat> flat_normals;
-    flat_verts.reserve(tri_count*9); // 3 vertices * 3 floats per triangle
-    flat_normals.reserve(tri_count*9); // 3 normals * 3 floats per triangle
+    flat_verts.reserve(size_t(tri_count)*9); // 3 vertices * 3 floats per triangle
+    flat_normals.reserve(size_t(tri_count)*9); // 3 normals * 3 floats per triangle
     
     for (size_t i = 0; i < verts.size(); i += 3)
     {
@@ -291,27 +290,40 @@ Mesh* Loader::read_stl_binary(QFile& file)
 
     // Load the triangle count from the .stl file
     file.seek(80);
-    uint32_t tri_count;
+    uint32_t tri_count = 0;
     data >> tri_count;
 
     // Verify that the file is the right size
-    if (file.size() != 84 + tri_count*50)
+    const qint64 payloadSize = qint64(tri_count) * 50;
+    if (data.status() != QDataStream::Ok ||
+        file.size() != 84 + payloadSize ||
+        quint64(tri_count) * 3 > quint64(std::numeric_limits<int>::max()))
     {
         emit error_bad_stl();
         return NULL;
     }
 
     // Extract vertices into an array of xyz, unsigned pairs
-    QVector<Vertex> verts(tri_count*3);
+    QVector<Vertex> verts(qsizetype(tri_count) * 3);
 
-    // Dummy array, because readRawData is faster than skipRawData
-    std::unique_ptr<uint8_t[]> buffer(new uint8_t[tri_count * 50]);
-    data.readRawData((char*)buffer.get(), tri_count * 50);
-
-    // Store vertices in the array, processing one triangle at a time.
-    auto b = buffer.get();
+    // Read each record exactly; providers can fail or truncate after size checks.
+    uint8_t buffer[50 * 1024];
+    int bufferedRecords = 0;
+    int nextRecord = 0;
     for (auto v=verts.begin(); v != verts.end(); v += 3)
     {
+        if (nextRecord == bufferedRecords)
+        {
+            bufferedRecords = int(std::min<qsizetype>(1024, (verts.end() - v) / 3));
+            const int bytesToRead = bufferedRecords * 50;
+            if (data.readRawData(reinterpret_cast<char*>(buffer), bytesToRead) != bytesToRead)
+            {
+                emit error_bad_stl();
+                return nullptr;
+            }
+            nextRecord = 0;
+        }
+        auto b = buffer + nextRecord++ * 50;
         // Skip the face normal (first 3 floats) - we'll compute it from vertices
         b += 3 * sizeof(float);
         
@@ -319,6 +331,11 @@ Mesh* Loader::read_stl_binary(QFile& file)
         for (unsigned i=0; i < 3; ++i)
         {
             qFromLittleEndian<float>(b, 3, &v[i]);
+            if (!std::isfinite(v[i].x) || !std::isfinite(v[i].y) || !std::isfinite(v[i].z))
+            {
+                emit error_bad_stl();
+                return nullptr;
+            }
             b += 3 * sizeof(float);
         }
 
@@ -398,9 +415,16 @@ Mesh* Loader::load_3mf()
             {
                 // Read vertex coordinates
                 QXmlStreamAttributes attrs = xml.attributes();
-                float x = attrs.value("x").toFloat();
-                float y = attrs.value("y").toFloat();
-                float z = attrs.value("z").toFloat();
+                bool validX = false, validY = false, validZ = false;
+                float x = attrs.value("x").toFloat(&validX);
+                float y = attrs.value("y").toFloat(&validY);
+                float z = attrs.value("z").toFloat(&validZ);
+                if (!validX || !validY || !validZ ||
+                    !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
                 vertex_coords.push_back(x);
                 vertex_coords.push_back(y);
                 vertex_coords.push_back(z);
@@ -410,20 +434,24 @@ Mesh* Loader::load_3mf()
             {
                 // Read triangle vertex indices
                 QXmlStreamAttributes attrs = xml.attributes();
-                int v1 = attrs.value("v1").toInt();
-                int v2 = attrs.value("v2").toInt();
-                int v3 = attrs.value("v3").toInt();
-                
-                // Add vertices to the triangle list
-                if (v1 * 3 + 2 < vertex_coords.size() &&
-                    v2 * 3 + 2 < vertex_coords.size() &&
-                    v3 * 3 + 2 < vertex_coords.size())
+                bool valid1 = false, valid2 = false, valid3 = false;
+                int v1 = attrs.value("v1").toInt(&valid1);
+                int v2 = attrs.value("v2").toInt(&valid2);
+                int v3 = attrs.value("v3").toInt(&valid3);
+                const qsizetype availableVertices = vertex_coords.size() / 3;
+                if (!valid1 || !valid2 || !valid3 ||
+                    v1 < 0 || v2 < 0 || v3 < 0 ||
+                    v1 >= availableVertices || v2 >= availableVertices || v3 >= availableVertices)
                 {
-                    verts.push_back(Vertex(vertex_coords[v1*3], vertex_coords[v1*3+1], vertex_coords[v1*3+2]));
-                    verts.push_back(Vertex(vertex_coords[v2*3], vertex_coords[v2*3+1], vertex_coords[v2*3+2]));
-                    verts.push_back(Vertex(vertex_coords[v3*3], vertex_coords[v3*3+1], vertex_coords[v3*3+2]));
-                    tri_count++;
+                    emit error_bad_stl();
+                    return nullptr;
                 }
+
+                const qsizetype i1 = qsizetype(v1) * 3, i2 = qsizetype(v2) * 3, i3 = qsizetype(v3) * 3;
+                verts.push_back(Vertex(vertex_coords[i1], vertex_coords[i1+1], vertex_coords[i1+2]));
+                verts.push_back(Vertex(vertex_coords[i2], vertex_coords[i2+1], vertex_coords[i2+2]));
+                verts.push_back(Vertex(vertex_coords[i3], vertex_coords[i3+1], vertex_coords[i3+2]));
+                tri_count++;
             }
         }
     }
@@ -537,14 +565,19 @@ Mesh* Loader::read_stl_ascii(QFile& file)
         for (int i=0; i < 3; ++i)
         {
             auto line = file.readLine().simplified().split(' ');
-            if (line[0] != "vertex")
+            if (line.size() != 4 || line[0] != "vertex")
             {
                 okay = false;
                 break;
             }
-            const float x = line[1].toFloat(&okay);
-            const float y = line[2].toFloat(&okay);
-            const float z = line[3].toFloat(&okay);
+            bool validX = false, validY = false, validZ = false;
+            const float x = line[1].toFloat(&validX);
+            const float y = line[2].toFloat(&validY);
+            const float z = line[3].toFloat(&validZ);
+            okay = validX && validY && validZ &&
+                   std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
+            if (!okay)
+                break;
             verts.push_back(Vertex(x, y, z));
         }
         if (!file.readLine().trimmed().startsWith("endloop") ||

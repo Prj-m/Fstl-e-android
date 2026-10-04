@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QTemporaryFile>
 #include <QDir>
+#include <memory>
 
 #ifdef FSTL_USE_OCCT_STEP
 // Open CASCADE headers
@@ -39,12 +40,13 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
     // is a content URI or Qt resource, copy the data into a temporary file and
     // pass that real filesystem path to OCCT.
     QString occtFilename = filename;
-    bool removeTempFile = false;
+    // Keep ownership until OCCT finishes; all return paths remove the copy.
+    std::unique_ptr<QTemporaryFile> temporarySource;
 
 #ifdef Q_OS_ANDROID
     if (filename.startsWith("content://") || filename.startsWith(":/")) {
-        QTemporaryFile tmp(QDir::tempPath() + "/fstl_step_XXXXXX.stp");
-        tmp.setAutoRemove(false); // Will be removed manually after OCCT processing
+        temporarySource = std::make_unique<QTemporaryFile>(QDir::tempPath() + "/fstl_step_XXXXXX.stp");
+        QTemporaryFile& tmp = *temporarySource;
         if (!tmp.open()) {
             qWarning() << "OCCT STEP: Failed to create temporary STEP file" << tmp.errorString();
             return false;
@@ -56,20 +58,21 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
             return false;
         }
 
-        QByteArray data = inFile.readAll();
-        if (data.isEmpty()) {
-            qWarning() << "OCCT STEP: Source STEP file appears empty" << filename;
-            return false;
+        while (!inFile.atEnd()) {
+            const QByteArray chunk = inFile.read(1024 * 1024);
+            if (chunk.isEmpty() || tmp.write(chunk) != chunk.size()) {
+                qWarning() << "OCCT STEP: Failed to copy source to temporary file";
+                return false;
+            }
         }
-        if (tmp.write(data) != data.size()) {
-            qWarning() << "OCCT STEP: Failed to write full STEP data to temporary file";
+        if (inFile.error() != QFileDevice::NoError || tmp.size() == 0 || !tmp.flush()) {
+            qWarning() << "OCCT STEP: Source read or temporary file write failed";
             return false;
         }
         tmp.close();
         inFile.close();
 
         occtFilename = tmp.fileName();
-        removeTempFile = true;
         qDebug() << "OCCT STEP: Copied" << filename << "to temp" << occtFilename;
     }
 #endif
@@ -152,20 +155,10 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
     if (outTriCount == 0)
     {
         qWarning() << "OCCT STEP: No triangles generated from shape";
-#ifdef Q_OS_ANDROID
-        if (removeTempFile) {
-            QFile::remove(occtFilename);
-        }
-#endif
         return false;
     }
 
     qDebug() << "OCCT STEP: Generated" << outTriCount << "triangles";
-#ifdef Q_OS_ANDROID
-    if (removeTempFile) {
-        QFile::remove(occtFilename);
-    }
-#endif
     return true;
 #else
     Q_UNUSED(filename);
