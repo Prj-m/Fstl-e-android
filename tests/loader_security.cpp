@@ -1,4 +1,7 @@
 #include "core/loader.h"
+#include "core/importlimits.h"
+#include "core/fileopenpath.h"
+#include <QtEndian>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QTemporaryDir>
@@ -34,13 +37,22 @@ int main(int argc, char** argv) {
     QTemporaryDir dir;
     if (!dir.isValid()) return 2;
     int failures = 0, checks = 0;
-    auto check = [&](const QByteArray& bytes, bool zip, bool expected, const char* name, int expectedTriangles = 1) {
+    auto check = [&](const QByteArray& bytes, bool zip, bool expected, const char* name, int expectedTriangles = 1, quint32 declaredXmlSize = 0) {
         const QString path = dir.filePath(zip ? "model.3mf" : "model.stl");
         if (zip) {
             QZipWriter writer(path);
             writer.addFile("3D/3dmodel.model", bytes);
             writer.close();
             if (writer.status() != QZipWriter::NoError) std::abort();
+            if (declaredXmlSize) {
+                QFile zipFile(path);
+                if (!zipFile.open(QIODevice::ReadWrite)) std::abort();
+                const QByteArray data = zipFile.readAll();
+                const qsizetype central = data.indexOf(QByteArray("PK\x01\x02", 4));
+                if (central < 0) std::abort();
+                quint32 size = qToLittleEndian(declaredXmlSize);
+                if (!zipFile.seek(central + 24) || zipFile.write(reinterpret_cast<const char*>(&size), 4) != 4) std::abort();
+            }
         } else {
             QFile file(path);
             if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size()) std::abort();
@@ -72,6 +84,7 @@ int main(int argc, char** argv) {
     check(binaryStl(1, true, false), false, false, "nonfinite binary coordinates");
     const QByteArray model = "<model><resources><object><mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources></model>";
     check(model, true, true, "valid 3MF");
+    check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);
     for (const QByteArray& index : {QByteArray("-1"), QByteArray("-2147483648"), QByteArray("2147483647"), QByteArray("3"), QByteArray("invalid"), QByteArray("")}) {
         QByteArray malformed = model;
         malformed.replace("v1='0'", "v1='" + index + "'");
@@ -81,6 +94,27 @@ int main(int argc, char** argv) {
         QByteArray malformed = model;
         malformed.replace("x='0'", "x='" + coordinate + "'");
         check(malformed, true, false, "malformed 3MF coordinate");
+    }
+    for (const bool triangleBudget : {false, true}) {
+        const QString path = dir.filePath("oversized.stl");
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) std::abort();
+        const quint32 count = ImportLimits::Triangles + 1;
+        const QByteArray header = binaryStl(count, false);
+        if (file.write(header) != header.size() ||
+            !file.resize(triangleBudget ? 84 + qint64(count) * 50 : ImportLimits::SourceBytes + 1)) std::abort();
+        file.close();
+        TestLoader loader(path);
+        int errors = 0;
+        QObject::connect(&loader, &Loader::error_bad_stl, [&] { ++errors; });
+        std::unique_ptr<Mesh> mesh(loader.load_stl());
+        ++checks;
+        if (mesh || errors != 1) { ++failures; std::cerr << "FAIL: sparse input budget\n"; }
+    }
+    for (const auto& item : {qMakePair(QString("file:///tmp/part%20one.stl"), QString("/tmp/part one.stl")),
+                             qMakePair(QString("content://models.provider/document/part%2Fone.stp"), QString("content://models.provider/document/part%2Fone.stp"))}) {
+        ++checks;
+        if (fileOpenPath(QUrl(item.first)) != item.second) { ++failures; std::cerr << "FAIL: file-open URI conversion\n"; }
     }
     std::cout << checks << " checks, " << failures << " failures\n";
     return failures ? 1 : 0;

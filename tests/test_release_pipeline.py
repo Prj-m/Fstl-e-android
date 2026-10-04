@@ -125,12 +125,15 @@ if '-B' in sys.argv:
     build = pathlib.Path(sys.argv[sys.argv.index('-B') + 1])
     build.mkdir(parents=True, exist_ok=True)
     (build / 'android-fstl_viewer-deployment-settings.json').write_text('{}')
+    if os.environ.get('FSTL_TEST_FAIL') != 'no-native':
+        (build / 'libfstl_viewer_arm64-v8a.so').write_bytes(b'native')
 """)
         self.executable(self.base / "qt/gcc_64/bin/androiddeployqt", """import os, pathlib, shutil, sys
 root = pathlib.Path(os.environ['FSTL_TEST_ROOT'])
 (root / 'deploy-called').touch()
 if os.environ.get('FSTL_TEST_FAIL') == 'deploy': sys.exit(8)
 out = pathlib.Path(sys.argv[sys.argv.index('--output') + 1])
+assert (out / 'libs/arm64-v8a/libfstl_viewer_arm64-v8a.so').read_bytes() == b'native'
 (out / 'gradlew').write_text('exit 9\\n' if os.environ.get('FSTL_TEST_FAIL') == 'lint' else 'exit 0\\n')
 if os.environ.get('FSTL_TEST_FAIL') != 'no-bundle':
     bundles = out / 'build/outputs/bundle/release'
@@ -150,6 +153,7 @@ if os.environ.get('FSTL_TEST_FAIL') != 'no-bundle':
         build = self.base / "build"
         build.mkdir()
         (build / "android-fstl_viewer-deployment-settings.json").write_text("{}")
+        (build / "libfstl_viewer_arm64-v8a.so").write_bytes(b"native")
         with zipfile.ZipFile(self.base / "fixture.apk", "w") as archive:
             archive.writestr("lib/arm64-v8a/libfstl_viewer_arm64-v8a.so", elf())
             archive.writestr("lib/arm64-v8a/libTKDESTEP.so", elf())
@@ -158,6 +162,7 @@ root = pathlib.Path(os.environ['FSTL_TEST_ROOT'])
 assert '--aux-mode' in sys.argv
 assert '--install' not in sys.argv and '--release' not in sys.argv
 out = pathlib.Path(sys.argv[sys.argv.index('--output') + 1])
+assert (out / 'libs/arm64-v8a/libfstl_viewer_arm64-v8a.so').read_bytes() == b'native'
 (out / 'gradlew').write_text('exit 9\\n' if os.environ.get('FSTL_TEST_FAIL') == 'lint' else 'exit 0\\n')
 if os.environ.get('FSTL_TEST_FAIL') != 'no-apk':
     apk_dir = out / 'build/outputs/apk/debug'
@@ -196,6 +201,11 @@ if sys.argv[1] == 'dump':
         calls = (self.base / "cmake-calls").read_text()
         self.assertIn("-DCMAKE_BUILD_TYPE=Release", calls)
         self.assertIn("-DFSTL_REQUIRE_OCCT=ON", calls)
+
+    def test_missing_native_library_fails_before_deployment(self):
+        self.env["FSTL_TEST_FAIL"] = "no-native"
+        self.assertNotEqual(self.run_build().returncode, 0)
+        self.assertFalse((self.base / "deploy-called").exists())
 
     def test_missing_dependency_fails_before_any_build(self):
         (self.base / "occt/lib/libTKDESTEP.so").unlink()

@@ -1,4 +1,5 @@
 #include "loaders/occtsteploader.h"
+#include "core/importlimits.h"
 
 #include <QDebug>
 #include <QFile>
@@ -60,7 +61,8 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
 
         while (!inFile.atEnd()) {
             const QByteArray chunk = inFile.read(1024 * 1024);
-            if (chunk.isEmpty() || tmp.write(chunk) != chunk.size()) {
+            if (chunk.isEmpty() || tmp.size() + chunk.size() > ImportLimits::SourceBytes ||
+                tmp.write(chunk) != chunk.size()) {
                 qWarning() << "OCCT STEP: Failed to copy source to temporary file";
                 return false;
             }
@@ -128,6 +130,13 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
         const Standard_Integer nbNodes = tri->NbNodes();
         const Standard_Integer nbTris  = tri->NbTriangles();
 
+        if (nbTris < 0 || quint64(outTriCount) + quint64(nbTris) > ImportLimits::Triangles)
+        {
+            outVerts.clear();
+            outTriCount = 0;
+            qWarning() << "OCCT STEP: Triangle budget exceeded";
+            return false;
+        }
         for (Standard_Integer i = 1; i <= nbTris; ++i)
         {
             Poly_Triangle t = tri->Triangle(i);
