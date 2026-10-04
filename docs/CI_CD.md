@@ -9,9 +9,9 @@ The first stage verifies changes and produces an **unsigned** Android bundle. Th
 | Pull request, push to main, or manual run | CI | Shell checks, release-script/bundle tests, sanitizer parser checks, and a desktop compile |
 | Pull request or Actions → Android validation bundle → Run workflow | Android validation bundle | The CI checks, a full OCCT STEP dependency build, Release Android compile, Gradle lint, native 16 KB alignment verification, an unsigned AAB with SHA-256 checksum, and an optional separate debug-signed `.dev` APK |
 
-The Android build uses Qt 6.10.0, Java 17, SDK API 36, NDK 27.2.12479018, arm64-v8a and OCCT 7.9.3 at commit `a016080bf6738d6aeae020badee4e888ad1540a5`. OCCT is built with shared libraries and flexible page sizes; Qt and OCCT downloads/builds are cached. GitHub action references are pinned to commits. No application signing key or Play service account is required by either workflow. Tokens have read-only repository permissions.
+The Android build uses Qt 6.11.3, Java 17, SDK API 36, NDK 27.2.12479018, arm64-v8a and OCCT 7.9.3 at commit `a016080bf6738d6aeae020badee4e888ad1540a5`. OCCT is built with shared libraries and flexible page sizes; Qt and OCCT downloads/builds are cached. GitHub action references are pinned to commits. No application signing key or Play service account is required by either workflow. Tokens have read-only repository permissions.
 
-Qt documents [NDK r27c and command-line Android builds](https://doc.qt.io/qt-6.10/android-building-projects-from-commandline.html). The API 36 migration also changes platform behavior; test layout, system bars and storage on Android 16 before approving a release.
+Qt documents [NDK r27c and command-line Android builds](https://doc.qt.io/qt-6.11/android-building-projects-from-commandline.html). The API 36 migration also changes platform behavior; test layout, system bars and storage on Android 16 before approving a release.
 
 The first Android run can take considerably longer while compiling OCCT. Later runs reuse the cache. A workflow that fails does not upload its artifact. Packaging uses a fresh directory so an old successful AAB cannot hide a failed build. The native verifier checks ELF load segments, the ABI and required app/STEP libraries; it does not prove Android runtime or APK ZIP-alignment compatibility.
 
@@ -32,8 +32,8 @@ Install the same Qt Android and host kits, SDK/NDK and Ninja. Check out the pinn
 ```bash
 export ANDROID_SDK_ROOT="/path/to/Android/Sdk"
 export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/27.2.12479018"
-export QT_ANDROID_ROOT="/path/to/Qt/6.10.0/android_arm64_v8a"
-export QT_HOST_ROOT="/path/to/Qt/6.10.0/gcc_64"
+export QT_ANDROID_ROOT="/path/to/Qt/6.11.3/android_arm64_v8a"
+export QT_HOST_ROOT="/path/to/Qt/6.11.3/gcc_64"
 export FSTL_OCCT_SOURCE="/path/to/occt-source"
 export FSTL_OCCT_ROOT="/path/to/occt-install"
 bash scripts/build_occt_android.sh
