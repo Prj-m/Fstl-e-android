@@ -54,6 +54,13 @@ class ReleaseManifestChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             manifest_check.verify_manifest(xml.replace(' android:maxSdkVersion="32"', ''))
 
+    def test_profile_receiver_requires_privileged_dump_permission(self):
+        receiver = '<receiver android:name="androidx.profileinstaller.ProfileInstallReceiver" android:exported="true" android:permission="android.permission.DUMP"/>'
+        xml = MANIFEST.replace("</application>", receiver + "</application>")
+        self.assertEqual(manifest_check.verify_manifest(xml), 20)
+        with self.assertRaises(ValueError):
+            manifest_check.verify_manifest(xml.replace(' android:permission="android.permission.DUMP"', ""))
+
     def test_rejects_exported_service(self):
         xml = MANIFEST.replace('</application>', '<service android:name="Unexpected" android:exported="true"/></application>')
         with self.assertRaises(ValueError):

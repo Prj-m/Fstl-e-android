@@ -13,7 +13,7 @@ The Android build uses Qt 6.11.3, Java 17, SDK API 36, NDK 27.2.12479018, arm64-
 
 Qt documents [NDK r27c and command-line Android builds](https://doc.qt.io/qt-6.11/android-building-projects-from-commandline.html). The API 36 migration also changes platform behavior; test layout, system bars and storage on Android 16 before approving a release.
 
-The first Android run can take considerably longer while compiling OCCT. Later runs reuse the cache. A workflow that fails does not upload its artifact. Packaging uses a fresh directory so an old successful AAB cannot hide a failed build. The native verifier checks ELF load segments, the ABI and required app/STEP libraries; it does not prove Android runtime or APK ZIP-alignment compatibility.
+The first Android run can take considerably longer while compiling OCCT. Android runs are queued per branch so an in-progress dependency build can finish and save its cache. Later runs reuse the cache. A workflow that fails does not upload its artifact. Packaging uses a fresh directory so an old successful AAB cannot hide a failed build. The native verifier checks ELF load segments, the ABI and required app/STEP libraries; it does not prove Android runtime or APK ZIP-alignment compatibility.
 
 ## Put the pipeline into service
 

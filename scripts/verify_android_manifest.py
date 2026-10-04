@@ -41,7 +41,11 @@ def verify_manifest(xml, highest_version_code=None):
         for component in app.findall(tag):
             exported = component.get(ANDROID + "exported")
             if exported == "true" or (exported is None and component.find("intent-filter") is not None):
-                if tag != "activity" or component.get(ANDROID + "name") != ACTIVITY:
+                viewer = tag == "activity" and component.get(ANDROID + "name") == ACTIVITY
+                privileged_profiler = (tag == "receiver" and
+                    component.get(ANDROID + "name") == "androidx.profileinstaller.ProfileInstallReceiver" and
+                    component.get(ANDROID + "permission") == "android.permission.DUMP")
+                if not viewer and not privileged_profiler:
                     raise ValueError("Unexpected exported component")
     return version
 

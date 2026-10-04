@@ -159,7 +159,7 @@ if os.environ.get('FSTL_TEST_FAIL') != 'no-bundle':
             archive.writestr("lib/arm64-v8a/libTKDESTEP.so", elf())
         self.executable(self.base / "qt/gcc_64/bin/androiddeployqt", """import os, pathlib, shutil, sys
 root = pathlib.Path(os.environ['FSTL_TEST_ROOT'])
-assert '--aux-mode' in sys.argv
+assert '--aux-mode' not in sys.argv and '--aab' not in sys.argv
 assert '--install' not in sys.argv and '--release' not in sys.argv
 out = pathlib.Path(sys.argv[sys.argv.index('--output') + 1])
 assert (out / 'libs/arm64-v8a/libfstl_viewer_arm64-v8a.so').read_bytes() == b'native'
