@@ -18,6 +18,9 @@ App::App(int& argc, char *argv[]) :
     // No global style override; handled per-toolbar in Window
 #endif
     QString fileToOpen;
+#ifdef Q_OS_ANDROID
+    QtAndroidPrivate::registerNewIntentListener(this);
+#endif
     
 #ifdef Q_OS_ANDROID
     QJniObject activity = QJniObject::callStaticObjectMethod(
@@ -64,6 +67,9 @@ App::App(int& argc, char *argv[]) :
 
 App::~App()
 {
+#ifdef Q_OS_ANDROID
+    QtAndroidPrivate::unregisterNewIntentListener(this);
+#endif
     delete window;
 }
 
@@ -83,3 +89,28 @@ bool App::event(QEvent* e)
         return QApplication::event(e);
     }
 }
+
+#ifdef Q_OS_ANDROID
+bool App::handleNewIntent(JNIEnv*, jobject intentObject)
+{
+    const QJniObject intent(intentObject);
+    const QString action = intent.callObjectMethod("getAction", "()Ljava/lang/String;").toString();
+    if (action != QStringLiteral("android.intent.action.VIEW"))
+        return false;
+    const QJniObject data = intent.callObjectMethod("getData", "()Landroid/net/Uri;");
+    if (!data.isValid())
+        return false;
+    const QUrl url(data.callObjectMethod("toString", "()Ljava/lang/String;").toString());
+    if (url.scheme() != QStringLiteral("file") && url.scheme() != QStringLiteral("content"))
+        return false;
+    const QString filename = fileOpenPath(url);
+    if (filename.isEmpty())
+        return false;
+    // JNI callbacks arrive outside the GUI thread. The context cancels delivery
+    // if the application is destroyed before this queued operation runs.
+    QMetaObject::invokeMethod(this, [this, filename] {
+        window->load_stl(filename);
+    }, Qt::QueuedConnection);
+    return true;
+}
+#endif

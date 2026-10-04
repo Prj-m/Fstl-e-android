@@ -40,6 +40,11 @@ else()
     message(STATUS "3MF support DISABLED - only STL files will be supported")
 endif()
 
+if(ANDROID)
+    # The pinned Qt Android kit exposes new-intent delivery through this API.
+    find_package(Qt6 REQUIRED COMPONENTS CorePrivate)
+endif()
+
 # Source files organized in subdirectories
 set(PROJECT_SOURCES
     # Core sources
@@ -222,7 +227,7 @@ endif()
 # Link Android log library for logging
 if(ANDROID)
     find_library(log-lib log)
-    target_link_libraries(fstl_viewer PRIVATE ${log-lib})
+    target_link_libraries(fstl_viewer PRIVATE ${log-lib} Qt6::CorePrivate)
 endif()
 
 # Resolve deployment dependencies after every library and property is set.
