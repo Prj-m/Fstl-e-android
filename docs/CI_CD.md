@@ -7,7 +7,7 @@ The first stage verifies changes and produces an **unsigned** Android bundle. Th
 | Trigger | Workflow | Result |
 | --- | --- | --- |
 | Pull request, push to main, or manual run | CI | Shell checks, release-script/bundle tests, sanitizer parser checks, and a desktop compile |
-| Actions → Android validation bundle → Run workflow | Android validation bundle | The CI checks, a full OCCT STEP dependency build, Release Android compile, Gradle lint, native 16 KB alignment verification, an unsigned AAB with SHA-256 checksum, and an optional separate debug-signed `.dev` APK |
+| Pull request or Actions → Android validation bundle → Run workflow | Android validation bundle | The CI checks, a full OCCT STEP dependency build, Release Android compile, Gradle lint, native 16 KB alignment verification, an unsigned AAB with SHA-256 checksum, and an optional separate debug-signed `.dev` APK |
 
 The Android build uses Qt 6.10.0, Java 17, SDK API 36, NDK 27.2.12479018, arm64-v8a and OCCT 7.9.3 at commit `a016080bf6738d6aeae020badee4e888ad1540a5`. OCCT is built with shared libraries and flexible page sizes; Qt and OCCT downloads/builds are cached. GitHub action references are pinned to commits. No application signing key or Play service account is required by either workflow. Tokens have read-only repository permissions.
 
@@ -44,7 +44,7 @@ For an interactive local signing build, set `FSTL_SIGN_WITH_KEYSTORE=1`, `FSTL_K
 
 ## Phone development APK
 
-The manual Android workflow defaults to building a second artifact, `fstl-e-phone-arm64-<commit>`. This APK uses `com.github.prjm.fstl_e.dev` and a debug signing key so it installs beside the existing release. Native code is reused from the Release compile; this is a debug Android package, not a native Debug build. CI debug keys are ephemeral, so a later run may not upgrade a previous test installation. Use a persistent local test key for repeated upgrades. Never substitute this artifact for a Play release.
+The Android workflow runs on pull requests and defaults to building a second artifact, `fstl-e-phone-arm64-<commit>`. This APK uses `com.github.prjm.fstl_e.dev` and a debug signing key so it installs beside the existing release. Native code is reused from the Release compile; this is a debug Android package, not a native Debug build. CI debug keys are ephemeral, so a later run may not upgrade a previous test installation. Use a persistent local test key for repeated upgrades. Never substitute this artifact for a Play release.
 
 After the local release build, package and install with:
 
