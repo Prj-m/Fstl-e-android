@@ -15,8 +15,6 @@ find_package(Qt6 REQUIRED COMPONENTS
     Widgets
     OpenGL
     OpenGLWidgets
-    Network
-    Xml
 )
 
 # Option to enable/disable 3MF support (requires Qt private headers)
@@ -100,6 +98,10 @@ if(ANDROID)
     
     # Set minimum Android API level - use qt6_add_executable for Android
     qt6_add_executable(fstl_viewer MANUAL_FINALIZATION ${PROJECT_SOURCES})
+    # NDK r27 needs both flags: LOAD alignment alone leaves a 4 KB RELRO end.
+    target_link_options(fstl_viewer PRIVATE
+        "-Wl,-z,max-page-size=16384"
+        "-Wl,-z,common-page-size=16384")
     
     # Android-specific properties
     set_target_properties(fstl_viewer PROPERTIES
@@ -156,8 +158,6 @@ target_link_libraries(fstl_viewer
         Qt6::Widgets
         Qt6::OpenGL
         Qt6::OpenGLWidgets
-        Qt6::Network
-        Qt6::Xml
 )
 
 # Optional: full STEP support via Open CASCADE (desktop or heavy Android build)
