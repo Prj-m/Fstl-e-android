@@ -34,6 +34,28 @@ def write_bundle(path, app=True, step=True, alignment=16384, extra=None):
 
 
 class BundleChecks(unittest.TestCase):
+    def test_relro_rounding_must_not_protect_writable_data(self):
+        # Include the safe separated-LOAD layout used by NDK libc++ as well as
+        # hazardous writable tails/prefixes within a rounded protection page.
+        for start, end, rw_start, rw_end, accepted in (
+            (0, 16384, 16384, 32768, True),
+            (0, 4096, 16384, 32768, True),
+            (0, 4096, 4096, 8192, False),
+            (4096, 16384, 0, 4096, False),
+            (0, 4096, 0, 4096, True),
+        ):
+            with self.subTest(start=start, end=end, rw_start=rw_start):
+                data = elf()
+                data.extend(bytes(32768 - len(data)))
+                struct.pack_into("<H", data, 56, 3)
+                struct.pack_into("<IIQQQQQQ", data, 120, 0x6474E552, 4, start, start, 0, 0, end - start, 1)
+                struct.pack_into("<IIQQQQQQ", data, 176, 1, 6, rw_start, rw_start, 0, 0, rw_end - rw_start, 16384)
+                if accepted:
+                    bundle_check.verify_elf(data, "library.so")
+                else:
+                    with self.assertRaisesRegex(ValueError, "RELRO"):
+                        bundle_check.verify_elf(data, "library.so")
+
     def test_accepts_16k_and_64k_alignment(self):
         for alignment in (16384, 65536):
             with self.subTest(alignment=alignment):

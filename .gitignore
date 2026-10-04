@@ -25,3 +25,5 @@ dist/
 *.apks
 __pycache__/
 *.pyc
+# Private signing folder must remain outside source control.
+signing/
