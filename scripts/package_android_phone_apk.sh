@@ -11,13 +11,13 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 deploy_json="$FSTL_ANDROID_BUILD_DIR/android-fstl_viewer-deployment-settings.json"
 [[ -s "$deploy_json" ]] || { echo "Run build_android_full_release_aab.sh first" >&2; exit 1; }
 output_dir="$(mktemp -d "$FSTL_ANDROID_BUILD_DIR/android-phone.XXXXXX")"
-# Stage only, then assembleDebug: uses the .dev application ID and a test key.
+# Default Qt packaging builds Debug: uses the .dev application ID and a test key.
 native_library="$FSTL_ANDROID_BUILD_DIR/libfstl_viewer_arm64-v8a.so"
 [[ -s "$native_library" ]] || { echo "Missing compiled arm64 viewer library" >&2; exit 1; }
 mkdir -p "$output_dir/libs/arm64-v8a"
 cp "$native_library" "$output_dir/libs/arm64-v8a/"
-"$ANDROIDDEPLOYQT" --input "$deploy_json" --output "$output_dir" --aux-mode
-(cd "$output_dir" && bash ./gradlew --no-daemon assembleDebug lintDebug)
+"$ANDROIDDEPLOYQT" --input "$deploy_json" --output "$output_dir"
+(cd "$output_dir" && bash ./gradlew --no-daemon lintDebug)
 mapfile -t apks < <(find "$output_dir" -type f -path '*/outputs/apk/debug/*.apk')
 [[ "${#apks[@]}" == 1 && -s "${apks[0]}" ]] || { echo "Expected one fresh debug APK" >&2; exit 1; }
 python3 "$repo_root/scripts/verify_android_bundle.py" --apk "${apks[0]}"
