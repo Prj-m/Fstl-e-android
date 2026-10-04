@@ -1,6 +1,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QFile>
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QTimer>
@@ -1365,13 +1366,20 @@ void Window::on_save_screenshot()
     const auto image = canvas->grabFramebuffer();
     
 #ifdef Q_OS_ANDROID
-    // Android: Generate filename with timestamp and save to Pictures
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    QString filename = QString("fstl_screenshot_%1.png").arg(timestamp);
-    QString picturesPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-    QString fullPath = picturesPath + "/" + filename;
-    
-    const auto save_ok = image.save(fullPath, "PNG");
+    // The native save dialog grants access through Android's document provider.
+    // Keep the returned content URI intact and select PNG explicitly: its URI
+    // need not have a filename extension.
+    const QString filename = QString("fstl_screenshot_%1.png").arg(
+        QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
+    const QString destination = QFileDialog::getSaveFileName(
+        this, tr("Save Screenshot Image"), filename, tr("PNG image (*.png)"));
+    if (destination.isEmpty())
+        return;
+
+    QFile output(destination);
+    const bool save_ok = output.open(QIODevice::WriteOnly)
+        && image.save(&output, "PNG") && output.flush();
+    output.close();
     if(save_ok)
     {
         canvas->set_status("Screenshot saved: " + filename);

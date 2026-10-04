@@ -1,39 +1,38 @@
 # Google Play release readiness
 
-Status on 2026-10-04: **not ready for production**. Local checks are evidence of specific behavior, not a security certification. No Play Console state has been verified.
+Status on 2026-10-04: **not ready for Play upload or production**. Specific checks pass; signing, runtime and Console gates remain open.
 
-## Evidence and release blockers
+## Verified evidence
 
-| Gate | Evidence | Required before production |
-| --- | --- | --- |
-| Existing installation | Samsung SM-F936U, Android 14/API 34, arm64, 4 KB pages; v1.0.3/code 19 launched successfully | Test the new release candidate, including Play installation and upgrades |
-| Native compatibility | Installed APK fails 16 KB ELF alignment at `libTKBO.so` | Rebuild all native dependencies; verify AAB, generated APK ZIP alignment and 16 KB runtime |
-| Signing | Installed APK is debuggable; extracted v2 certificate subject is Android Debug | Installed APK signature verified with apksigner; compare Play upload and app-signing fingerprints; preserve the existing keys |
-| API target | Installed APK targets 35; source now targets 36 | Confirm packaged manifest and Android 16 behavior |
-| Parser safety | 30 host import/URI sanitizer checks pass for malformed STL/3MF; arithmetic/indexing and STEP temporary-file fixes prepared | Input, declared XML and output mesh budgets added; test device memory/CPU behavior and deceptive ZIP metadata, and review multi-object 3MF correctness |
-| Branch protection | GitHub reports `main` unprotected and no rulesets | Require PRs and desktop/Android checks; block force pushes and deletion; current connector cannot change administration settings |
-| CI | 26 local pipeline unit tests and host viewer compile pass | Hosted desktop and Android workflows must pass on the exact reviewed commit |
-| Dependency updates | Qt pin updated from 6.10.0 to 6.11.3 after checking official advisories | Verify packaged modules/SBOM against relevant advisories and third-party vulnerabilities |
-| Package hardening | Release Gradle configuration disables debugging; source disables backup and cleartext traffic | Confirm the merged release manifest, permissions, component exports and packaged SDKs |
-| Privacy/licensing | Source has no INTERNET permission or identified analytics/ads integration | Verify final package; publish accurate privacy policy, Data safety and Qt/OCCT notices |
-| Play delivery | Console account, track state, highest code and credentials unknown | Establish signing identity, increment version code, use internal testing and examine the pre-launch report |
+- Authenticated Console: package `com.github.prjm.fstl_e`, Play App Signing enabled, closed track REL25, published code 26/version 0.1.0-alpha.1. Four testers opted in; twelve continuous opt-ins for fourteen days are required before applying for production access. Verify all bundles and drafts before choosing the next code.
+- Hosted desktop and Android CI passed commit `9de5216f04b052a466beabcbfa5d8714c724734b`. Subsequent bounded-ZIP and screenshot changes require their own hosted checks.
+- Local unsigned full-STEP arm64 AAB targets API 36. Release lint, actual packaged manifest policy and sixteen-kilobyte ELF alignment passed for all 43 native libraries. This artifact still uses code 19 and cannot be uploaded over the existing release.
+- Warm file-open intent handling passed on a Samsung SM-F936U running Android 14 with four-kilobyte pages. Successive STL/3MF/STEP imports and recovery after invalid STL passed in one process. Provider content-URI permissions and visual rendering still require validation.
+- Thirty initial host sanitizer checks and 26 pipeline tests passed. Expanded archive tests now cover incorrect decompressed sizes, CRC, malformed offsets/lengths, duplicate model parts and unsupported 3MF assemblies.
+- Main has an active ruleset preventing deletion and force pushes. Required PRs and required status checks are still missing.
+- Testers Community dashboard confirms one paid Starter credit, zero apps submitted and zero tests running. Activation awaits the updated build and access configuration. No extra purchase is needed.
 
-Installed APK extracted public certificate SHA-256:
+## Parser and storage hardening
 
-`e79cd0680f942ce50dfd44041aae51fd4d29a8a3b65bcbda22e0208b5e2f5c35`
+Source inputs are limited to 128 MiB; 3MF model XML to 32 MiB; coordinate and output triangle counts to one million. STL count arithmetic, index ranges, finite coordinates and truncated records are checked. STEP staging counts bytes and uses a temporary-file lifetime guard. Full-OCCT imports reject failure rather than inventing fallback geometry.
 
-The installed APK signature was subsequently verified with apksigner. This does not establish which identity Play uses. Never upload debug-signed `.dev` APKs to Play. The CI phone package uses a separate application ID; testing it cannot establish upgrade compatibility for the release package.
+The new ZIP reader limits actual inflate output, checks declared size and CRC, validates offsets and rejects ambiguous model parts. It supports ordinary single-disk stored/deflated ZIPs and rejects encryption and ZIP64. It does not extract archive paths to disk. The viewer currently accepts a single untransformed mesh; assemblies, component references and transforms are rejected to avoid displaying incorrect geometry. DTDs are rejected.
 
-## Production acceptance
+Android screenshot saving now uses the native document picker, preserves its content URI and writes PNG explicitly. Saving and canceling still need real-device validation. OCCT internal allocation and meshing time are not hard bounded; device stress testing remains necessary. These changes are not a security certification.
 
-1. Preserve and verify the upload/app-signing identities against Play Console. Record the highest version code and account testing requirements. Keep private keys and passwords outside source/chat/logs.
-2. Merge only after CI and the full Android dependency build pass. Pin dependencies/actions, retain artifact hashes and run IDs, and scan dependency versions for relevant published vulnerabilities.
-3. Build a non-debuggable signed release AAB targeting API 36 with a version code above every previously uploaded code. Verify the final manifest, signatures, native libraries and generated APK alignment. Never infer these from source configuration alone.
-4. Exercise startup, second file-open intents, provider URI permissions, local/cloud STL/3MF/STEP imports, malformed/large files, settings, gestures, fold/unfold/rotation, background/restart, screenshots and storage. Include Android 16 and 16 KB runtime tests.
-5. Upload to internal testing with the confirmed upload identity. Test fresh installation and updates through Play, inspect pre-launch crashes/warnings, and complete any account-specific closed-testing requirement.
-6. Verify store declarations, privacy URL, content rating, third-party license obligations and contact information. Approve production promotion only after this evidence is recorded.
+## Required before Play upload
 
-Signed delivery should be a separate protected workflow using environment secrets, approved main-branch commits and minimum Play permissions. Public PR builds receive no signing or Play credentials. Do not enable automatic production promotion while these gates remain open.
+1. Locate the upload keystore and verify its public fingerprint against Console. Keep key contents and passwords outside source, chat and logs. Upload certificate SHA-256: `b70b93e6ea12ade0f9dc5822e079dd024266819652a1f04c61823e173444bd61`.
+2. Check all uploaded/draft version codes and increment the packaged code above them. Never upload the separate debug development APK.
+3. Pass hosted CI on the final commit and validate the signed release AAB, actual manifest, permission/component policy, signature and native/ZIP alignment. Set `FSTL_PLAY_HIGHEST_VERSION_CODE` for the release validator.
+4. Complete visual rendering, content-provider imports, screenshots, settings, rotation/folding and lifecycle tests. Include Android 15/16 and a sixteen-kilobyte runtime, plus different manufacturers and screen sizes.
+5. Review dependency advisories and licensing, app declarations, privacy/Data safety and store information. Upload to internal testing only after these gates pass; inspect the Play pre-launch report and validate fresh install and upgrade through Play.
+
+## Required before production
+
+Use the updated reviewed release for paid closed testing. Preserve existing tester access, confirm the provider's supported task scope and configure a verified opt-in link and feedback route. Recruit real arm64 users across devices/Android versions, collect reproducible feedback, fix defects and retest. Complete Console's continuous testing requirement and provide truthful production-access answers based on the actual test.
+
+Require PRs and the desktop/Android status checks before merging. Do not require an unavailable independent approver in a solo-maintainer repository. No production promotion has occurred.
 
 ## Official references
 
@@ -42,15 +41,6 @@ Signed delivery should be a separate protected workflow using environment secret
 - [Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756)
 - [Pre-launch reports](https://support.google.com/googleplay/android-developer/answer/9842757)
 - [Personal-account testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465)
+- [Qt advisories](https://wiki.qt.io/List_of_known_vulnerabilities_in_Qt_products)
 
-Dependency advisory source: [Qt known vulnerabilities](https://wiki.qt.io/List_of_known_vulnerabilities_in_Qt_products). The version update does not prove every advisory is resolved or relevant; reachability and bundled third-party dependencies still require review.
-
-The Android workflow uses checksummed bundletool 1.18.3 to validate the AAB structure and dump the actual packaged manifest. Automated checks reject a debug release, wrong package, target API below 36, enabled backup/cleartext, new unreviewed permissions and additional exported components. Set `FSTL_PLAY_HIGHEST_VERSION_CODE` when running `bash scripts/check_android_release.sh <release.aab>` to enforce the Console version floor. This validator does not authenticate the upload signing identity or authorize production.
-
-Import limits now reject source files over 128 MiB, declared/extracted 3MF model XML over 32 MiB, over 1,000,000 3MF coordinates and over 1,000,000 output triangles. STEP staging counts bytes as it copies. STL file stability polling is bounded. These limits do not bound OCCT internal allocation/meshing time or guarantee a hard decompression memory limit when ZIP size metadata lies. The full-OCCT release rejects failed STEP imports instead of invoking the reduced fallback that can invent geometry from points. Import-thread exceptions are converted to an error signal; process termination and library aborts remain outside that mechanism.
-
-Branch policy should enforce checks for administrators as well. Require an independent approval when a second maintainer is available; the owner cannot approve their own PR. Requiring an unavailable reviewer would lock a solo-maintainer workflow. No protection setting has been changed.
-
-Local candidate validation: unsigned full-STEP AAB built with Qt 6.11.3, API 36 and NDK r27c; Release lint passed and all 43 native libraries passed ELF alignment. The actual packaged manifest passed policy checks. AndroidX ProfileInstallReceiver is allowed only with its exact class name and the privileged `android.permission.DUMP` guard; unguarded variants are rejected. The `.dev` APK passed Debug lint, apksigner, 16 KB ZIP alignment and package ID checks. The separate development APK was installed on an authorized Samsung SM-F936U (Android 14, 4 KB pages). Cold-start loader logs confirm a one-triangle 3MF and a 12-triangle OCCT STEP cube; a malformed STL did not terminate the process. These checks do not establish rendering correctness. Warm VIEW intents did not reach the loader in the smoke test and remain a release blocker. The geometry shader emitted a version warning and the existing fallback path needs visual verification. Device testing was paused at the owner’s request; Android 16, 16 KB runtime, provider URI permissions and final hosted results remain pending.
-
-The staged tester tasks, issue intake and release gates are in [TESTING_PROGRAM.md](TESTING_PROGRAM.md).
+The staged tester tasks and release gates are in [TESTING_PROGRAM.md](TESTING_PROGRAM.md). Public certificate downloads and local audit details are retained outside the source tree; private credentials are not included.

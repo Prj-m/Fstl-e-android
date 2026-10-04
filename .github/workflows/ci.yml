@@ -24,7 +24,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y ninja-build shellcheck
+        run: sudo apt-get update && sudo apt-get install -y ninja-build shellcheck zlib1g-dev
       - name: Install the tested Qt series
         uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:

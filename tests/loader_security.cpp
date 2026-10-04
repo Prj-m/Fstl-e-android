@@ -1,5 +1,6 @@
 #include "core/loader.h"
 #include "core/importlimits.h"
+#include "core/boundedzip.h"
 #include "core/fileopenpath.h"
 #include <QtEndian>
 #include <QCoreApplication>
@@ -52,6 +53,9 @@ int main(int argc, char** argv) {
                 if (central < 0) std::abort();
                 quint32 size = qToLittleEndian(declaredXmlSize);
                 if (!zipFile.seek(central + 24) || zipFile.write(reinterpret_cast<const char*>(&size), 4) != 4) std::abort();
+                // Lie consistently in both headers so this exercises the
+                // decompressor's limit, rather than header disagreement.
+                if (!zipFile.seek(22) || zipFile.write(reinterpret_cast<const char*>(&size), 4) != 4) std::abort();
             }
         } else {
             QFile file(path);
@@ -85,6 +89,66 @@ int main(int argc, char** argv) {
     const QByteArray model = "<model><resources><object><mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources></model>";
     check(model, true, true, "valid 3MF");
     check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);
+    check(model, true, false, "understated ZIP XML size", 1, 1);
+    check(model, true, false, "overstated ZIP XML size", 1, model.size() + 1);
+    check("<!DOCTYPE model [<!ENTITY shape 'triangle'>]>" + model, true, false, "3MF DTD rejected");
+    QByteArray assembly = model;
+    assembly.replace("</resources>", "<object><mesh/></object></resources>");
+    check(assembly, true, false, "3MF multiple objects rejected");
+    assembly = model;
+    assembly.replace("</model>", "<build><item objectid='1' transform='1 0 0 0 1 0 0 0 1 10 0 0'/></build></model>");
+    check(assembly, true, false, "3MF unsupported transform rejected");
+    assembly = model;
+    assembly.replace("</object>", "<components><component objectid='2'/></components></object>");
+    check(assembly, true, false, "3MF components rejected");
+    {
+        const QString path = dir.filePath("archive.3mf");
+        auto archiveCheck = [&](QByteArray data, bool expected, const char* name) {
+            QFile file(path);
+            if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size()) std::abort();
+            file.close();
+            if (!file.open(QIODevice::ReadOnly)) std::abort();
+            QByteArray extracted;
+            ++checks;
+            const bool valid = readBounded3mfModel(file, extracted);
+            if (valid != expected || (expected && extracted != model)) {
+                ++failures; std::cerr << "FAIL: " << name << '\n';
+            }
+        };
+        QZipWriter writer(path);
+        writer.setCompressionPolicy(QZipWriter::NeverCompress);
+        writer.addFile("3d/3dmodel.model", model);
+        writer.close();
+        QFile source(path);
+        if (!source.open(QIODevice::ReadOnly)) std::abort();
+        const QByteArray original = source.readAll();
+        source.close();
+        archiveCheck(original, true, "stored lowercase ZIP model");
+        archiveCheck(original.chopped(1), false, "truncated ZIP end record");
+        const qsizetype central = original.indexOf(QByteArray("PK\x01\x02", 4));
+        const qsizetype end = original.lastIndexOf(QByteArray("PK\x05\x06", 4));
+        if (central < 0 || end < 0) std::abort();
+        QByteArray damaged = original;
+        damaged[30 + QByteArray("3d/3dmodel.model").size()] ^= 1;
+        archiveCheck(damaged, false, "ZIP CRC mismatch");
+        damaged = original;
+        qToLittleEndian<quint32>(0xffffffffU, damaged.data() + central + 42);
+        archiveCheck(damaged, false, "ZIP invalid local offset");
+        damaged = original;
+        qToLittleEndian<quint16>(0xffffU, damaged.data() + central + 28);
+        archiveCheck(damaged, false, "ZIP invalid central name length");
+        damaged = original;
+        qToLittleEndian<quint16>(1, damaged.data() + end + 4);
+        archiveCheck(damaged, false, "ZIP multidisk rejected");
+        QZipWriter duplicate(path);
+        duplicate.addFile("3D/3dmodel.model", model);
+        duplicate.addFile("3d/3dmodel.model", model);
+        duplicate.close();
+        if (!source.open(QIODevice::ReadOnly)) std::abort();
+        damaged = source.readAll();
+        source.close();
+        archiveCheck(damaged, false, "ZIP ambiguous model entries rejected");
+    }
     for (const QByteArray& index : {QByteArray("-1"), QByteArray("-2147483648"), QByteArray("2147483647"), QByteArray("3"), QByteArray("invalid"), QByteArray("")}) {
         QByteArray malformed = model;
         malformed.replace("v1='0'", "v1='" + index + "'");
