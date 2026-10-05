@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(FstlViewer VERSION 0.1 LANGUAGES CXX)
+project(FstlViewer VERSION 1.0.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -129,6 +129,8 @@ set_target_properties(fstl_viewer PROPERTIES
 )
 
 # Add include directories for new structure
+target_compile_definitions(fstl_viewer PRIVATE FSTLE_VERSION="${PROJECT_VERSION}-rc.2")
+
 target_include_directories(fstl_viewer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
