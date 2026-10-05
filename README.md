@@ -1,84 +1,41 @@
 # fstl-e for Android
 
-<p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="UI screenshot (Android)" width="600"></p>
+<p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="fstl-e Android viewer" width="600"></p>
 
+Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF and STEP models. The current candidate is a testing prerelease; production readiness remains under review.
 
-**Status: Beta** - Stable with all core features working.
-Android port of [fstl-e](https://github.com/wdaniau/fstl), a fast STL, 3MF, and STEP file viewer.
+## Download and testing
 
-## Download
+The [1.0.4-rc.1 testing release](https://github.com/Prj-m/fstl-e-android/releases/tag/v1.0.4-rc.1) includes an arm64 development APK and a SHA-256 checksum. Verify the checksum before installation. The debug-signed APK uses `com.github.prjm.fstl_e.dev`, installs alongside the Play app, and is intended for evaluation. Native dependencies still contain generic build-path strings.
 
-**Google Play (Recommended):**
+Older APK downloads were withdrawn during repository privacy cleanup. The [Google Play listing](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e) may be restricted to a testing track; public availability requires Play Console verification. The development APK is not a Play upload artifact.
 
-[![Get it on Google Play](https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e)
+Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues). Include app version, Android version, device model, steps and expected versus actual behavior. Keep credentials, device serials, private models and unrelated logs out of reports.
 
-**Direct APK Downloads:**
+## Source and development status
 
-For users who prefer sideloading or don't have access to Google Play:
-
-- **ARM64 APK** (v1.0.3, ~40MB): [Download](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.3/fstl-e-android-v1.0.3-arm64.apk)
-
-Includes full OCCT STEP support for enhanced geometry loading.
-
-> **Note:** Google Play version includes all features and receives automatic updates.
-> 
-> **Important:** Users upgrading from v1.0.2 may need to uninstall the old version first.
-
-### What's New in v1.0.3
-
-- **Fixed critical crash** in Background Color Settings preset dropdown
-- **Integrated OCCT libraries** for enhanced STEP file support
-- Replaced problematic QComboBox with stable inline list widget on Android
-- Improved stability and reliability across all Android devices
-
-## Features
-
-- Fast rendering of STL (binary and ASCII), 3MF, and STEP files
-- Multiple draw modes: Shaded, Wireframe, Surface Angle, Meshlight
-- Configurable lighting and shader preferences
-- Touch gestures: pinch to zoom, drag to rotate
-- Auto-reload on file changes
-- Displays mesh information (triangle count, dimensions)
-- Supports Android's scoped storage (content URIs)
-
-**Note:** STEP file support uses OpenCASCADE (OCCT) libraries and supports most standard STEP geometry.
-
-## Building
-
-### Android (with OCCT)
-
-Requires Qt 6.5+ for Android (tested with Qt 6.10). OCCT libraries are bundled in the `android/libs` directory.
+The default branch does not yet contain the candidate's Android import hardening and release-validation workflows. Those changes are under review in [PR #2](https://github.com/Prj-m/fstl-e-android/pull/2) on `codex/android-release-readiness`. Use that branch to reproduce the candidate build:
 
 ```bash
-mkdir build && cd build
-cmake -DCMAKE_TOOLCHAIN_FILE=$QT_ROOT/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake ..
-cmake --build .
+git clone https://github.com/Prj-m/fstl-e-android.git
+cd fstl-e-android
+git switch codex/android-release-readiness
 ```
 
-### Desktop (with optional OCCT STEP support)
+The reviewed build uses Qt 6.11.3, JDK 17, SDK API 36, NDK 27.2.12479018 and OCCT 7.9.3. Dependencies are built or installed separately; their binaries are not tracked in Git. After checking out the review branch, follow its build and validation instructions:
 
-```bash
-mkdir build-desktop && cd build-desktop
-cmake .. -DENABLE_OCCT_STEP=ON   # assumes OpenCASCADE is installed
-cmake --build .
-```
+- [CI/CD and local builds](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/CI_CD.md).
+- [Contribution guidance](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/CONTRIBUTING.md).
+- [Play readiness](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/PLAY_READINESS.md).
+- [Android compatibility](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/ANDROID_COMPATIBILITY.md).
+- [Testing program](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/TESTING_PROGRAM.md).
 
-When `ENABLE_OCCT_STEP=ON` and OpenCASCADE is found, the viewer will use the
-OCCT kernel for STEP files first, and fall back to the internal parser only if
-OCCT cannot generate any triangles.
+Other Android versions, native 16 KB runtime, cloud providers, OCCT resource stress and dependency distribution notices remain release gates. CI results and testing on one device do not establish compatibility on every Android device.
 
-## License
+## License and credits
 
-MIT License - see LICENSE file
+Application source is covered by the [MIT license](LICENSE). STEP support uses OCCT under LGPL 2.1 with the Open CASCADE exception. Qt and other dependencies have their own licenses.
 
-### Third-party components
-
-- STEP file support uses Open CASCADE Technology (OCCT). OCCT is free software
-  licensed under the GNU Lesser General Public License (LGPL) version 2.1 with
-  the Open CASCADE exception. See the OCCT licensing information for details.
-
-## Credits
-
-- Original fstl: [Matt Keeter](https://github.com/fstl-app/fstl)
-- fstl-e enhancements: [William Daniau](https://github.com/wdaniau/fstl)
-- Android port: Prj-m and contributors
+- Original fstl: [Matt Keeter](https://github.com/fstl-app/fstl).
+- fstl-e enhancements: [William Daniau](https://github.com/wdaniau/fstl).
+- Android port: Prj-m and contributors.
