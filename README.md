@@ -10,7 +10,7 @@ The [1.0.4-rc.1 testing release](https://github.com/Prj-m/fstl-e-android/release
 
 The [Google Play listing](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e) may be restricted to a testing track; public availability must be confirmed in Play Console. The development APK is not a Play upload artifact.
 
-See [Play readiness](docs/PLAY_READINESS.md) for release gates and [Android compatibility](docs/ANDROID_COMPATIBILITY.md) for device coverage. Other Android versions and native 16 KB runtime compatibility still require testing. Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues).
+Other Android versions and native 16 KB runtime compatibility still require testing. Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues).
 
 ## Features and import limits
 
@@ -44,9 +44,9 @@ To use OCCT STEP support, install Open CASCADE and configure with `-DENABLE_OCCT
 
 ## Development and release checks
 
-Read [contribution guidance](CONTRIBUTING.md) before changing code or publishing artifacts. CI runs shell checks, pipeline tests, parser sanitizer regressions and a desktop build. Android validation also checks packaging, lint, the actual bundle manifest and native LOAD/RELRO alignment. These checks do not establish compatibility on every device.
+CI scans source history for credentials and device/workstation metadata, runs shell checks and pipeline tests, and builds the desktop viewer with parser sanitizer regressions. Android validation also checks packaging, lint, the actual bundle manifest and native LOAD/RELRO alignment. These checks do not establish compatibility on every device.
 
-Use [testing program guidance](docs/TESTING_PROGRAM.md) for user feedback and [privacy information](PRIVACY.md) for data handling. Keep signing keys, account details, device serials and private models out of public source, issues and logs.
+See [privacy information](PRIVACY.md) for data handling. Keep signing keys, account details, device serials and private models out of public source, issues and logs.
 
 ## License and credits
 

@@ -27,7 +27,7 @@ bash scripts/build_android_full_release_aab.sh
 bash scripts/check_android_release.sh build/android-release/artifacts/fstl-e-arm64-release.aab
 ```
 
-The resulting AAB is unsigned and cannot be installed directly or submitted to Play. Keep signing material outside tracked source; see [Play readiness](PLAY_READINESS.md) before preparing a signed upload.
+The resulting AAB is unsigned and cannot be installed directly or submitted to Play. Keep signing material outside tracked source. A Play upload requires the active upload identity, a signed bundle and a version code higher than existing uploads and drafts.
 
 ## Test on a phone
 
@@ -41,4 +41,4 @@ bash scripts/deploy_android_phone.sh build/android-release/phone-artifacts/fstl-
 
 The APK uses `com.github.prjm.fstl_e.dev` and a test signing key. It installs alongside the Play app; it is not a Play release. CI test keys can change between runs, so a later APK may not upgrade an earlier test installation.
 
-Use the [compatibility checklist](ANDROID_COMPATIBILITY.md) for device testing and [contribution guidance](../CONTRIBUTING.md) for source/privacy checks. Keep device serials and workstation records private.
+Exercise changed behavior on a test device. Keep device serials and workstation records private.
