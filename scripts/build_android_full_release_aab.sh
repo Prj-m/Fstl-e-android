@@ -48,6 +48,7 @@ case "$FSTL_SIGN_WITH_KEYSTORE" in
     *) fail "FSTL_SIGN_WITH_KEYSTORE must be 0 or 1" ;;
 esac
 
+prefix_map_flags="\"-ffile-prefix-map=$repo_root=/src/fstl-e\" \"-ffile-prefix-map=$QT_ANDROID_ROOT=/deps/qt\" \"-ffile-prefix-map=$FSTL_OCCT_ROOT=/deps/occt\""
 "$QT_CMAKE" -S "$repo_root" -B "$FSTL_ANDROID_BUILD_DIR" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$QT_ANDROID_ROOT/lib/cmake/Qt6/qt.toolchain.cmake" \
     -DQT_HOST_PATH="$QT_HOST_ROOT" \
@@ -55,6 +56,7 @@ esac
     -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
     -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28 \
     -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+    -DCMAKE_C_FLAGS="$prefix_map_flags" -DCMAKE_CXX_FLAGS="$prefix_map_flags" \
     -DCMAKE_BUILD_TYPE=Release -DFSTL_ANDROID_TARGET_SDK=36 \
     -DENABLE_OCCT_STEP=ON -DFSTL_REQUIRE_OCCT=ON \
     -DFSTL_OCCT_ROOT="$FSTL_OCCT_ROOT"
