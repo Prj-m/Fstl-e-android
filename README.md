@@ -25,12 +25,8 @@ git switch codex/android-release-readiness
 The reviewed build uses Qt 6.11.3, JDK 17, SDK API 36, NDK 27.2.12479018 and OCCT 7.9.3. Dependencies are built or installed separately; their binaries are not tracked in Git. After checking out the review branch, follow its build and validation instructions:
 
 - [CI/CD and local builds](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/CI_CD.md).
-- [Contribution guidance](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/CONTRIBUTING.md).
-- [Play readiness](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/PLAY_READINESS.md).
-- [Android compatibility](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/ANDROID_COMPATIBILITY.md).
-- [Testing program](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/TESTING_PROGRAM.md).
 
-Other Android versions, native 16 KB runtime, cloud providers, OCCT resource stress and dependency distribution notices remain release gates. CI results and testing on one device do not establish compatibility on every Android device.
+Compatibility across Android versions and native 16 KB devices is still being tested.
 
 ## License and credits
 
