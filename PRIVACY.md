@@ -1,47 +1,19 @@
-# fstl-e-android Privacy Policy
+# fstl-e Android privacy policy
 
-_Last updated: 2025-11-27_
+Updated: 2026-10-04
 
-fstl-e-android is an offline 3D viewer for STL, 3MF, and STEP files. The app is designed to run entirely on your device and does not collect or transmit personal data.
+fstl-e Android, maintained by Prj-m, processes selected 3D models on your device. The app does not upload models, collect analytics, display advertising or send personal data to the developer.
 
-## Data collection
+## Files and local data
 
-fstl-e-android does **not**:
+The app reads files you choose through Android's file picker. STEP imports may use temporary local copies, normally removed when the import finishes. Screenshots are saved to a location you choose. Settings and recent-file references are stored locally; clearing app data or uninstalling removes that app data, but not your original models or saved screenshots.
 
-- collect personal information (such as your name, email address, or identifiers),
-- track your usage or behavior,
-- send any data to our servers or to third parties,
-- display advertising or use advertising SDKs.
+A cloud storage provider you select may download files under its own privacy policy. The viewer does not upload those files.
 
-## Files and storage access
+## Diagnostics
 
-The app can access 3D files that you choose to open (for example from device storage or a file manager). These files are:
-
-- read locally on your device for the sole purpose of rendering them,
-- not uploaded or transmitted by the app,
-- not copied or modified unless you explicitly save screenshots.
-
-You are responsible for the content of the files you open with the app.
-
-## Third-party libraries
-
-The app uses third-party libraries such as:
-
-- Qt (application framework),
-- Open CASCADE Technology (OCCT) for STEP file support.
-
-These libraries run locally inside the app and do not transmit your data to their authors.
-
-## Logs and debugging
-
-On Android, the app may write diagnostic messages to the system log (logcat) for debugging and crash analysis. These logs stay on your device and are only shared if you explicitly export them using developer tools. We do not receive logs automatically.
-
-## Children
-
-fstl-e-android is a general-purpose utility app and is not directed at children. We do not knowingly collect information about children.
+The app may write device diagnostic logs containing filenames or paths. The developer does not receive them automatically. Review any logs or models before voluntarily sharing them in a support report.
 
 ## Contact
 
-If you have questions about this privacy policy or about the app, please open an issue on the project GitHub page:
-
-https://github.com/Prj-m/fstl-e-android/issues
+For questions, use the [project's GitHub issues](https://github.com/Prj-m/fstl-e-android/issues). Do not include private files or account details in a public report.
