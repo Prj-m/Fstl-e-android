@@ -566,6 +566,13 @@ Mesh* Loader::load_step()
     verts.reserve(stepVerts.size());
     for (const QVector3D& v : stepVerts)
     {
+        // OCCT uses double coordinates; narrowing to float can overflow even
+        // when the source coordinate was finite. Never sort/render NaN or Inf.
+        if (!std::isfinite(v.x()) || !std::isfinite(v.y()) || !std::isfinite(v.z()))
+        {
+            emit error_bad_stl();
+            return nullptr;
+        }
         verts.push_back(Vertex(v.x(), v.y(), v.z()));
     }
 

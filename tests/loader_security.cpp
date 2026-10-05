@@ -17,6 +17,7 @@ public:
     explicit TestLoader(const QString& path) : Loader(nullptr, path, false) {}
     using Loader::load_stl;
     using Loader::load_3mf;
+    using Loader::load_step;
 };
 
 static QByteArray binaryStl(quint32 count, bool triangle = true, bool finite = true) {
@@ -38,6 +39,23 @@ int main(int argc, char** argv) {
     QTemporaryDir dir;
     if (!dir.isValid()) return 2;
     int failures = 0, checks = 0;
+    for (const QByteArray& coordinate : {QByteArray("0"), QByteArray("nan"), QByteArray("inf"), QByteArray("1e100")}) {
+        const QString path = dir.filePath("coordinate.step");
+        QFile file(path);
+        const QByteArray bytes = "ISO-10303-21;\nDATA;\n#1=CARTESIAN_POINT('',(" + coordinate
+            + ",0,0));\n#2=CARTESIAN_POINT('',(1,0,0));\n#3=CARTESIAN_POINT('',(0,1,0));\nENDSEC;\nEND-ISO-10303-21;\n";
+        if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size()) std::abort();
+        file.close();
+        TestLoader loader(path);
+        int errors = 0;
+        QObject::connect(&loader, &Loader::error_bad_stl, [&] { ++errors; });
+        std::unique_ptr<Mesh> mesh(loader.load_step());
+        const bool expected = coordinate == "0";
+        ++checks;
+        if (expected ? !mesh || errors : mesh || errors != 1) {
+            ++failures; std::cerr << "FAIL: STEP coordinate output validation\n";
+        }
+    }
     auto check = [&](const QByteArray& bytes, bool zip, bool expected, const char* name, int expectedTriangles = 1, quint32 declaredXmlSize = 0) {
         const QString path = dir.filePath(zip ? "model.3mf" : "model.stl");
         if (zip) {
