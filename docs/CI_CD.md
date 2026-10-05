@@ -53,19 +53,13 @@ After the local release build, package and install with:
 
 ```bash
 bash scripts/package_android_phone_apk.sh
-export ANDROID_SERIAL=RFCT80NJ43W
+export ANDROID_SERIAL="YOUR_DEVICE_SERIAL"
 bash scripts/deploy_android_phone.sh build/android-release/phone-artifacts/fstl-e-arm64-dev.apk
 ```
 
 Packaging requires lint, native alignment, APK signature and ZIP alignment checks, and verifies the separate package ID before exporting. Deployment rejects release package IDs and uses `adb install -r -t`; it does not uninstall or clear app data. Files opened through startup intents or subsequent file-open events retain their complete content URI. STEP/STP filename filters are now included. Provider URIs without extensions and permission persistence still require device testing.
 
-On this CachyOS workstation, the inspection/install tools can be enabled in the current shell with:
-
-```bash
-export JAVA_HOME="$HOME/.local/share/fstle-android/jdk17"
-export PATH="$JAVA_HOME/bin:$PATH"
-export ANDROID_SDK_ROOT="$HOME/.local/share/fstle-android/sdk"
-```
+Set `JAVA_HOME` to your JDK 17 installation and `ANDROID_SDK_ROOT` to your Android SDK. Add the JDK and SDK platform tools to `PATH`. Use the tool versions and Qt/OCCT paths documented in the build section.
 
 The CI download can be installed directly with the deployment script after verifying its checksum. For local builds, also set the Qt/OCCT paths from the build section below.
 
@@ -84,6 +78,6 @@ This stage is intentionally not wired to unknown credentials. Google's [Play App
 
 ## Phone testing
 
-On the development computer with Android platform tools installed, connect your phone with USB debugging enabled and accept the phone's authorization prompt. Confirm it appears with `adb devices -l`. The current CachyOS workstation has ADB access to an authorized Samsung SM-F936U running Android 14 (API 34), arm64-v8a, with 4 KB pages. The installed v1.0.3 is debuggable and an OCCT library fails the native 16 KB alignment check. It is a baseline only, not a release candidate. The matching Qt 6.11.3 Android/host kits, API 36 platform, NDK 27.2.12479018, JDK 17 and Android build-tools 36.0.0 are installed under `~/.local/share/fstle-android`. The pinned OCCT source is checked out there and its Android build is in progress. CMake, Ninja and ShellCheck are installed in a temporary user tool environment for validation.
+On the development computer with Android platform tools installed, connect a test phone with USB debugging enabled and accept its authorization prompt. Confirm it appears with `adb devices -l`. Keep device serials, local installation paths and detailed workstation inventories in private validation records. Record the app version, Android/API version, architecture and page size when reporting compatibility results. Test the reviewed candidate build rather than relying on an older installation.
 
 Test cold launch, settings, rotation/zoom, STL/3MF/STEP imports through local and cloud file providers, malformed files, reload/restart, screenshots, background/foreground, second file-open intents, Android 16 insets and a 16 KB device/emulator. Preserve reference screenshots of the current GUI.
