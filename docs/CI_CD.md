@@ -53,13 +53,13 @@ After the local release build, package and install with:
 
 ```bash
 bash scripts/package_android_phone_apk.sh
-export ANDROID_SERIAL=YOUR_DEVICE_SERIAL
+export ANDROID_SERIAL="YOUR_DEVICE_SERIAL"
 bash scripts/deploy_android_phone.sh build/android-release/phone-artifacts/fstl-e-arm64-dev.apk
 ```
 
 Packaging requires lint, native alignment, APK signature and ZIP alignment checks, and verifies the separate package ID before exporting. Deployment rejects release package IDs and uses `adb install -r -t`; it does not uninstall or clear app data. Files opened through startup intents or subsequent file-open events retain their complete content URI. STEP/STP filename filters are now included. Provider URIs without extensions and permission persistence still require device testing.
 
-Set JAVA_HOME and ANDROID_SDK_ROOT to your local JDK and Android SDK installations. Keep workstation paths in private validation records.
+Set `JAVA_HOME` to your JDK 17 installation and `ANDROID_SDK_ROOT` to your Android SDK. Add the JDK and SDK platform tools to `PATH`. Use the tool versions and Qt/OCCT paths documented in the build section.
 
 The CI download can be installed directly with the deployment script after verifying its checksum. For local builds, also set the Qt/OCCT paths from the build section below.
 
@@ -78,6 +78,6 @@ This stage is intentionally not wired to unknown credentials. Google's [Play App
 
 ## Phone testing
 
-On the development computer with Android platform tools installed, connect your phone with USB debugging enabled and accept the phone's authorization prompt. Confirm it appears with `adb devices -l`. Keep device serials and workstation inventories in private validation records. Test the reviewed candidate build and record its Android/API version, architecture and page size.
+On the development computer with Android platform tools installed, connect a test phone with USB debugging enabled and accept its authorization prompt. Confirm it appears with `adb devices -l`. Keep device serials, local installation paths and detailed workstation inventories in private validation records. Record the app version, Android/API version, architecture and page size when reporting compatibility results. Test the reviewed candidate build rather than relying on an older installation.
 
 Test cold launch, settings, rotation/zoom, STL/3MF/STEP imports through local and cloud file providers, malformed files, reload/restart, screenshots, background/foreground, second file-open intents, Android 16 insets and a 16 KB device/emulator. Preserve reference screenshots of the current GUI.
