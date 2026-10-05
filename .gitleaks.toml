@@ -1,0 +1,21 @@
+title = "fstl-e public repository privacy checks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "workstation-home-path"
+description = "Use placeholder paths instead of workstation home directories"
+regex = '''/(?:home|Users)/([A-Za-z0-9._-]+)/'''
+secretGroup = 1
+
+[[rules]]
+id = "android-serial-assignment"
+description = "Use a placeholder instead of a literal Android device serial"
+regex = '''(?m)^\s*(?:export\s+)?ANDROID_SERIAL\s*=\s*["']?([A-Za-z0-9]{6,})'''
+secretGroup = 1
+
+[[rules]]
+id = "samsung-device-serial"
+description = "Keep Samsung device serials in private validation records"
+regex = '''\bRF[A-Z0-9]{9}\b'''

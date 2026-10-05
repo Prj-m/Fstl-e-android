@@ -6,7 +6,7 @@ The validation workflows verify changes and produce an **unsigned** Android bund
 
 | Trigger | Workflow | Result |
 | --- | --- | --- |
-| Pull request, push to main, or manual run | CI | Shell checks, release-script/bundle tests, sanitizer parser checks, and a desktop compile |
+| Pull request, push to main, or manual run | CI | Secret/metadata source-history scan, shell checks, release-script/bundle tests, sanitizer parser checks, and a desktop compile |
 | Pull request or Actions → Android validation bundle → Run workflow | Android validation bundle | The CI checks, a full OCCT STEP dependency build, Release Android compile, Gradle lint, native 16 KB alignment verification, an unsigned AAB with SHA-256 checksum, and an optional separate debug-signed `.dev` APK |
 
 The Android build uses Qt 6.11.3, Java 17, SDK API 36, NDK 27.2.12479018, arm64-v8a and OCCT 7.9.3 at commit `a016080bf6738d6aeae020badee4e888ad1540a5`. OCCT is built with shared libraries and flexible page sizes; Qt and OCCT downloads/builds are cached. GitHub action references are pinned to commits. No application signing key or Play service account is required by either workflow. Tokens have read-only repository permissions.
@@ -21,7 +21,7 @@ The first Android run can take considerably longer while compiling OCCT. Android
 2. Confirm GitHub Actions is enabled. Run **CI** and resolve any hosted-runner build/lint differences before treating it as a merge gate.
 3. Run **Android validation bundle**, select the reviewed branch and wait for all jobs. Download the `fstl-e-unsigned-arm64-<commit>` artifact from that run.
 4. Verify the artifact checksum. The AAB is unsigned: it cannot be uploaded to Play or installed directly. For phone testing, generate APKs from it with bundletool using a local test key, or produce a signed local build using the confirmed production/upload identity. APKs signed with a different key cannot upgrade an existing installation; use a spare test device/profile rather than uninstalling an app with settings you want to keep.
-5. Once the hosted workflows have passed, require pull requests and both **Build and regression checks** and **Unsigned arm64 bundle with full STEP support** in the repository rules. Confirm the job names in the latest successful run before configuring them. Keep changes on branches and merge after checks pass.
+5. Once the hosted workflows have passed, require pull requests and both **Build and regression checks**, **Repository privacy scan** and **Unsigned arm64 bundle with full STEP support** in the repository rules. Confirm the job names in the latest successful run before configuring them. Keep changes on branches and merge after checks pass.
 
 The workflow also validates the actual AAB manifest with checksummed bundletool before artifact upload. `FSTL_PLAY_HIGHEST_VERSION_CODE` can enforce the Play version floor during local validation.
 

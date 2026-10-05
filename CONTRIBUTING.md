@@ -24,7 +24,13 @@ Before submitting, run `git diff --check`, review the staged diff, and verify do
 
 Commit specific reviewed paths. Keep signing material, credentials, account-specific Console records, device serials, personal workstation paths, confidential models and unrelated logs out of tracked files and GitHub discussions. Use GitHub's noreply email for commits when a personal address should remain private. Keep detailed validation records locally.
 
-Run a verified secret scanner such as Gitleaks with redacted output before publishing. Review the current tree, reachable history, commit metadata and artifact contents; deleting a file does not erase its previous versions. Pattern scans cannot prove the absence of secrets. Native libraries can retain build paths even after debug symbols are stripped.
+CI runs a pinned, checksummed Gitleaks binary against reachable source history. The repository configuration extends credential checks with workstation-path and device-serial checks. Before publishing, run the same checks locally with redacted output:
+
+```bash
+gitleaks git . --config .gitleaks.toml --log-opts="--all" --redact=100
+```
+
+This source-history scan does not inspect compiled APK contents, commit-email metadata or GitHub cached PR references. Review the current tree, reachable history, commit metadata and artifact contents; deleting a file does not erase its previous versions. Pattern scans cannot prove the absence of secrets. Native libraries can retain build paths even after debug symbols are stripped.
 
 Generate APKs/AABs in ignored build directories. Publish only reviewed artifacts with checksums and clear testing/release status. Development APKs and unsigned bundles are not Play delivery artifacts. Preserve branch protections and required checks; coordinate history cleanup before updating shared branches or released tags.
 
