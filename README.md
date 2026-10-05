@@ -6,9 +6,9 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF
 
 ## Download and testing
 
-**[Download the Android APK (arm64)](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.1/fstl-e-1.0.4-rc.1-arm64-dev.apk)** · [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.1/SHA256SUMS)
+**[Download the Android APK (arm64)](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.2/fstl-e-1.0.4-rc.2-arm64-dev.apk)** · [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.2/SHA256SUMS)
 
-The [1.0.4-rc.1 testing release](https://github.com/Prj-m/fstl-e-android/releases/tag/v1.0.4-rc.1) includes an arm64 development APK and a SHA-256 checksum. Verify the checksum before installation. The debug-signed APK uses `com.github.prjm.fstl_e.dev`, installs alongside the Play app, and is intended for evaluation. Native dependencies still contain generic build-path strings.
+The [1.0.4-rc.2 testing release](https://github.com/Prj-m/fstl-e-android/releases/tag/v1.0.4-rc.2) includes an arm64 development APK and a SHA-256 checksum. Verify the checksum before installation. The debug-signed APK uses `com.github.prjm.fstl_e.dev`, installs alongside the Play app, and is intended for evaluation.
 
 Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues). Include app version, Android version, device model, steps and expected versus actual behavior. Keep credentials, device serials, private models and unrelated logs out of reports.
 
