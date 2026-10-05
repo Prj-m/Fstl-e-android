@@ -1,6 +1,6 @@
 # CI/CD for fstl-e Android
 
-The first stage verifies changes and produces an **unsigned** Android bundle. The existing GUI stays in place. Signing and Google Play delivery follow after the signing identity and Play Console status are confirmed.
+The validation workflows verify changes and produce an **unsigned** Android bundle plus a separate development APK. Signing and Google Play delivery require a confirmed upload identity and completed release checks.
 
 ## What runs
 
@@ -13,7 +13,7 @@ The Android build uses Qt 6.11.3, Java 17, SDK API 36, NDK 27.2.12479018, arm64-
 
 Qt documents [NDK r27c and command-line Android builds](https://doc.qt.io/qt-6.11/android-building-projects-from-commandline.html). The API 36 migration also changes platform behavior; test layout, system bars and storage on Android 16 before approving a release.
 
-The first Android run can take considerably longer while compiling OCCT. Android runs are queued per branch so an in-progress dependency build can finish and save its cache. Later runs reuse the cache. A workflow that fails does not upload its artifact. Packaging uses a fresh directory so an old successful AAB cannot hide a failed build. The native verifier checks ELF load segments, the ABI and required app/STEP libraries; it does not prove Android runtime or APK ZIP-alignment compatibility.
+The first Android run can take considerably longer while compiling OCCT. Android runs are queued per branch so an in-progress dependency build can finish and save its cache. Later runs reuse the cache. A workflow that fails does not upload its artifact. Packaging uses a fresh directory so an old successful AAB cannot hide a failed build. The native verifier checks ELF load segments, rounded RELRO protection, the ABI and required app/STEP libraries. Development APK packaging separately verifies ZIP alignment and signatures. Static checks do not establish Android runtime compatibility.
 
 ## Put the pipeline into service
 
@@ -21,7 +21,7 @@ The first Android run can take considerably longer while compiling OCCT. Android
 2. Confirm GitHub Actions is enabled. Run **CI** and resolve any hosted-runner build/lint differences before treating it as a merge gate.
 3. Run **Android validation bundle**, select the reviewed branch and wait for all jobs. Download the `fstl-e-unsigned-arm64-<commit>` artifact from that run.
 4. Verify the artifact checksum. The AAB is unsigned: it cannot be uploaded to Play or installed directly. For phone testing, generate APKs from it with bundletool using a local test key, or produce a signed local build using the confirmed production/upload identity. APKs signed with a different key cannot upgrade an existing installation; use a spare test device/profile rather than uninstalling an app with settings you want to keep.
-5. Once the hosted workflows have passed, make **Build and regression checks** a required pull-request check in the repository rules. Keep changes on branches and merge after checks pass.
+5. Once the hosted workflows have passed, require pull requests and both **Build and regression checks** and **Unsigned arm64 bundle with full STEP support** in the repository rules. Confirm the job names in the latest successful run before configuring them. Keep changes on branches and merge after checks pass.
 
 The workflow also validates the actual AAB manifest with checksummed bundletool before artifact upload. `FSTL_PLAY_HIGHEST_VERSION_CODE` can enforce the Play version floor during local validation.
 
@@ -43,7 +43,7 @@ bash scripts/build_android_full_release_aab.sh
 bash scripts/check_android_release.sh build/android-release/artifacts/fstl-e-arm64-release.aab
 ```
 
-For an interactive local signing build, set `FSTL_SIGN_WITH_KEYSTORE=1`, `FSTL_KEYSTORE` and `FSTL_KEY_ALIAS`. The deploy tool prompts for passwords. Keep signing files outside the repository; do not put passwords in scripts, command arguments or workflow files. Preserve the original key and encrypted backups until its role is confirmed.
+For an interactive local signing build, set `FSTL_SIGN_WITH_KEYSTORE=1`, `FSTL_KEYSTORE` and `FSTL_KEY_ALIAS`. The deploy tool prompts for passwords. Keep signing files outside the tracked source tree; do not put passwords in scripts, command arguments or workflow files. Preserve the original key and encrypted backups until its role is confirmed.
 
 ## Phone development APK
 
@@ -61,20 +61,20 @@ Packaging requires lint, native alignment, APK signature and ZIP alignment check
 
 Set `JAVA_HOME` to your JDK 17 installation and `ANDROID_SDK_ROOT` to your Android SDK. Add the JDK and SDK platform tools to `PATH`. Use the tool versions and Qt/OCCT paths documented in the build section.
 
-The CI download can be installed directly with the deployment script after verifying its checksum. For local builds, also set the Qt/OCCT paths from the build section below.
+The CI download can be installed directly with the deployment script after verifying its checksum. For local builds, also set the Qt/OCCT paths from the local build section above.
 
 ## Next stage: signed testing delivery
 
 After the unsigned pipeline passes and a phone confirms the build behaves correctly:
 
-1. In Play Console, record the app's current highest version code, upload certificate fingerprint, app-signing certificate fingerprint and testing/production status. This branch leaves versionCode 19 in place for validation; increment above the Console's highest code for the first upload.
+1. In Play Console, record the app's current highest version code, upload certificate fingerprint, app-signing certificate fingerprint and testing/production status. The candidate uses versionCode 27; verify every upload and draft, then increase it if needed before Play delivery.
 2. Determine whether the local key is the **upload key** or the **app signing key**. Use the existing identity or the appropriate Play reset procedure. Do not generate a replacement key blindly.
 3. Add a separate, manually triggered delivery workflow behind a GitHub `play-internal` environment. Restrict it to the protected main branch and approved commits. Configure environment approval if your GitHub plan supports it.
 4. Store the upload keystore and passwords as environment secrets, restore the keystore only into the runner's temporary directory, and remove it after use. Public/fork pull-request jobs must never receive those secrets. Use a separate signing step that can read passwords from environment/file inputs without echoing them.
 5. Give a Play service account only the app/track permissions required to deliver testing releases. Store its credential as an environment secret or use short-lived federation where supported. Have the workflow upload to the **internal testing track** first. Leave production promotion as a deliberate separate step.
 6. Verify installation and upgrades through Play internal testing, inspect the pre-launch report and satisfy any closed-testing gate before applying for production access.
 
-This stage is intentionally not wired to unknown credentials. Google's [Play App Signing documentation](https://support.google.com/googleplay/android-developer/answer/9842756) explains the distinction between upload and signing keys. Personal developer accounts created after November 13, 2023 require at least 12 closed testers continuously opted in for 14 days before applying for production access; internal testing does not fulfill that requirement. [Official testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465).
+Signed Play delivery is not implemented in the validation workflows. Google's [Play App Signing documentation](https://support.google.com/googleplay/android-developer/answer/9842756) explains the distinction between upload and signing keys. Personal developer accounts created after November 13, 2023 require at least 12 closed testers continuously opted in for 14 days before applying for production access; internal testing does not fulfill that requirement. [Official testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465).
 
 ## Phone testing
 
