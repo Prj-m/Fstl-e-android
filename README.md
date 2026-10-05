@@ -10,8 +10,6 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF
 
 The [1.0.4-rc.1 testing release](https://github.com/Prj-m/fstl-e-android/releases/tag/v1.0.4-rc.1) includes an arm64 development APK and a SHA-256 checksum. Verify the checksum before installation. The debug-signed APK uses `com.github.prjm.fstl_e.dev`, installs alongside the Play app, and is intended for evaluation. Native dependencies still contain generic build-path strings.
 
-Older APK downloads were withdrawn during repository privacy cleanup. The [Google Play listing](https://play.google.com/store/apps/details?id=com.github.prjm.fstl_e) may be restricted to a testing track; public availability requires Play Console verification. The development APK is not a Play upload artifact.
-
 Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues). Include app version, Android version, device model, steps and expected versus actual behavior. Keep credentials, device serials, private models and unrelated logs out of reports.
 
 ## Source and development status
