@@ -1,6 +1,12 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QPushButton>
+#include <QTextBrowser>
+#include <QVBoxLayout>
+#include <QScreen>
 #include <QFile>
 #include <QRegularExpression>
 #include <QDateTime>
@@ -1158,7 +1164,7 @@ void Window::on_open()
 
 void Window::on_about()
 {
-    QMessageBox::about(this, "",
+    QMessageBox about(QMessageBox::Information, tr("About fstl-e"),
                        "<p align=\"center\">This is <b>fstl-e</b><br>" FSTLE_VERSION "</p>"
                        "<p>A viewer for STL, 3MF and STEP models.</p>"
                        "<p>source code of this version available here :"
@@ -1174,7 +1180,27 @@ void Window::on_about()
                        "<a href=\"mailto:matt.j.keeter@gmail.com\""
                        "   style=\"color: #93a1a1;\">matt.j.keeter@gmail.com</a></p>"
                        "</font>"
-                       );
+                       , QMessageBox::Ok, this);
+    QPushButton* licenses = about.addButton(tr("Licenses"), QMessageBox::ActionRole);
+    about.exec();
+    if (about.clickedButton() == licenses) {
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Third-party licenses"));
+        auto* layout = new QVBoxLayout(&dialog);
+        auto* text = new QTextBrowser(&dialog);
+        QFile notices(":/licenses/NOTICE.txt");
+        if (notices.open(QIODevice::ReadOnly))
+            text->setPlainText(QString::fromUtf8(notices.readAll()));
+        else
+            text->setPlainText(tr("License notices could not be opened."));
+        layout->addWidget(text);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        layout->addWidget(buttons);
+        const QSize available = screen()->availableGeometry().size();
+        dialog.resize(qMin(640, available.width() - 24), qMin(720, available.height() - 48));
+        dialog.exec();
+    }
 }
 
 void Window::on_bad_stl()
@@ -1183,8 +1209,7 @@ void Window::on_bad_stl()
                           "<b>Error:</b><br>"
                           "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
                           "Please re-export it from the original source or try a simpler version.");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    // Keep the last valid model and its filename when an import fails.
 }
 
 void Window::on_empty_mesh()
@@ -1192,8 +1217,7 @@ void Window::on_empty_mesh()
     QMessageBox::critical(this, "Error",
                           "<b>Error:</b><br>"
                           "This file is syntactically correct<br>but contains no triangles.");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    // Keep the last valid model and its filename when an import fails.
 }
 
 void Window::on_missing_file()
@@ -1201,13 +1225,18 @@ void Window::on_missing_file()
     QMessageBox::critical(this, "Error",
                           "<b>Error:</b><br>"
                           "The target file is missing.<br>");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    // Keep the last valid model and its filename when an import fails.
 }
 
 void Window::enable_open()
 {
     open_action->setEnabled(true);
+    if (!pending_import.isEmpty()) {
+        const QString filename = pending_import;
+        const bool is_reload = pending_import_reload;
+        pending_import.clear();
+        load_stl(filename, is_reload);
+    }
 }
 
 void Window::disable_open()
@@ -1491,7 +1520,12 @@ void Window::on_reload()
 
 bool Window::load_stl(QString filename, bool is_reload)
 {
-    if (filename.isEmpty() || !open_action->isEnabled()) return false;
+    if (filename.isEmpty()) return false;
+    if (!open_action->isEnabled()) {
+        pending_import = filename;
+        pending_import_reload = is_reload;
+        return true;
+    }
 
     // is it a directory?
     bool isDir = QFileInfo(filename).isDir();
@@ -1521,10 +1555,10 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     connect(loader, &Loader::finished,
             loader, &Loader::deleteLater);
-    connect(loader, &Loader::finished,
-              this, &Window::enable_open);
-    connect(loader, &Loader::finished,
-            canvas, &Canvas::clear_status);
+    connect(loader, &Loader::finished, this, [this] {
+        canvas->clear_status();
+        enable_open();
+    });
 
     if (filename[0] != ':')
     {

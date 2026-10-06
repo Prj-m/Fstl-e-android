@@ -87,6 +87,7 @@ set(PROJECT_SOURCES
     resources/qml.qrc
     resources/icons.qrc
     resources/shaders.qrc
+    resources/licenses.qrc
 )
 
 if(ANDROID)

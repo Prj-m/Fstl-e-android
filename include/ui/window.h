@@ -78,6 +78,8 @@ private slots:
     void on_backdropSettings();
 
 private:
+    QString pending_import;
+    bool pending_import_reload = false;
     void rebuild_recent_files();
     void load_persist_settings();
     void sorted_insert(QStringList& list, const QCollator& collator, const QString& value);
