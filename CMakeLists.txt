@@ -129,7 +129,7 @@ set_target_properties(fstl_viewer PROPERTIES
 )
 
 # Add include directories for new structure
-target_compile_definitions(fstl_viewer PRIVATE FSTLE_VERSION="${PROJECT_VERSION}-rc.2")
+target_compile_definitions(fstl_viewer PRIVATE FSTLE_VERSION="${PROJECT_VERSION}-rc.4")
 
 target_include_directories(fstl_viewer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

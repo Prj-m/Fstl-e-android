@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import re
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("manifest_check", ROOT / "scripts/verify_android_manifest.py")
@@ -17,6 +19,14 @@ MANIFEST = '''<manifest xmlns:android="http://schemas.android.com/apk/res/androi
 
 
 class ReleaseManifestChecks(unittest.TestCase):
+    def test_viewer_and_android_versions_agree(self):
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        project = re.search(r"project\(FstlViewer VERSION ([0-9.]+)", cmake).group(1)
+        display = re.search(r'FSTLE_VERSION="([^"\n]+)"', cmake).group(1)
+        display = display.replace("${PROJECT_VERSION}", project)
+        manifest = ET.parse(ROOT / "android/AndroidManifest.xml").getroot()
+        self.assertEqual(display, manifest.get("{http://schemas.android.com/apk/res/android}versionName"))
+
     def test_valid_release_and_upgrade(self):
         self.assertEqual(manifest_check.verify_manifest(MANIFEST, 19), 20)
 

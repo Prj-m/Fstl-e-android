@@ -828,6 +828,10 @@ Window::Window(QWidget* parent)
     });
 
     windowToolBar->addAction(resetTransformOnLoadAction);
+    // These actions must be reachable by touch as well as keyboard shortcuts.
+    windowToolBar->addAction(save_screenshot_action);
+    about_action->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    windowToolBar->addAction(about_action);
 #else
     // Desktop: show axes, then the "eye" apply-view menu button, then reset-on-load
     windowToolBar->addAction(axes_action);
@@ -1156,10 +1160,10 @@ void Window::on_about()
 {
     QMessageBox::about(this, "",
                        "<p align=\"center\">This is <b>fstl-e</b><br>" FSTLE_VERSION "</p>"
-                       "<p>A fast viewer for <code>.stl</code> files.</p>"
+                       "<p>A viewer for STL, 3MF and STEP models.</p>"
                        "<p>source code of this version available here :"
-                       "<a href=\"https://github.com/wdaniau/fstl\""
-                       "   style=\"color: #93a1a1;\">https://github.com/wdaniau/fstl</a></p>"
+                       "<a href=\"https://github.com/Prj-m/Fstl-e-android\""
+                       "   style=\"color: #93a1a1;\">Fstl-e-android source and releases</a></p>"
                        "<font size='small'>"
                        "<p>It is a forked version of <b>fstl</b> 0.10.0<br>"
                        "with some fancy enhancements"
@@ -1487,7 +1491,7 @@ void Window::on_reload()
 
 bool Window::load_stl(QString filename, bool is_reload)
 {
-    if (!open_action->isEnabled())  return false;
+    if (filename.isEmpty() || !open_action->isEnabled()) return false;
 
     // is it a directory?
     bool isDir = QFileInfo(filename).isDir();
@@ -1500,12 +1504,12 @@ bool Window::load_stl(QString filename, bool is_reload)
         }
     }
 
+    // Reserve the import before starting the thread. Its started signal is
+    // queued, so rapid file intents could otherwise start concurrent imports.
+    disable_open();
     canvas->set_status("Loading " + filename);
 
     Loader* loader = new Loader(this, filename, is_reload);
-    connect(loader, &Loader::started,
-              this, &Window::disable_open);
-
     connect(loader, &Loader::got_mesh,
             canvas, &Canvas::load_mesh);
     connect(loader, &Loader::error_bad_stl,
