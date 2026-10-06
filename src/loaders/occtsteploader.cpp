@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QTemporaryFile>
 #include <QDir>
+#include <QStandardPaths>
 #include <memory>
 
 #ifdef FSTL_USE_OCCT_STEP
@@ -46,7 +47,14 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
 
 #ifdef Q_OS_ANDROID
     if (filename.startsWith("content://") || filename.startsWith(":/")) {
-        temporarySource = std::make_unique<QTemporaryFile>(QDir::tempPath() + "/fstl_step_XXXXXX.stp");
+        // Android's process temporary directory may be unwritable. Use the
+        // application's private cache, which Qt resolves through getCacheDir().
+        const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+        if (cachePath.isEmpty() || !QDir().mkpath(cachePath)) {
+            qWarning() << "OCCT STEP: Application cache is unavailable";
+            return false;
+        }
+        temporarySource = std::make_unique<QTemporaryFile>(cachePath + "/fstl_step_XXXXXX.stp");
         QTemporaryFile& tmp = *temporarySource;
         if (!tmp.open()) {
             qWarning() << "OCCT STEP: Failed to create temporary STEP file" << tmp.errorString();
