@@ -4,29 +4,15 @@
 
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF and STEP models. The current candidate is a testing prerelease; production readiness remains under review.
 
-## Testing on Google Play
+## Testing
 
-fstl-e is in closed testing on Google Play. Current test build: **1.0.4-rc.5** (version code 31).
+Closed test on Google Play, build 1.0.4-rc.5. Join the tester group, then opt in: [play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)
 
-1. Join the tester group or list you were invited to, using the same Google account as your phone.
-2. Opt in: **[play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)**
-3. Install or update **fstl-e** from Google Play and keep it installed for the whole test period.
+Android 9+, arm64. Report problems with the [bug report template](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md).
 
-Requires an arm64 phone or tablet running Android 9 or newer. The app works offline and needs no account.
+## Building
 
-**Please test:** open STL, 3MF and STEP files from local storage and from cloud storage (for example Google Drive); rotate and zoom; open a second model from a file manager while the app is running; rotate the device, background and resume; save a screenshot with the camera button.
-
-### Reporting a problem
-
-Open a [bug report](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md). Include the app version (shown under the info button), phone model, Android version, the steps you took, and what you expected versus what happened. Attach a screenshot when helpful. Only share models that are not confidential, and leave out personal data.
-
-Older debug APKs on the Releases page predate fixes in the Play build. Use Google Play for testing.
-
-## Source and builds
-
-Releases are built from the default branch. The release build uses Qt 6.11.3, JDK 17, SDK API 36, NDK 27.2.12479018 and OCCT 7.9.3. Dependencies are built or installed separately; their binaries are not tracked in Git. See [CI/CD and local builds](docs/CI_CD.md) for build and validation steps.
-
-Compatibility across Android versions and native 16 KB page-size devices is being checked during closed testing.
+Qt 6.11.3, JDK 17, SDK 36, NDK 27.2.12479018, OCCT 7.9.3. See [docs/CI_CD.md](docs/CI_CD.md).
 
 ## License and credits
 
