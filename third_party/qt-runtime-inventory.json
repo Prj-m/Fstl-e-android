@@ -1,0 +1,1983 @@
+[
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-BundledFreetype-Attribution-freetype-bdf-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledFreetype_Attribution_freetype-bdf\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/freetype/qt_attribution.json\n    Entry index: 2\n    Id: freetype-bdf\n    Name: Freetype 2 - Bitmap Distribution Format (BDF) support\n    Description: FreeType is a freely available software library to render fonts.\n    Qt usage: Optionally used in Qt GUI and platform plugins. Configure with -no-freetype, or -system-freetype to avoid.\n    License: MIT License\n    License file: BDF-LICENSE.txt\n",
+    "copyrightText": "Copyright (c) 2000 Computing Research Labs, New Mexico State University\nCopyright (c) 2001-2014 Francesco Zappa Nardelli",
+    "downloadLocation": "http://www.freetype.org",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledFreetype_Attribution_freetype-bdf",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledFreetype_Attribution_freetype-bdf@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledFreetype_Attribution_freetype-bdf",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledFreetype_Attribution_freetype-bdf",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-BundledFreetype-Attribution-freetype-pcf-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledFreetype_Attribution_freetype-pcf\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/freetype/qt_attribution.json\n    Entry index: 3\n    Id: freetype-pcf\n    Name: Freetype 2 - Portable Compiled Format (PCF) support\n    Description: FreeType is a freely available software library to render fonts.\n    Qt usage: Optionally used in Qt GUI and platform plugins. Configure with -no-freetype, or -system-freetype to avoid.\n    License: MIT License and MIT Open Group variant\n    License file: PCF-LICENSE.txt\n",
+    "copyrightText": "Copyright (c) 2001, 2012 David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2000-2014 Francesco Zappa Nardelli\nCopyright (c) 1990, 1994, 1998 The Open Group",
+    "downloadLocation": "http://www.freetype.org",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledFreetype_Attribution_freetype-pcf",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledFreetype_Attribution_freetype-pcf@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledFreetype_Attribution_freetype-pcf",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT AND MIT-open-group",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledFreetype_Attribution_freetype-pcf",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-BundledFreetype-Attribution-freetype-zlib-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledFreetype_Attribution_freetype-zlib\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/freetype/qt_attribution.json\n    Entry index: 1\n    Id: freetype-zlib\n    Name: Freetype 2 - zlib\n    Description: FreeType is a freely available software library to render fonts.\n    Qt usage: Optionally used in Qt GUI and platform plugins. Configure with -no-freetype, or -system-freetype to avoid.\n    License: zlib License\n    License file: ZLIB-LICENSE.txt\n",
+    "copyrightText": "Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler",
+    "downloadLocation": "http://www.freetype.org",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledFreetype_Attribution_freetype-zlib",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledFreetype_Attribution_freetype-zlib@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledFreetype_Attribution_freetype-zlib",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Zlib",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledFreetype_Attribution_freetype-zlib",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-BundledPcre2-Attribution-pcre2-sljit-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledPcre2_Attribution_pcre2-sljit\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/pcre2/qt_attribution.json\n    Entry index: 1\n    Id: pcre2-sljit\n    Name: PCRE2 - Stack-less Just-In-Time Compiler\n    Description: The PCRE library is a set of functions that implement regular expression pattern matching using the same syntax and semantics as Perl 5.\n    Qt usage: Used in Qt Core (QRegularExpression).\n    License: BSD 2-clause \"Simplified\" License\n    License file: LICENSE-SLJIT\n",
+    "copyrightText": "Copyright Zoltan Herczeg",
+    "downloadLocation": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.48/pcre2-10.48.tar.bz2",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/PCRE2Project/pcre2@pcre2-10.48",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledPcre2_Attribution_pcre2-sljit",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledPcre2_Attribution_pcre2-sljit@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledPcre2_Attribution_pcre2-sljit",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:pcre:pcre2:10.48:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-2-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledPcre2_Attribution_pcre2-sljit",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "10.48"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-blake2-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_blake2\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/blake2/qt_attribution.json\n    Entry index: 0\n    Id: blake2\n    Name: BLAKE2 (reference implementation)\n    Description: BLAKE2 is a cryptographic hash function faster than MD5, SHA-1, SHA-2, and SHA-3, yet is at least as secure as the latest standard SHA-3.\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: Creative Commons Zero v1.0 Universal or Apache License 2.0\n    License file: COPYING\n",
+    "copyrightText": "Copyright 2012, Samuel Neves <sneves@dei.uc.pt>",
+    "downloadLocation": "https://github.com/BLAKE2/BLAKE2/tree/ed1974ea83433eba7b2d95c5dcd9ac33cb847913",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/BLAKE2/BLAKE2@ed1974ea83433eba7b2d95c5dcd9ac33cb847913",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_blake2",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_blake2@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_blake2",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:blake2:blake2:*:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0 OR Apache-2.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_blake2",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "ed1974ea83433eba7b2d95c5dcd9ac33cb847913"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-doubleconversion-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_doubleconversion\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/double-conversion/qt_attribution.json\n    Entry index: 0\n    Id: doubleconversion\n    Name: Efficient Binary-Decimal and Decimal-Binary Conversion Routines for IEEE Doubles\n    Qt usage: Used in Qt Core. Configure with -system-doubleconversion or -no-doubleconversion to avoid.\n    License: BSD 3-clause \"New\" or \"Revised\" License\n    License file: LICENSE\n",
+    "copyrightText": "Copyright 2006-2012, the V8 project authors",
+    "downloadLocation": "https://github.com/google/double-conversion/releases/tag/v3.4.0",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/google/double-conversion@v3.4.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_doubleconversion",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_doubleconversion@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_doubleconversion",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:google:double-conversion:3.4.0:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_doubleconversion",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "3.4.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-easing-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_easing\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/easing/qt_attribution.json\n    Entry index: 0\n    Id: easing\n    Name: Easing Equations by Robert Penner\n    Qt usage: Used in Qt Core (QEasingCurve).\n    License: BSD 3-clause \"New\" or \"Revised\" License\n    License file: LICENSE\n",
+    "copyrightText": "Copyright (c) 2001 Robert Penner",
+    "downloadLocation": "http://robertpenner.com/easing/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_easing",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_easing@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_easing",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_easing",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-forkfd-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_forkfd\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/forkfd/qt_attribution.json\n    Entry index: 0\n    Id: forkfd\n    Name: forkfd\n    Qt usage: Used on most Unix platforms in Qt Core.\n    License: MIT License\n    License file: LICENSE\n",
+    "copyrightText": "Copyright (C) 2016 Intel Corporation\nCopyright (C) 2015 Klar\u00e4lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_forkfd",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_forkfd@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_forkfd",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_forkfd",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-md4-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_md4\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/md4/qt_attribution.json\n    Entry index: 0\n    Id: md4\n    Name: MD4\n    Description: An OpenSSL-compatible implementation of the RSA Data Security, Inc. MD4 Message-Digest Algorithm.\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: Public Domain\n",
+    "copyrightText": "Written by Alexander Peslyak - better known as Solar Designer <solar@openwall.com> - in 2001, and placed in the public domain. There's absolutely no warranty.",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_md4",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_md4@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_md4",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_md4",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-md5-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_md5\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/md5/qt_attribution.json\n    Entry index: 0\n    Id: md5\n    Name: MD5\n    Description: MD5 message-digest algorithm.\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: Public Domain\n",
+    "copyrightText": "Written by Colin Plumb in 1993, no copyright is claimed. Ian Jackson <ian@chiark.greenend.org.uk>.",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_md5",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_md5@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_md5",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_md5",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-rfc6234-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_rfc6234\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/rfc6234/qt_attribution.json\n    Entry index: 0\n    Id: rfc6234\n    Name: Secure Hash Algorithms SHA-384 and SHA-512\n    Description: Implements the Secure Hash Algorithms SHA 384 and SHA-521\n    Qt usage: Used in Qt Core (QCryptographicHash and QMessageAuthenticationCode)\n    License: BSD 3-clause \"New\" or \"Revised\" License\n    License file: LICENSE\n",
+    "copyrightText": "Copyright (c) 2011 IETF Trust and the persons identified as authors of the code.",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_rfc6234",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_rfc6234@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_rfc6234",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_rfc6234",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-sha1-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_sha1\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/sha1/qt_attribution.json\n    Entry index: 0\n    Id: sha1\n    Name: Secure Hash Algorithm SHA-1\n    Description: Implements the Secure Hash Algorithms SHA 1\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: Public Domain\n",
+    "copyrightText": "Copyright (C) Dominik Reichl <dominik.reichl@t-online.de>\nCopyright (C) 2016 The Qt Company Ltd",
+    "downloadLocation": "http://www.dominik-reichl.de/projects/csha1/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/csha1?download_url=https://www.dominik-reichl.de/projects/csha1/",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_sha1",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_sha1@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_sha1",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-SHA1-Public-Domain",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_sha1",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-sha3-endian-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_sha3_endian\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/sha3/qt_attribution.json\n    Entry index: 0\n    Id: sha3_endian\n    Name: Secure Hash Algorithm SHA-3 - brg_endian\n    Description: SHA-3, originally known as Keccak, is a cryptographic hash function.\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: BSD 2-clause \"Simplified\" License\n    License file: BRG_ENDIAN_LICENSE\n",
+    "copyrightText": "Copyright (c) 1998-2013, Brian Gladman, Worcester, UK. All rights reserved.",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/BrianGladman/sha@1.0.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_sha3_endian",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_sha3_endian@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_sha3_endian",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-2-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_sha3_endian",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "1.0.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-sha3-keccak-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_sha3_keccak\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/sha3/qt_attribution.json\n    Entry index: 1\n    Id: sha3_keccak\n    Name: Secure Hash Algorithm SHA-3 - Keccak\n    Description: SHA-3, originally known as Keccak, is a cryptographic hash function.\n    Qt usage: Used in Qt Core (QCryptographicHash).\n    License: Creative Commons Zero v1.0 Universal\n    License file: CC0_LICENSE\n",
+    "copyrightText": "Guido Bertoni, Joan Daemen, Micha\u00ebl Peeters and Gilles Van Assche.\nTo the extent possible under law, the implementers have waived all copyright\nand related or neighboring rights to the source code in this file.",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/sha3_keccak@3.2?download_url=https://keccak.team/obsolete/KeccakReferenceAndOptimized-3.2.zip",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_sha3_keccak",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_sha3_keccak@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_sha3_keccak",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_sha3_keccak",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "3.2"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-siphash-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_siphash\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/siphash/qt_attribution.json\n    Entry index: 0\n    Id: siphash\n    Name: SipHash Algorithm\n    Description: Implements the SipHash algorithm.\n    Qt usage: Used in Qt Core (QHash)\n    License: Creative Commons Zero v1.0 Universal\n",
+    "copyrightText": "Copyright (C) 2012-2014 Jean-Philippe Aumasson\nCopyright (C) 2012-2014 Daniel J. Bernstein <djb@cr.yp.to>\nCopyright (C) 2016 Intel Corporation",
+    "downloadLocation": "https://raw.githubusercontent.com/veorq/SipHash/adcbf09b1684a718f594faa650ffc56bacdb0777/siphash24.c",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/veorq/SipHash@adcbf09b1684a718f594faa650ffc56bacdb0777",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_siphash",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_siphash@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_siphash",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_siphash",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-tika-mimetypes-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_tika-mimetypes\n    Information extracted from:\n     /src_dir/qtbase/src/corelib/mimetypes/3rdparty/qt_attribution.json\n    Entry index: 0\n    Id: tika-mimetypes\n    Name: Apache Tika MimeType Definitions\n    Description: The Apache Tika MimeTypes list many known MIME types and how to match files (using globs and/or 'magic' rules for the file contents)\n    Qt usage: Qt Core uses a copy of the Apache Tika MimeType Definitions if shared-mime-info isn't installed on the system.\n    License: Apache License 2.0\n",
+    "copyrightText": "Copyright 2026 The Apache Software Foundation",
+    "downloadLocation": "https://github.com/apache/tika/blob/c29724782854bb5a319f4a1940d0828a58ace3f9/tika-core/src/main/resources/org/apache/tika/mime/tika-mimetypes.xml",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/apache/tika@c29724782854bb5a319f4a1940d0828a58ace3f9#tika-core/src/main/resources/org/apache/tika/mime/tika-mimetypes.xml",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_tika-mimetypes",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_tika-mimetypes@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_tika-mimetypes",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:apache:tika:*:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Apache-2.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_tika-mimetypes",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "c29724782854bb5a319f4a1940d0828a58ace3f9"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-tinycbor-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_tinycbor\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/tinycbor/qt_attribution.json\n    Entry index: 0\n    Id: tinycbor\n    Name: TinyCBOR\n    Description: Concise Binary Object Representation (CBOR) Library\n    Qt usage: Used for QCborStreamReader and QCborStreamWriter.\n    License: MIT License\n    License file: LICENSE\n",
+    "copyrightText": "Copyright (C) 2015-2025 Intel Corporation",
+    "downloadLocation": "https://github.com/intel/tinycbor/archive/v7.0/tinycbor-7.0.tar.gz",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/intel/tinycbor@v7.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_tinycbor",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_tinycbor@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_tinycbor",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:tinycbor:tinycbor:7.0:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_tinycbor",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "7.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-tlexpected-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_tlexpected\n    Information extracted from:\n     /src_dir/qtbase/src/corelib/global/qt_attribution.json\n    Entry index: 0\n    Id: tlexpected\n    Name: tl::expected\n    Description: Single header implementation of std::expected with functional-style extensions.\n    Qt usage: Available as a private type in all Qt modules\n    License: Creative Commons Zero v1.0 Universal\n",
+    "copyrightText": "To the extent possible under law, Sy Brand has waived all copyright and related or neighboring rights to the expected library. This work is published from: United Kingdom.",
+    "downloadLocation": "https://github.com/TartanLlama/expected/blob/41d3e1f48d682992a2230b2a715bca38b848b269/include/tl/expected.hpp",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_tlexpected",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_tlexpected@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_tlexpected",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "CC0-1.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_tlexpected",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "41d3e1f48d682992a2230b2a715bca38b848b269"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-unicode-character-database-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_unicode-character-database\n    Information extracted from:\n     /src_dir/qtbase/src/corelib/text/qt_attribution.json\n    Entry index: 0\n    Id: unicode-character-database\n    Name: Unicode Character Database (UCD)\n    Description: The Unicode Character Database (UCD) is a set of files that\n define the Unicode character properties and internal mappings.\n    Qt usage: Qt Core uses data obtained from UCD files for working with characters and strings.\n    License: Unicode License Agreement - Data Files and Software (2016)\n",
+    "copyrightText": "Copyright (C) 1991-2025 Unicode, Inc.",
+    "downloadLocation": "https://www.unicode.org/ucd/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_unicode-character-database",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_unicode-character-database@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_unicode-character-database",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Unicode-3.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_unicode-character-database",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "36"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Core-Attribution-unicode-cldr-51ffe75f44e8",
+    "comment": "\nCMake target name: Core_Attribution_unicode-cldr\n    Information extracted from:\n     /src_dir/qtbase/src/corelib/text/qt_attribution.json\n    Entry index: 1\n    Id: unicode-cldr\n    Name: Unicode Common Locale Data Repository (CLDR)\n    Description: The Unicode CLDR provides key building blocks for software to support the\n world's languages, with the largest and most extensive standard repository of locale data\n available.\n    Qt usage: Used in Qt Core (QTimeZone, QLocale).\n    License: Unicode License v3\n",
+    "copyrightText": "Copyright (C) 2004-2025 Unicode, Inc.",
+    "downloadLocation": "https://cldr.unicode.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core_Attribution_unicode-cldr",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core_Attribution_unicode-cldr@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core_Attribution_unicode-cldr",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Unicode-3.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Core_Attribution_unicode-cldr",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "v48.2"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-aglfn-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_aglfn\n    Information extracted from:\n     /src_dir/qtbase/src/gui/text/qt_attribution.json\n    Entry index: 0\n    Id: aglfn\n    Name: Adobe Glyph List For New Fonts\n    Description: Provides standardized names for glyphs.\n    Qt usage: Used by PDF generator to make it easier for reader applications to resolve  the original contents of rendered text.\n    License: BSD 3-Clause \"New\" or \"Revised\" License\n    License file: LICENSE.AGLFN.txt\n",
+    "copyrightText": "Copyright 2002, 2003, 2005, 2006, 2008, 2010, 2015 Adobe Systems",
+    "downloadLocation": "https://github.com/adobe-type-tools/agl-aglfn",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/adobe-type-tools/agl-aglfn@0276763a3cdf204a1badc283d90f5bc7ac13130d",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_aglfn",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_aglfn@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_aglfn",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_aglfn",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "1.7"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-emoji-segmenter-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_emoji-segmenter\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/emoji-segmenter/qt_attribution.json\n    Entry index: 0\n    Id: emoji-segmenter\n    Name: Emoji Segmenter\n    Description: A parser for emoji sequences.\n    Qt usage: Used in QtGui for parsing complex emoji sequences. Can be configured using the -emojisegmenter option.\n    License: Apache License 2.0\n",
+    "copyrightText": "Copyright 2019 Google LLC",
+    "downloadLocation": "https://github.com/google/emoji-segmenter/releases/tag/0.4.0",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/google/emoji-segmenter@0.4.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_emoji-segmenter",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_emoji-segmenter@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_emoji-segmenter",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Apache-2.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_emoji-segmenter",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "0.4.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-grayraster-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_grayraster\n    Information extracted from:\n     /src_dir/qtbase/src/gui/painting/qt_attribution.json\n    Entry index: 0\n    Id: grayraster\n    Name: Anti-aliasing rasterizer from FreeType 2\n    Description: FreeType is a freely available software library to render fonts.\n    Qt usage: Used in Qt GUI.\n    License: Freetype Project License or GNU General Public License v2.0 only\n    License file: ../../3rdparty/freetype/LICENSE.txt\n",
+    "copyrightText": "Copyright 2000-2016 by David Turner, Robert Wilhelm, and Werner Lemberg.",
+    "downloadLocation": "http://www.freetype.org",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/freetype-grayraster?download_url=https://www.freetype.org/",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_grayraster",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_grayraster@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_grayraster",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "FTL OR GPL-2.0-only",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_grayraster",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-icc-srgb-color-profile-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_icc-srgb-color-profile\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/icc/qt_attribution.json\n    Entry index: 0\n    Id: icc-srgb-color-profile\n    Name: sRGB color profile icc file\n    Description: An ICC color profile for PDF/A-1b compatible PDF files.\n    Qt usage: Used in Qt Gui (Embedded into PDF/A-1b files generated by QPrinter/QPdfWriter).\n    License: International Color Consortium License\n    License file: LICENSE.txt\n",
+    "copyrightText": "Copyright International Color Consortium, 2015",
+    "downloadLocation": "http://www.color.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/icc-sRGB-color-profile?download_url=http://www.color.org/",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_icc-srgb-color-profile",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_icc-srgb-color-profile@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_icc-srgb-color-profile",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-ICC-License",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_icc-srgb-color-profile",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-md4c-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_md4c\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/md4c/qt_attribution.json\n    Entry index: 0\n    Id: md4c\n    Name: MD4C\n    Description: A CommonMark-compliant Markdown parser.\n    Qt usage: Optionally used in QTextDocument if configured with textmarkdownreader.\n    License: MIT License\n    License file: LICENSE.md\n",
+    "copyrightText": "Copyright \u00a9 2016-2024 Martin Mit\u00e1\u0161",
+    "downloadLocation": "https://github.com/mity/md4c/releases/tag/release-0.5.3",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/mity/md4c@release-0.5.3",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_md4c",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_md4c@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_md4c",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:md4c_project:md4c:0.5.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_md4c",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "0.5.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-opengl-es2-headers-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_opengl-es2-headers\n    Information extracted from:\n     /src_dir/qtbase/src/gui/opengl/qt_attribution.json\n    Entry index: 1\n    Id: opengl-es2-headers\n    Name: OpenGL ES 2 Headers\n    Description: OpenGL ES 2 header generated from the Khronos OpenGL / OpenGL ES XML API Registry.\n    Qt usage: Used on Windows and Linux in the OpenGL related headers of Qt GUI.\n    License: MIT License\n    License file: LICENSE.KHRONOS.txt\n",
+    "copyrightText": "Copyright (c) 2013-2014 The Khronos Group Inc.",
+    "downloadLocation": "https://www.khronos.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/khronos-opengl-es2-headers?download_url=https://www.khronos.org/?revision=27673",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_opengl-es2-headers",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_opengl-es2-headers@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_opengl-es2-headers",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_opengl-es2-headers",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "Revision 27673"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-opengl-headers-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_opengl-headers\n    Information extracted from:\n     /src_dir/qtbase/src/gui/opengl/qt_attribution.json\n    Entry index: 0\n    Id: opengl-headers\n    Name: OpenGL Headers\n    Description: OpenGL header generated from the Khronos OpenGL / OpenGL ES XML API Registry.\n    Qt usage: Used on Windows and Linux in the OpenGL related headers of Qt GUI.\n    License: MIT License\n    License file: LICENSE.KHRONOS.txt\n",
+    "copyrightText": "Copyright (c) 2013-2014 The Khronos Group Inc.",
+    "downloadLocation": "https://www.khronos.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/khronos-opengl-headers?download_url=https://www.khronos.org/?revision=27684",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_opengl-headers",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_opengl-headers@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_opengl-headers",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_opengl-headers",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "Revision 27684"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-rhi-miniengine-d3d12-mipmap-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_rhi-miniengine-d3d12-mipmap\n    Information extracted from:\n     /src_dir/qtbase/src/gui/rhi/qt_attribution.json\n    Entry index: 0\n    Id: rhi-miniengine-d3d12-mipmap\n    Name: Mipmap generator for D3D12\n    Description: Compute shader for mipmap generation from MiniEngine in DirectX-Graphics-Samples\n    Qt usage: Compute shader for mipmap generation with Direct 3D 12\n    License: MIT License\n    License file: LICENSE.MiniEngine.txt\n",
+    "copyrightText": "Copyright (c) 2015 Microsoft",
+    "downloadLocation": "https://github.com/microsoft/DirectX-Graphics-Samples",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/microsoft/DirectX-Graphics-Samples@0aa79bad78992da0b6a8279ddb9002c1753cb849",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_rhi-miniengine-d3d12-mipmap",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_rhi-miniengine-d3d12-mipmap@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_rhi-miniengine-d3d12-mipmap",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_rhi-miniengine-d3d12-mipmap",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "0aa79bad78992da0b6a8279ddb9002c1753cb849"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-smooth-scaling-algorithm-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_smooth-scaling-algorithm\n    Information extracted from:\n     /src_dir/qtbase/src/gui/painting/qt_attribution.json\n    Entry index: 1\n    Id: smooth-scaling-algorithm\n    Name: Smooth Scaling Algorithm\n    Description: Normal smoothscale method, based on Imlib2's smoothscale.\n    Qt usage: Used in Qt Gui (QImage::transformed() functions).\n    License: BSD 2-clause \"Simplified\" License and Imlib2 License\n    License file: LICENSE.QIMAGETRANSFORM.txt\n",
+    "copyrightText": "Copyright (C) 2004, 2005 Daniel M. Duley.\n(C) Carsten Haitzler and various contributors.\n(C) Willem Monsuwe <willem@stack.nl>",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_smooth-scaling-algorithm",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_smooth-scaling-algorithm@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_smooth-scaling-algorithm",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-2-Clause AND Imlib2",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_smooth-scaling-algorithm",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-vulkan-xml-spec-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_vulkan-xml-spec\n    Information extracted from:\n     /src_dir/qtbase/src/gui/vulkan/qt_attribution.json\n    Entry index: 0\n    Id: vulkan-xml-spec\n    Name: Vulkan API Registry\n    Description: Vulkan XML API Registry.\n    Qt usage: Used to dynamically generate the sources for the QVulkan(Device)Functions classes.\n    License: Apache License 2.0 or MIT License\n    License file: LICENSE.txt\n",
+    "copyrightText": "Copyright (c) 2015-2025 The Khronos Group Inc.",
+    "downloadLocation": "https://www.khronos.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/KhronosGroup/Vulkan-Docs@v1.4.308?download_url=https://github.com/KhronosGroup/Vulkan-Docs/blob/v1.4.308/xml/vk.xml",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_vulkan-xml-spec",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_vulkan-xml-spec@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_vulkan-xml-spec",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:khronos:vulkan:1.4.308:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "Apache-2.0 OR MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_vulkan-xml-spec",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "1.4.308"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-vulkanmemoryallocator-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_vulkanmemoryallocator\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/VulkanMemoryAllocator/qt_attribution.json\n    Entry index: 0\n    Id: vulkanmemoryallocator\n    Name: Vulkan Memory Allocator\n    Description: Vulkan Memory Allocator\n    Qt usage: Memory management for the Vulkan backend of QRhi.\n    License: MIT License\n    License file: LICENSE.txt\n",
+    "copyrightText": "Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.",
+    "downloadLocation": "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator@v3.2.1",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_vulkanmemoryallocator",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_vulkanmemoryallocator@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_vulkanmemoryallocator",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_vulkanmemoryallocator",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "3.2.1"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-webgradients-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_webgradients\n    Information extracted from:\n     /src_dir/qtbase/util/gradientgen/qt_attribution.json\n    Entry index: 0\n    Id: webgradients\n    Name: WebGradients\n    Description: WebGradients is a free collection of 180 linear gradients.\n    Qt usage: Used in Qt GUI to provide presets for QGradient.\n    License: MIT License\n    License file: LICENSE.WEBGRADIENTS.txt\n",
+    "copyrightText": "Copyright (c) 2017 itmeo",
+    "downloadLocation": "https://webgradients.com/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/webgradients?download_url=https://webgradients.com/",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_webgradients",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_webgradients@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_webgradients",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_webgradients",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Gui-Attribution-xserverhelper-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui_Attribution_xserverhelper\n    Information extracted from:\n     /src_dir/qtbase/src/gui/painting/qt_attribution.json\n    Entry index: 2\n    Id: xserverhelper\n    Name: X Server helper\n    Description: Code from X11's region.h, Region.c, poly.h, and PolyReg.c\n    Qt usage: Used in Qt GUI (QRegion).\n    License: X11 License and Historical Permission Notice and Disclaimer\n    License file: LICENSE.XCONSORTIUM.txt\n",
+    "copyrightText": "Copyright (c) 1987, 1988 X Consortium\nCopyright 1987, 1988 by Digital Equipment Corporation, Maynard, Massachusetts.",
+    "downloadLocation": "https://www.x.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/xserverhelper?download_url=https://www.x.org/",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui_Attribution_xserverhelper",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui_Attribution_xserverhelper@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui_Attribution_xserverhelper",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "X11 AND HPND",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Gui_Attribution_xserverhelper",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Platform-Attribution-extra-cmake-modules-51ffe75f44e8",
+    "comment": "\nCMake target name: Platform_Attribution_extra-cmake-modules\n    Information extracted from:\n     /src_dir/qtbase/cmake/3rdparty/extra-cmake-modules/qt_attribution.json\n    Entry index: 0\n    Id: extra-cmake-modules\n    Name: extra-cmake-modules\n    Description: Additional CMake modules.\n    Qt usage: Used as part of the build system.\n    License: BSD-3-Clause\n    License file: COPYING-CMAKE-SCRIPTS\n",
+    "copyrightText": "Copyright \u00a9 2011-2018 The KDE community",
+    "downloadLocation": "https://api.kde.org/ecm/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Platform_Attribution_extra-cmake-modules",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Platform_Attribution_extra-cmake-modules@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Platform_Attribution_extra-cmake-modules",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Platform_Attribution_extra-cmake-modules",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "5.84.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-3rdparty-sources-Platform-Attribution-kwin-51ffe75f44e8",
+    "comment": "\nCMake target name: Platform_Attribution_kwin\n    Information extracted from:\n     /src_dir/qtbase/cmake/3rdparty/kwin/qt_attribution.json\n    Entry index: 0\n    Id: kwin\n    Name: KWin\n    Description: Additional CMake modules for graphics system dependencies.\n    Qt usage: Used as part of the build system.\n    License: BSD 3-Clause \"New\" or \"Revised\" License\n    License file: COPYING-CMAKE-SCRIPTS\n",
+    "copyrightText": "Copyright 2014 Alex Merry <alex.merry@kde.org>\nCopyright 2014 Martin Gr\u00e4\u00dflin <mgraesslin@kde.org>\nCopyright (c) 2006,2007 Laurent Montel, <montel@kde.org>",
+    "downloadLocation": "https://www.kde.org/",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Platform_Attribution_kwin",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Platform_Attribution_kwin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Platform_Attribution_kwin",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Platform_Attribution_kwin",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "5.13.4"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-bundled-3rdparty-module-BundledFreetype-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledFreetype\nCMake exported target name: Qt6::BundledFreetype\nContained in CMake package: Qt6BundledFreetype\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/freetype/qt_attribution.json\n    Entry index: 0\n    Id: freetype\n    Name: Freetype 2\n    Description: FreeType is a freely available software library to render fonts.\n    Qt usage: Optionally used in Qt GUI and platform plugins. Configure with -no-freetype, or -system-freetype to avoid.\n    License: Freetype Project License or GNU General Public License v2.0 only\n    License file: LICENSE.txt\n",
+    "copyrightText": "Copyright (c) 2007-2014 Adobe Systems Incorporated\nCopyright (c) 2004-2026 Albert Chin-A-Young\nCopyright (c) 2018-2026 Armin Hasitzka, David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2000 Computing Research Labs, New Mexico State University\nCopyright (c) 1996-2026 David Turner, Robert Wilhelm, Dominik R\u00f6ttsches, and Werner Lemberg\nCopyright (c) 2004-2026 David Turner, Robert Wilhelm, Werner Lemberg and George Williams\nCopyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, and Moazin Khatti\nCopyright (c) 2008-2026 David Turner, Robert Wilhelm, Werner Lemberg, and suzuki toshiya\nCopyright (c) 2003-2026 David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2005-2026 David Turner\nCopyright (c) 2007-2026 Derek Clegg and Michael Toftdal\nCopyright (c) 2007 Dmitry Timoshkov for Codeweavers\nCopyright (c) 2001-2015 Francesco Zappa Nardelli\nCopyright (c) 2005, 2007, 2008, 2013 George Williams\nCopyright (c) 2013-2026 Google, Inc. Google Author(s) Behdad Esfahbod and Stuart Gill\nCopyright (c) 2013-2022 Google, Inc.\nCopyright (c) 2003 Huw D M Davies for Codeweavers\nCopyright (c) 2010-2026 Joel Klinghed\nCopyright (c) 1996-2026 Just van Rossum, David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2003-2026 Masatake YAMATO and Redhat K.K.\nCopyright (c) 2004-2026 Masatake YAMATO, Redhat K.K, David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2019-2026 Nikhil Ramakrishnan, David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2009-2026 Oran Agra and Mickey Gabel\nCopyright (c) 2007-2026 Rahul Bhalerao <rahul.bhalerao@redhat.com>\nCopyright (c) 2002-2026 Roberto Alameda\nCopyright (c) 2015-2026 Werner Lemberg\nCopyright (c) 2004-2026 suzuki toshiya, Masatake YAMATO, Red Hat K.K., David Turner, Robert Wilhelm, and Werner Lemberg\nCopyright (c) 2019 nyorain\nCopyright (c) 2022-2026 David Turner, Robert Wilhelm, Werner Lemberg, George Williams, and Dominik R\u00f6ttsches\nCopyright (C) 2009, 2023  Red Hat, Inc.",
+    "downloadLocation": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/freetype/freetype@VER-2-14-3",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledFreetype#src/3rdparty/freetype",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledFreetype@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledFreetype#src/3rdparty/freetype",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:freetype:freetype:2.14.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "FTL OR GPL-2.0-only",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledFreetype",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "89ffbf9e5bb897775dca51f488b4942bdd20587b"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "2.14.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-bundled-3rdparty-module-BundledHarfbuzz-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledHarfbuzz\nCMake exported target name: Qt6::BundledHarfbuzz\nContained in CMake package: Qt6BundledHarfbuzz\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/harfbuzz-ng/qt_attribution.json\n    Entry index: 0\n    Id: harfbuzz-ng\n    Name: HarfBuzz-NG\n    Description: HarfBuzz is an OpenType text shaping engine.\n    Qt usage: Optionally used in Qt GUI. Configure with -system-harfbuzz to force the use of the system library, or -qt-harfbuzz to link statically to the library that is bundled with your Qt version.\n    License: MIT License\n    License file: COPYING\n",
+    "copyrightText": "Copyright \u00a9 2010-2022  Google, Inc.\nCopyright \u00a9 2015-2020  Ebrahim Byagowi\nCopyright \u00a9 2019,2020  Facebook, Inc.\nCopyright \u00a9 2012,2015  Mozilla Foundation\nCopyright \u00a9 2011  Codethink Limited\nCopyright \u00a9 2008,2010  Nokia Corporation and/or its subsidiary(-ies)\nCopyright \u00a9 2009  Keith Stribley\nCopyright \u00a9 2011  Martin Hosken and SIL International\nCopyright \u00a9 2007  Chris Wilson\nCopyright \u00a9 2005,2006,2020,2021,2022,2023  Behdad Esfahbod\nCopyright \u00a9 2004,2007,2008,2009,2010,2013,2021,2022,2023  Red Hat, Inc.\nCopyright \u00a9 1998-2005  David Turner and Werner Lemberg\nCopyright \u00a9 2016  Igalia S.L.\nCopyright \u00a9 2022  Matthias Clasen\nCopyright \u00a9 2018,2021  Khaled Hosny\nCopyright \u00a9 2018,2019,2020  Adobe, Inc\nCopyright \u00a9 2013-2015  Alexei Podtelezhnikov",
+    "downloadLocation": "https://github.com/harfbuzz/harfbuzz/releases/tag/14.4.0",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/harfbuzz/harfbuzz@14.4.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledHarfbuzz#src/3rdparty/harfbuzz-ng",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledHarfbuzz@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledHarfbuzz#src/3rdparty/harfbuzz-ng",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:harfbuzz_project:harfbuzz:14.4.0:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "MIT",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledHarfbuzz",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "14.4.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-bundled-3rdparty-module-BundledLibjpeg-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledLibjpeg\nCMake exported target name: Qt6::BundledLibjpeg\nContained in CMake package: Qt6BundledLibjpeg\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/libjpeg/qt_attribution.json\n    Entry index: 0\n    Id: libjpeg\n    Name: LibJPEG-turbo\n    Description: The Independent JPEG Group's JPEG software\n    Qt usage: Used in the qjpeg image plugin. Configure with -system-libjpeg or -no-libjpeg to avoid.\n    License: Independent JPEG Group License and BSD 3-Clause \"New\" or \"Revised\" License\n",
+    "copyrightText": "Copyright (C) 2009-2026 D. R. Commander\nCopyright (C) 1991-1998 Thomas G. Lane\nCopyright (C) 2009 Pierre Ossman for Cendio AB\nCopyright (C) 1999-2006 MIYASAKA Masaru\nCopyright (C) 1999 Ken Murchison\nCopyright (C) 2015-2016, 2018, 2022 Matthieu Darbois\nCopyright (C) 2018 Matthias R\u00e4ncker\nCopyright (C) 2019-2020 Arm Limited\nCopyright (C) 2022 Felix Hanau\nCopyright (C) 1997-1998 Thomas G. Lane, Todd Newman\nCopyright (C) 2021 Alex Richardson\nCopyright (C) 2015, 2020 Google, Inc.\nCopyright (C) 2013 Linaro Limited\nCopyright (C) 2014 Olle Liljenzin\nCopyright (C) 1991-2020 Thomas G. Lane, Guido Vollbeding\n",
+    "downloadLocation": "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledLibjpeg#src/3rdparty/libjpeg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledLibjpeg@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledLibjpeg#src/3rdparty/libjpeg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:libjpeg-turbo:libjpeg-turbo:3.2.0:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "IJG AND BSD-3-Clause",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledLibjpeg",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "ba3b41dce0256beeb4f5cf96063f0ca07a037bed"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "3.2.0"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-bundled-3rdparty-module-BundledLibpng-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledLibpng\nCMake exported target name: Qt6::BundledLibpng\nContained in CMake package: Qt6BundledLibpng\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/libpng/qt_attribution.json\n    Entry index: 0\n    Id: libpng\n    Name: LibPNG\n    Description: libpng is the official PNG reference library.\n    Qt usage: Used in the qpng image plugin. Configure with -system-libpng or -no-libpng to avoid.\n    License: libpng License and PNG Reference Library version 2\n    License file: LICENSE\n",
+    "copyrightText": "Copyright (c) 1995-2026 The PNG Reference Library Authors\nCopyright (c) 2000-2026 Cosmin Truta\nCopyright (c) 1998-2018 Glenn Randers-Pehrson\nCopyright (c) 1996-1997 Andreas Dilger\nCopyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.\nCopyright (c) 2000-2017 Simon-Pierre Cadieux\nCopyright (c) 2000-2017 Eric S. Raymond\nCopyright (c) 2000-2017 Mans Rullgard\nCopyright (c) 2000-2017 Gilles Vollant\nCopyright (c) 2000-2017 James Yu\nCopyright (c) 2000-2017 Mandar Sahastrabuddhe\nCopyright (c) 1998-2000 Tom Lane\nCopyright (c) 1998-2000 Willem van Schaik\nCopyright (c) 1996-1997 John Bowler\nCopyright (c) 1996-1997 Kevin Bracey\nCopyright (c) 1996-1997 Sam Bushell\nCopyright (c) 1996-1997 Magnus Holmgren\nCopyright (c) 1996-1997 Greg Roelofs\nCopyright (c) 1996-1997 Tom Tanner\nCopyright (c) 1995-1996 Dave Martindale\nCopyright (c) 1995-1996 Paul Schmidt\nCopyright (c) 1995-1996 Tim Wegner",
+    "downloadLocation": "https://download.sourceforge.net/libpng/libpng-1.6.58.tar.xz",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/pnggroup/libpng@v1.6.58",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledLibpng#src/3rdparty/libpng",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledLibpng@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledLibpng#src/3rdparty/libpng",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:libpng:libpng:1.6.58:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "Libpng AND libpng-2.0",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledLibpng",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "f406e8c36b297b4d7059a91680fcd17a018882a8"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "1.6.58"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-bundled-3rdparty-module-BundledPcre2-51ffe75f44e8",
+    "comment": "\nCMake target name: BundledPcre2\nCMake exported target name: Qt6::BundledPcre2\nContained in CMake package: Qt6BundledPcre2\n    Information extracted from:\n     /src_dir/qtbase/src/3rdparty/pcre2/qt_attribution.json\n    Entry index: 0\n    Id: pcre2\n    Name: PCRE2\n    Description: The PCRE library is a set of functions that implement regular expression pattern matching using the same syntax and semantics as Perl 5.\n    Qt usage: Used in Qt Core (QRegularExpression).\n    License: BSD 3-clause \"New\" or \"Revised\" License with PCRE2 binary-like Packages Exception\n    License file: LICENCE.md\n",
+    "copyrightText": "Copyright (c) 1997-2007 University of Cambridge\nCopyright (c) 2007-2024 Philip Hazel\nCopyright (c) 2010-2024 Zoltan Herczeg",
+    "downloadLocation": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.48/pcre2-10.48.tar.bz2",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/PCRE2Project/pcre2@pcre2-10.48",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=BundledPcre2#src/3rdparty/pcre2",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-BundledPcre2@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=BundledPcre2#src/3rdparty/pcre2",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:pcre:pcre2:10.48:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception",
+    "licenseDeclared": "NOASSERTION",
+    "name": "BundledPcre2",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "10.48"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-Core-51ffe75f44e8",
+    "comment": "\nCMake target name: Core\nCMake exported target name: Qt6::Core\nContained in CMake package: Qt6Core\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Core#src/corelib",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Core@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Core#src/corelib",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "Core",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "70f273b9f42f69970875f7383e2d6062446f2f48"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-GlobalConfigPrivate-51ffe75f44e8",
+    "comment": "\nCMake target name: GlobalConfigPrivate\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=GlobalConfigPrivate",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-GlobalConfigPrivate@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=GlobalConfigPrivate",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "GlobalConfigPrivate",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-Gui-51ffe75f44e8",
+    "comment": "\nCMake target name: Gui\nCMake exported target name: Qt6::Gui\nContained in CMake package: Qt6Gui\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Gui#src/gui",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Gui@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Gui#src/gui",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "Gui",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "813f6ce9d93d8ea087da69663e4237423d7e0244"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-OpenGL-51ffe75f44e8",
+    "comment": "\nCMake target name: OpenGL\nCMake exported target name: Qt6::OpenGL\nContained in CMake package: Qt6OpenGL\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=OpenGL#src/opengl",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-OpenGL@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=OpenGL#src/opengl",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "OpenGL",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "2bcc3a161b341c90952b2aa4c3272c680382e5f7"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-OpenGLWidgets-51ffe75f44e8",
+    "comment": "\nCMake target name: OpenGLWidgets\nCMake exported target name: Qt6::OpenGLWidgets\nContained in CMake package: Qt6OpenGLWidgets\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=OpenGLWidgets#src/openglwidgets",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-OpenGLWidgets@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=OpenGLWidgets#src/openglwidgets",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "OpenGLWidgets",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "d3dc51e189e1f2f04f537f40ec28aa5357795bb0"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-Platform-51ffe75f44e8",
+    "comment": "\nCMake target name: Platform\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Platform",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Platform@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Platform",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "Platform",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-PlatformModuleInternal-51ffe75f44e8",
+    "comment": "\nCMake target name: PlatformModuleInternal\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=PlatformModuleInternal",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-PlatformModuleInternal@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=PlatformModuleInternal",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "PlatformModuleInternal",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-PlatformPluginInternal-51ffe75f44e8",
+    "comment": "\nCMake target name: PlatformPluginInternal\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=PlatformPluginInternal",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-PlatformPluginInternal@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=PlatformPluginInternal",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "PlatformPluginInternal",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-module-Widgets-51ffe75f44e8",
+    "comment": "\nCMake target name: Widgets\nCMake exported target name: Qt6::Widgets\nContained in CMake package: Qt6Widgets\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=Widgets#src/widgets",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-Widgets@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=Widgets#src/widgets",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "Widgets",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "bfb73c75bc14e6b935114d2c6dfdc9742c001322"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QAndroidIntegrationPlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QAndroidIntegrationPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QAndroidIntegrationPlugin#src/plugins/platforms/android",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QAndroidIntegrationPlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QAndroidIntegrationPlugin#src/plugins/platforms/android",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QAndroidIntegrationPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "a7d74d9ef54ee6499f9f243fc7f783ca606dc289"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QAndroidStylePlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QAndroidStylePlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QAndroidStylePlugin#src/plugins/styles/android",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QAndroidStylePlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QAndroidStylePlugin#src/plugins/styles/android",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QAndroidStylePlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "0845bc6efd3024295cddf493603a5bce98963643"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QGifPlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QGifPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QGifPlugin#src/plugins/imageformats/gif",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QGifPlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QGifPlugin#src/plugins/imageformats/gif",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QGifPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "907f1ae9fab5b56f76ca509760bd9c3faf61b08e"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QICOPlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QICOPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QICOPlugin#src/plugins/imageformats/ico",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QICOPlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QICOPlugin#src/plugins/imageformats/ico",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QICOPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "b53196b5cf919f01d584e65ff42334d6b1451241"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QJpegPlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QJpegPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QJpegPlugin#src/plugins/imageformats/jpeg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QJpegPlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QJpegPlugin#src/plugins/imageformats/jpeg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QJpegPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "a52eb152aee40fd6778eb525b8f7525e5e91ee46"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-qt-plugin-QOffscreenIntegrationPlugin-51ffe75f44e8",
+    "comment": "\nCMake target name: QOffscreenIntegrationPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtbase.git@5a1194b2d368e2d72c230205c464b04a2f23eccd",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtbase@5a1194b2?library_name=QOffscreenIntegrationPlugin#src/plugins/platforms/offscreen",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtbase-QOffscreenIntegrationPlugin@5a1194b2?vcs_url=https://code.qt.io/qt/qtbase.git@5a1194b2&library_name=QOffscreenIntegrationPlugin#src/plugins/platforms/offscreen",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtbase:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QOffscreenIntegrationPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "e48599c3f991556cd5a3a582854f825a2876fea7"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-system-3rdparty-EGL-51ffe75f44e8",
+    "comment": "\nCMake target name: EGL::EGL\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "https://www.khronos.org/egl/",
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "EGL",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "1.5"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-system-3rdparty-GLESv2-51ffe75f44e8",
+    "comment": "\nCMake target name: GLESv2::GLESv2\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "NOASSERTION",
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "GLESv2",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-system-3rdparty-WrapAtomic-51ffe75f44e8",
+    "comment": "\nCMake target name: WrapAtomic::WrapAtomic\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "NOASSERTION",
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "WrapAtomic",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-system-3rdparty-WrapRt-51ffe75f44e8",
+    "comment": "\nCMake target name: WrapRt::WrapRt\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "NOASSERTION",
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "WrapRt",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtbase-system-3rdparty-WrapZLIB-51ffe75f44e8",
+    "comment": "\nCMake target name: WrapZLIB::WrapZLIB\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "https://github.com/madler/zlib",
+    "externalRefs": [
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:zlib:zlib:1.3.0.1:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "WrapZLIB",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "1.3.0.1"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtsvg-qt-3rdparty-sources-Svg-Attribution-xsvg-cc92bc713136",
+    "comment": "\nCMake target name: Svg_Attribution_xsvg\n    Information extracted from:\n     /src_dir/qtsvg/src/svg/qt_attribution.json\n    Entry index: 0\n    Id: xsvg\n    Name: XSVG\n    Description: Some code for arc handling is derived from code from the XSVG project.\n    Qt usage: Used in the Qt SVG library.\n    License: Historical Permission Notice and Disclaimer - sell variant\n    License file: LICENSE.XSVG.txt\n",
+    "copyrightText": "Copyright 2002 USC/Information Sciences Institute",
+    "downloadLocation": "NOASSERTION",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtsvg@cb69025?library_name=Svg_Attribution_xsvg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtsvg-Svg_Attribution_xsvg@cb69025?vcs_url=https://code.qt.io/qt/qtsvg.git@cb69025&library_name=Svg_Attribution_xsvg",
+        "referenceType": "purl"
+      }
+    ],
+    "filesAnalyzed": false,
+    "licenseConcluded": "HPND-sell-variant",
+    "licenseDeclared": "NOASSERTION",
+    "name": "Svg_Attribution_xsvg",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "unknown"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtsvg-qt-module-Svg-cc92bc713136",
+    "comment": "\nCMake target name: Svg\nCMake exported target name: Qt6::Svg\nContained in CMake package: Qt6Svg\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtsvg.git@cb69025ce26ced80be7a96b6293fa5333fd42000",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtsvg@cb69025?library_name=Svg#src/svg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtsvg-Svg@cb69025?vcs_url=https://code.qt.io/qt/qtsvg.git@cb69025&library_name=Svg#src/svg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtsvg:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "Svg",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "42bd5e7aaf8215d983bdad64e82916610e4e3e5f"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtsvg-qt-plugin-QSvgIconPlugin-cc92bc713136",
+    "comment": "\nCMake target name: QSvgIconPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtsvg.git@cb69025ce26ced80be7a96b6293fa5333fd42000",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtsvg@cb69025?library_name=QSvgIconPlugin#src/plugins/iconengines/svgiconengine",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtsvg-QSvgIconPlugin@cb69025?vcs_url=https://code.qt.io/qt/qtsvg.git@cb69025&library_name=QSvgIconPlugin#src/plugins/iconengines/svgiconengine",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtsvg:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QSvgIconPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "9647c47c11b0c6a8493ba1c460220544593cf9c2"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtsvg-qt-plugin-QSvgPlugin-cc92bc713136",
+    "comment": "\nCMake target name: QSvgPlugin\n",
+    "copyrightText": "Copyright (C) The Qt Company Ltd. and other contributors.",
+    "downloadLocation": "git://code.qt.io/qt/qtsvg.git@cb69025ce26ced80be7a96b6293fa5333fd42000",
+    "externalRefs": [
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:github/qt/qtsvg@cb69025?library_name=QSvgPlugin#src/plugins/imageformats/svg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "PACKAGE_MANAGER",
+        "referenceLocator": "pkg:generic/TheQtCompany/qtsvg-QSvgPlugin@cb69025?vcs_url=https://code.qt.io/qt/qtsvg.git@cb69025&library_name=QSvgPlugin#src/plugins/imageformats/svg",
+        "referenceType": "purl"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qt:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      },
+      {
+        "referenceCategory": "SECURITY",
+        "referenceLocator": "cpe:2.3:a:qt:qtsvg:6.11.3:*:*:*:*:*:*:*",
+        "referenceType": "cpe23Type"
+      }
+    ],
+    "filesAnalyzed": true,
+    "licenseConcluded": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "licenseDeclared": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+    "name": "QSvgPlugin",
+    "packageVerificationCode": {
+      "packageVerificationCodeValue": "bf65fa547710d6e2ff4377d130a14e71c5e9a50c"
+    },
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Organization: TheQtCompany",
+    "versionInfo": "6.11.3"
+  },
+  {
+    "SPDXID": "SPDXRef-Package-qtsvg-system-3rdparty-WrapZLIB-cc92bc713136",
+    "comment": "\nCMake target name: WrapZLIB::WrapZLIB\n",
+    "copyrightText": "NOASSERTION",
+    "downloadLocation": "NOASSERTION",
+    "filesAnalyzed": false,
+    "licenseConcluded": "NOASSERTION",
+    "licenseDeclared": "NOASSERTION",
+    "name": "WrapZLIB",
+    "primaryPackagePurpose": "LIBRARY",
+    "supplier": "Person: Anonymous",
+    "versionInfo": "1.3.0.1"
+  }
+]

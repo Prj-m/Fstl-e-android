@@ -43,6 +43,16 @@ android {
     buildToolsVersion androidBuildToolsVersion
     ndkVersion = androidNdkVersion
 
+    buildTypes {
+        release {
+            debuggable false
+        }
+        debug {
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+        }
+    }
+
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -67,7 +77,7 @@ android {
     }
 
     lintOptions {
-        abortOnError = false
+        abortOnError = true
     }
 
     aaptOptions {

@@ -12,3 +12,18 @@ build*/
 *.jks
 *.keystore
 keystore.properties
+android-keystore/
+*.p12
+*.pfx
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+local.properties
+dist/
+*.apks
+__pycache__/
+*.pyc
+# Private signing folder must remain outside source control.
+signing/

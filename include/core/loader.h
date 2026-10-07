@@ -2,6 +2,7 @@
 #define LOADER_H
 
 #include <QThread>
+#include <atomic>
 
 #include "core/mesh.h"
 
@@ -11,6 +12,11 @@ class Loader : public QThread
 public:
     explicit Loader(QObject* parent, const QString& filename, bool is_reload);
     void run();
+
+    /*  Asks the import to stop at the next check point. A cancelled import
+     *  emits no result or error signals; the owner only waits for finished. */
+    void cancel();
+    bool isCancelled() const;
 
 protected:
     Mesh* load_stl();
@@ -37,6 +43,7 @@ signals:
 private:
     const QString filename;
     bool is_reload;
+    std::atomic<bool> cancelled{false};
 };
 
 #endif // LOADER_H

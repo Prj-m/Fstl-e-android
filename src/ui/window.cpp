@@ -1,11 +1,19 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QPushButton>
+#include <QTextBrowser>
+#include <QVBoxLayout>
+#include <QScreen>
+#include <QFile>
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QTimer>
 #include <QScreen>
 #include <QProxyStyle>
+#include <QCloseEvent>
 
 #ifndef FSTLE_VERSION
 #define FSTLE_VERSION "1.0.0"
@@ -827,6 +835,10 @@ Window::Window(QWidget* parent)
     });
 
     windowToolBar->addAction(resetTransformOnLoadAction);
+    // These actions must be reachable by touch as well as keyboard shortcuts.
+    windowToolBar->addAction(save_screenshot_action);
+    about_action->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    windowToolBar->addAction(about_action);
 #else
     // Desktop: show axes, then the "eye" apply-view menu button, then reset-on-load
     windowToolBar->addAction(axes_action);
@@ -1034,8 +1046,16 @@ void Window::load_persist_settings(){
     on_hide_menuBar();
     hide_menuBar_action->blockSignals(false);
 
-    // Don't set a hardcoded size - let Qt and Android handle window sizing
+#ifdef Q_OS_ANDROID
+    // Android sizes the activity window. Restoring a geometry saved while the
+    // task had different bounds (for example after the process was relaunched
+    // from another app's task) left the bottom of the screen blank on every
+    // later start, so the desktop geometry setting is not used here.
+    settings.remove(WINDOW_GEOM_KEY);
+#else
+    // Don't set a hardcoded size - let Qt handle window sizing
     restoreGeometry(settings.value(WINDOW_GEOM_KEY).toByteArray());
+#endif
     if (this->isFullScreen()) {
         fullscreen_action->blockSignals(true);
         fullscreen_action->setChecked(true);
@@ -1153,56 +1173,124 @@ void Window::on_open()
 
 void Window::on_about()
 {
-    QMessageBox::about(this, "",
+    QMessageBox about(QMessageBox::Information, tr("About fstl-e"),
                        "<p align=\"center\">This is <b>fstl-e</b><br>" FSTLE_VERSION "</p>"
-                       "<p>A fast viewer for <code>.stl</code> files.</p>"
+                       "<p>A viewer for STL, 3MF and STEP models.</p>"
                        "<p>source code of this version available here :"
+                       "<a href=\"https://github.com/Prj-m/Fstl-e-android\""
+                       "   style=\"color: #93a1a1;\">Fstl-e-android source and releases</a></p>"
+                       "<font size='small'>"
+                       "<p>Android port of <b>fstl-e</b> © 2024-2025 William Daniau<br>"
                        "<a href=\"https://github.com/wdaniau/fstl\""
                        "   style=\"color: #93a1a1;\">https://github.com/wdaniau/fstl</a></p>"
-                       "<font size='small'>"
-                       "<p>It is a forked version of <b>fstl</b> 0.10.0<br>"
-                       "with some fancy enhancements"
-                       "</p>"
-                       "<p>Original version © 2014-2024 Matthew Keeter<br>"
+                       "<p>fstl-e is a fork of <b>fstl</b> 0.10.0<br>"
+                       "© 2014-2024 Matthew Keeter<br>"
                        "<a href=\"https://github.com/fstl-app/fstl\""
                        "   style=\"color: #93a1a1;\">https://github.com/fstl-app/fstl</a><br>"
                        "<a href=\"mailto:matt.j.keeter@gmail.com\""
                        "   style=\"color: #93a1a1;\">matt.j.keeter@gmail.com</a></p>"
+                       "<p>Licensed under the MIT License; see Licenses.</p>"
                        "</font>"
-                       );
+                       , QMessageBox::Ok, this);
+    QPushButton* licenses = about.addButton(tr("Licenses"), QMessageBox::ActionRole);
+    about.exec();
+    if (about.clickedButton() == licenses) {
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Third-party licenses"));
+        auto* layout = new QVBoxLayout(&dialog);
+        auto* text = new QTextBrowser(&dialog);
+        QFile notices(":/licenses/NOTICE.txt");
+        if (notices.open(QIODevice::ReadOnly))
+            text->setPlainText(QString::fromUtf8(notices.readAll()));
+        else
+            text->setPlainText(tr("License notices could not be opened."));
+        layout->addWidget(text);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        layout->addWidget(buttons);
+        const QSize available = screen()->availableGeometry().size();
+        dialog.resize(qMin(640, available.width() - 24), qMin(720, available.height() - 48));
+        dialog.exec();
+    }
+}
+
+void Window::show_import_error(const QString& message)
+{
+    // Keep the last valid model and its filename when an import fails. The
+    // dialog is opened without a nested event loop, so the window can still
+    // be closed by the system while it is shown. While one error is visible,
+    // further failures (for example a burst of file intents the app cannot
+    // read) do not stack additional dialogs.
+    if (import_error_box)
+    {
+        return;
+    }
+    auto* box = new QMessageBox(QMessageBox::Critical, tr("Error"), message,
+                                QMessageBox::Ok, this);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    import_error_box = box;
+    connect(box, &QObject::destroyed, this, [this] { import_error_box = nullptr; });
+    connect(box, &QDialog::finished, box, &QObject::deleteLater);
+    box->open();
 }
 
 void Window::on_bad_stl()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
-                          "Please re-export it from the original source or try a simpler version.");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    show_import_error("<b>Error:</b><br>"
+                      "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
+                      "Please re-export it from the original source or try a simpler version.");
 }
 
 void Window::on_empty_mesh()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "This file is syntactically correct<br>but contains no triangles.");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    show_import_error("<b>Error:</b><br>"
+                      "This file is syntactically correct<br>but contains no triangles.");
 }
 
 void Window::on_missing_file()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "The target file is missing.<br>");
-    load_stl(":/gl/shaders/sphere.stl");
-    filenameStatusLabel->setText("File:none");
+    show_import_error("<b>Error:</b><br>"
+                      "The target file is missing.<br>");
+}
+
+void Window::stop_active_import()
+{
+    Loader* loader = active_loader;
+    if (!loader)
+    {
+        return;
+    }
+    pending_import.clear();
+    active_loader = nullptr;
+    // Stop delivering results to a window that is going away, then join the
+    // worker. The loader polls cancellation inside its parsing loops and the
+    // OCCT transfer/meshing stages, so this returns promptly.
+    loader->cancel();
+    loader->disconnect(this);
+    loader->disconnect(canvas);
+    loader->wait();
+}
+
+Window::~Window()
+{
+    stop_active_import();
+}
+
+void Window::closeEvent(QCloseEvent* event)
+{
+    stop_active_import();
+    QMainWindow::closeEvent(event);
 }
 
 void Window::enable_open()
 {
     open_action->setEnabled(true);
+    if (!pending_import.isEmpty()) {
+        const QString filename = pending_import;
+        const bool is_reload = pending_import_reload;
+        pending_import.clear();
+        load_stl(filename, is_reload);
+    }
 }
 
 void Window::disable_open()
@@ -1365,13 +1453,20 @@ void Window::on_save_screenshot()
     const auto image = canvas->grabFramebuffer();
     
 #ifdef Q_OS_ANDROID
-    // Android: Generate filename with timestamp and save to Pictures
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    QString filename = QString("fstl_screenshot_%1.png").arg(timestamp);
-    QString picturesPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-    QString fullPath = picturesPath + "/" + filename;
-    
-    const auto save_ok = image.save(fullPath, "PNG");
+    // The native save dialog grants access through Android's document provider.
+    // Keep the returned content URI intact and select PNG explicitly: its URI
+    // need not have a filename extension.
+    const QString filename = QString("fstl_screenshot_%1.png").arg(
+        QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
+    const QString destination = QFileDialog::getSaveFileName(
+        this, tr("Save Screenshot Image"), filename, tr("PNG image (*.png)"));
+    if (destination.isEmpty())
+        return;
+
+    QFile output(destination);
+    const bool save_ok = output.open(QIODevice::WriteOnly)
+        && image.save(&output, "PNG") && output.flush();
+    output.close();
     if(save_ok)
     {
         canvas->set_status("Screenshot saved: " + filename);
@@ -1479,7 +1574,12 @@ void Window::on_reload()
 
 bool Window::load_stl(QString filename, bool is_reload)
 {
-    if (!open_action->isEnabled())  return false;
+    if (filename.isEmpty()) return false;
+    if (!open_action->isEnabled()) {
+        pending_import = filename;
+        pending_import_reload = is_reload;
+        return true;
+    }
 
     // is it a directory?
     bool isDir = QFileInfo(filename).isDir();
@@ -1492,12 +1592,13 @@ bool Window::load_stl(QString filename, bool is_reload)
         }
     }
 
+    // Reserve the import before starting the thread. Its started signal is
+    // queued, so rapid file intents could otherwise start concurrent imports.
+    disable_open();
     canvas->set_status("Loading " + filename);
 
     Loader* loader = new Loader(this, filename, is_reload);
-    connect(loader, &Loader::started,
-              this, &Window::disable_open);
-
+    active_loader = loader;
     connect(loader, &Loader::got_mesh,
             canvas, &Canvas::load_mesh);
     connect(loader, &Loader::error_bad_stl,
@@ -1509,10 +1610,14 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     connect(loader, &Loader::finished,
             loader, &Loader::deleteLater);
-    connect(loader, &Loader::finished,
-              this, &Window::enable_open);
-    connect(loader, &Loader::finished,
-            canvas, &Canvas::clear_status);
+    connect(loader, &Loader::finished, this, [this, loader] {
+        if (active_loader == loader)
+        {
+            active_loader = nullptr;
+        }
+        canvas->clear_status();
+        enable_open();
+    });
 
     if (filename[0] != ':')
     {
@@ -1580,7 +1685,9 @@ void Window::mousePressEvent(QMouseEvent *event) {
 
 void Window::resizeEvent(QResizeEvent *event)
 {
+#ifndef Q_OS_ANDROID
     QSettings().setValue(WINDOW_GEOM_KEY, saveGeometry());
+#endif
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }
@@ -1602,7 +1709,9 @@ void Window::resizeEvent(QResizeEvent *event)
 
 void Window::moveEvent(QMoveEvent *event)
 {
+#ifndef Q_OS_ANDROID
     QSettings().setValue(WINDOW_GEOM_KEY, saveGeometry());
+#endif
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }
@@ -1835,10 +1944,12 @@ void Window::setViewportSize(QAction* act) {
 }
 
 void Window::on_help() {
-    //qDebug() << "help!";
-    QMessageBox* helpWin = new QMessageBox(QMessageBox::NoIcon,"Help","",QMessageBox::Ok,this,Qt::Dialog);
-    helpWin->setIconPixmap(QPixmap(":/qt/icons/fstl-e_64x64.png"));
-    helpWin->setText(""
+    QDialog helpWin(this);
+    helpWin.setWindowTitle(tr("Help"));
+    auto* layout = new QVBoxLayout(&helpWin);
+    auto* text = new QTextBrowser(&helpWin);
+    text->setOpenExternalLinks(true);
+    text->setHtml(""
                      "<h2>Help</h2>"
                      "<ul><li>"
                      "<a href=\"https://github.com/wdaniau/fstl/tree/fstl-e?tab=readme-ov-file#usage\""
@@ -1868,7 +1979,13 @@ void Window::on_help() {
                      "<li><b>Down Arrow</b> : use previous shader"
                      "</ul></ul>"
                      );
-    helpWin->show();
+    layout->addWidget(text);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &helpWin);
+    connect(buttons, &QDialogButtonBox::rejected, &helpWin, &QDialog::reject);
+    layout->addWidget(buttons);
+    const QSize available = screen()->availableGeometry().size();
+    helpWin.resize(qMin(640, available.width() - 24), qMin(720, available.height() - 48));
+    helpWin.exec();
 
 }
 
