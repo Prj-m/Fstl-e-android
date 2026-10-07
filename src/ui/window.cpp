@@ -1881,10 +1881,12 @@ void Window::setViewportSize(QAction* act) {
 }
 
 void Window::on_help() {
-    //qDebug() << "help!";
-    QMessageBox* helpWin = new QMessageBox(QMessageBox::NoIcon,"Help","",QMessageBox::Ok,this,Qt::Dialog);
-    helpWin->setIconPixmap(QPixmap(":/qt/icons/fstl-e_64x64.png"));
-    helpWin->setText(""
+    QDialog helpWin(this);
+    helpWin.setWindowTitle(tr("Help"));
+    auto* layout = new QVBoxLayout(&helpWin);
+    auto* text = new QTextBrowser(&helpWin);
+    text->setOpenExternalLinks(true);
+    text->setHtml(""
                      "<h2>Help</h2>"
                      "<ul><li>"
                      "<a href=\"https://github.com/wdaniau/fstl/tree/fstl-e?tab=readme-ov-file#usage\""
@@ -1914,7 +1916,13 @@ void Window::on_help() {
                      "<li><b>Down Arrow</b> : use previous shader"
                      "</ul></ul>"
                      );
-    helpWin->show();
+    layout->addWidget(text);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &helpWin);
+    connect(buttons, &QDialogButtonBox::rejected, &helpWin, &QDialog::reject);
+    layout->addWidget(buttons);
+    const QSize available = screen()->availableGeometry().size();
+    helpWin.resize(qMin(640, available.width() - 24), qMin(720, available.height() - 48));
+    helpWin.exec();
 
 }
 
