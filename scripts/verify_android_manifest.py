@@ -49,6 +49,9 @@ def verify_manifest(xml, highest_version_code=None):
     # Freeform <layout> defaults were applied by some launchers when the task
     # was started from another app, and the smaller task bounds persisted
     # across relaunches, leaving the bottom of the screen blank.
+    for category in viewer_activities[0].iter("category"):
+        if category.get(ANDROID + "name") == "android.intent.category.BROWSABLE":
+            raise ValueError("Viewer must not be launchable from web links (BROWSABLE)")
     if viewer_activities[0].find("layout") is not None:
         raise ValueError("Viewer activity must not declare freeform layout defaults")
     for tag in ("activity", "activity-alias", "service", "receiver", "provider"):
