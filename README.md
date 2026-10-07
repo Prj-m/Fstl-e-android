@@ -2,11 +2,11 @@
 
 <p align="center"><img src="screenshots/android_app_ui_20251125_191127.png" alt="fstl-e Android viewer" width="600"></p>
 
-Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF and STEP models. The current candidate is a testing prerelease; production readiness remains under review.
+Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF and STEP models.
 
 ## Testing
 
-Closed test on Google Play, build 1.0.4-rc.5. Join the tester group, then opt in: [play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)
+Closed test on Google Play, build 1.0.4-rc.5. Opt in: [play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)
 
 Android 9+, arm64. Report problems with the [bug report template](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md).
 

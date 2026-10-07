@@ -1,19 +1,15 @@
 # CI/CD
 
-The workflows validate source and build an unsigned AAB plus a separate development APK. Play delivery is not automated.
+## Workflows
 
-## CI checks
+- **CI:** privacy scan, shell and Python checks, parser sanitizer tests, desktop build.
+- **Android validation:** OCCT build, Android build, lint, manifest and 16 KB alignment checks, development APK.
 
-- **CI:** source-history privacy scan, shell/Python checks, parser sanitizer tests and a desktop build.
-- **Android validation:** OCCT build, Android compilation, lint, manifest/native-alignment checks and development APK signature/ZIP-alignment checks.
-
-Pull requests run both workflows. Failed builds do not publish artifacts; successful artifacts are retained for 14 days. Static checks do not establish compatibility on every Android device.
+Both run on pull requests. Artifacts are kept for 14 days.
 
 ## Local Android build
 
-Install JDK 17, Ninja and the Qt/SDK/NDK versions pinned in the [Android workflow](../.github/workflows/android-bundle.yml). Check out the OCCT commit specified there. Set `JAVA_HOME` and add the JDK and SDK tools to `PATH`.
-
-From the repository root:
+Requires JDK 17, Ninja, and the Qt, SDK, NDK and OCCT versions pinned in [android-bundle.yml](../.github/workflows/android-bundle.yml).
 
 ```bash
 export ANDROID_SDK_ROOT="/path/to/Android/Sdk"
@@ -27,11 +23,9 @@ bash scripts/build_android_full_release_aab.sh
 bash scripts/check_android_release.sh build/android-release/artifacts/fstl-e-arm64-release.aab
 ```
 
-The resulting AAB is unsigned and cannot be installed directly or submitted to Play. Keep signing material outside tracked source. A Play upload requires the active upload identity, a signed bundle and a version code higher than existing uploads and drafts.
+The AAB is unsigned. Signing keys are kept outside the repository.
 
-## Test on a phone
-
-Connect an authorized USB-debugging device, then run:
+## Install on a device
 
 ```bash
 bash scripts/package_android_phone_apk.sh
@@ -39,6 +33,4 @@ export ANDROID_SERIAL="YOUR_DEVICE_SERIAL"
 bash scripts/deploy_android_phone.sh build/android-release/phone-artifacts/fstl-e-arm64-dev.apk
 ```
 
-The APK uses `com.github.prjm.fstl_e.dev` and a test signing key. It installs alongside the Play app; it is not a Play release. CI test keys can change between runs, so a later APK may not upgrade an earlier test installation.
-
-Exercise changed behavior on a test device. Keep device serials and workstation records private.
+The development APK uses the package `com.github.prjm.fstl_e.dev` and installs alongside the Play app.
