@@ -4,29 +4,29 @@
 
 Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF and STEP models. The current candidate is a testing prerelease; production readiness remains under review.
 
-## Download and testing
+## Testing on Google Play
 
-**[Download the Android APK (arm64)](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.2/fstl-e-1.0.4-rc.2-arm64-dev.apk)** · [SHA-256 checksum](https://github.com/Prj-m/fstl-e-android/releases/download/v1.0.4-rc.2/SHA256SUMS)
+fstl-e is in closed testing on Google Play. Current test build: **1.0.4-rc.5** (version code 31).
 
-The [1.0.4-rc.2 testing release](https://github.com/Prj-m/fstl-e-android/releases/tag/v1.0.4-rc.2) includes an arm64 development APK and a SHA-256 checksum. Verify the checksum before installation. The debug-signed APK uses `com.github.prjm.fstl_e.dev`, installs alongside the Play app, and is intended for evaluation.
+1. Join the tester group or list you were invited to, using the same Google account as your phone.
+2. Opt in: **[play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)**
+3. Install or update **fstl-e** from Google Play and keep it installed for the whole test period.
 
-Report reproducible issues with nonconfidential models through [GitHub Issues](https://github.com/Prj-m/fstl-e-android/issues). Include app version, Android version, device model, steps and expected versus actual behavior. Keep credentials, device serials, private models and unrelated logs out of reports.
+Requires an arm64 phone or tablet running Android 9 or newer. The app works offline and needs no account.
 
-## Source and development status
+**Please test:** open STL, 3MF and STEP files from local storage and from cloud storage (for example Google Drive); rotate and zoom; open a second model from a file manager while the app is running; rotate the device, background and resume; save a screenshot with the camera button.
 
-The default branch does not yet contain the candidate's Android import hardening and release-validation workflows. Those changes are under review in [PR #2](https://github.com/Prj-m/fstl-e-android/pull/2) on `codex/android-release-readiness`. Use that branch to reproduce the candidate build:
+### Reporting a problem
 
-```bash
-git clone https://github.com/Prj-m/fstl-e-android.git
-cd fstl-e-android
-git switch codex/android-release-readiness
-```
+Open a [bug report](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md). Include the app version (shown under the info button), phone model, Android version, the steps you took, and what you expected versus what happened. Attach a screenshot when helpful. Only share models that are not confidential, and leave out personal data.
 
-The reviewed build uses Qt 6.11.3, JDK 17, SDK API 36, NDK 27.2.12479018 and OCCT 7.9.3. Dependencies are built or installed separately; their binaries are not tracked in Git. After checking out the review branch, follow its build and validation instructions:
+Older debug APKs on the Releases page predate fixes in the Play build. Use Google Play for testing.
 
-- [CI/CD and local builds](https://github.com/Prj-m/fstl-e-android/blob/codex/android-release-readiness/docs/CI_CD.md).
+## Source and builds
 
-Compatibility across Android versions and native 16 KB devices is still being tested.
+Releases are built from the default branch. The release build uses Qt 6.11.3, JDK 17, SDK API 36, NDK 27.2.12479018 and OCCT 7.9.3. Dependencies are built or installed separately; their binaries are not tracked in Git. See [CI/CD and local builds](docs/CI_CD.md) for build and validation steps.
+
+Compatibility across Android versions and native 16 KB page-size devices is being checked during closed testing.
 
 ## License and credits
 
