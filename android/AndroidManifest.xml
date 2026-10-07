@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <manifest package="com.github.prjm.fstl_e"
           xmlns:android="http://schemas.android.com/apk/res/android"
-android:versionName="1.0.4-rc.5"
-          android:versionCode="31"
+android:versionName="1.0.4-rc.6"
+          android:versionCode="32"
           android:installLocation="auto">
     <application android:allowBackup="false"
                  android:usesCleartextTraffic="false"
@@ -28,7 +28,6 @@ android:versionName="1.0.4-rc.5"
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="file"/>
                 <data android:scheme="content"/>
                 <data android:mimeType="*/*"/>

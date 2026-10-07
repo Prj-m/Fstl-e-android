@@ -57,6 +57,13 @@ class ReleaseManifestChecks(unittest.TestCase):
         source = ET.parse(ROOT / "android/AndroidManifest.xml").getroot()
         self.assertIsNone(source.find("application/activity/layout"))
 
+    def test_rejects_browsable_viewer(self):
+        xml = MANIFEST.replace('android:launchMode="2"/>', 'android:launchMode="2"><intent-filter><category android:name="android.intent.category.BROWSABLE"/></intent-filter></activity>')
+        with self.assertRaises(ValueError):
+            manifest_check.verify_manifest(xml)
+        source = (ROOT / "android/AndroidManifest.xml").read_text()
+        self.assertNotIn("BROWSABLE", source)
+
     def test_rejects_old_target(self):
         for xml in (MANIFEST.replace('targetSdkVersion="36"', 'targetSdkVersion="35"'),
                     MANIFEST.replace('minSdkVersion="28"', 'minSdkVersion="26"')):

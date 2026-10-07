@@ -6,6 +6,8 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QTemporaryDir>
+#include <QPair>
+#include <cmath>
 #include <QtCore/private/qzipwriter_p.h>
 #include <functional>
 #include <iostream>
@@ -138,15 +140,74 @@ int main(int argc, char** argv) {
     check(model, true, false, "understated ZIP XML size", 1, 1);
     check(model, true, false, "overstated ZIP XML size", 1, model.size() + 1);
     check("<!DOCTYPE model [<!ENTITY shape 'triangle'>]>" + model, true, false, "3MF DTD rejected");
-    QByteArray assembly = model;
-    assembly.replace("</resources>", "<object><mesh/></object></resources>");
-    check(assembly, true, false, "3MF multiple objects rejected");
-    assembly = model;
-    assembly.replace("</model>", "<build><item objectid='1' transform='1 0 0 0 1 0 0 0 1 10 0 0'/></build></model>");
-    check(assembly, true, false, "3MF unsupported transform rejected");
-    assembly = model;
-    assembly.replace("</object>", "<components><component objectid='2'/></components></object>");
-    check(assembly, true, false, "3MF components rejected");
+    // Slicer-style assemblies: multiple objects, components, transforms and
+    // meshes stored in separate model parts (3MF production extension).
+    auto checkAssembly = [&](const QList<QPair<QByteArray, QByteArray>>& files, bool expected,
+                             const char* name, int triangles = 0, float xmin = 0, float xmax = 0) {
+        const QString path = dir.filePath("assembly.3mf");
+        QFile::remove(path);
+        QZipWriter writer(path);
+        for (const auto& f : files) writer.addFile(QString::fromUtf8(f.first), f.second);
+        writer.close();
+        if (writer.status() != QZipWriter::NoError) std::abort();
+        TestLoader loader(path);
+        int errors = 0;
+        QObject::connect(&loader, &Loader::error_bad_stl, [&] { ++errors; });
+        QObject::connect(&loader, &Loader::error_empty_mesh, [&] { ++errors; });
+        std::unique_ptr<Mesh> mesh(loader.load_3mf());
+        ++checks;
+        bool passed = expected ? mesh && errors == 0 && mesh->triCount() == triangles
+                                 && std::abs(mesh->xmin() - xmin) < 1e-3f && std::abs(mesh->xmax() - xmax) < 1e-3f
+                               : !mesh && errors == 1;
+        if (!passed) { ++failures; std::cerr << "FAIL: " << name << '\n'; }
+    };
+    const QByteArray tri = "<mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh>";
+    auto rootModel = [&](const QByteArray& resources, const QByteArray& build) {
+        return "<model xmlns='http://schemas.microsoft.com/3dmanufacturing/core/2015/02' xmlns:p='http://schemas.microsoft.com/3dmanufacturing/production/2015/06'><resources>"
+               + resources + "</resources><build>" + build + "</build></model>";
+    };
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object>",
+        "<item objectid='1' transform='1 0 0 0 1 0 0 0 1 10 0 0'/>")}},
+        true, "3MF build item transform applied", 1, 10, 11);
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object><object id='2'><components><component objectid='1' transform='2 0 0 0 1 0 0 0 1 0 0 0'/></components></object>",
+        "<item objectid='2' transform='1 0 0 0 1 0 0 0 1 100 0 0'/>")}},
+        true, "3MF slicer component with nested transforms", 1, 100, 102);
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object><object id='2'>" + tri + "</object>",
+        "<item objectid='1'/><item objectid='2' transform='1 0 0 0 1 0 0 0 1 5 0 0'/>")}},
+        true, "3MF multiple build items", 2, 0, 6);
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='2'><components><component p:path='/3D/Objects/part.model' objectid='1'/></components></object>",
+        "<item objectid='2'/>")}, {"3D/Objects/part.model", "<model><resources><object id='1'>" + tri + "</object></resources></model>"}},
+        true, "3MF production-extension part referenced by path", 1, 0, 1);
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1' type='support'>" + tri + "</object><object id='2'>" + tri + "</object>",
+        "<item objectid='1'/><item objectid='2'/>")}},
+        true, "3MF support objects not drawn", 1, 0, 1);
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'><components><component objectid='2'/></components></object><object id='2'><components><component objectid='1'/></components></object>",
+        "<item objectid='1'/>")}}, false, "3MF component cycle rejected");
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object>", "<item objectid='9'/>")}},
+        false, "3MF missing object reference rejected");
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object>", "<item objectid='1' transform='1 0 0 0 1 0 0 0 1 10 0'/>")}},
+        false, "3MF malformed transform rejected");
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object>", "<item objectid='1' transform='1 0 0 0 1 0 0 0 1 nan 0 0'/>")}},
+        false, "3MF nonfinite transform rejected");
+    checkAssembly({{"3D/3dmodel.model", rootModel("<object id='1'>" + tri + "</object><object id='1'>" + tri + "</object>", "<item objectid='1'/>")}},
+        false, "3MF duplicate object id rejected");
+    {
+        // 18 levels deep exceeds the nesting limit of 16.
+        QByteArray chain = "<object id='0'>" + tri + "</object>";
+        for (int i = 1; i <= 18; ++i)
+            chain += "<object id='" + QByteArray::number(i) + "'><components><component objectid='" + QByteArray::number(i - 1) + "'/></components></object>";
+        checkAssembly({{"3D/3dmodel.model", rootModel(chain, "<item objectid='18'/>")}}, false, "3MF excessive component depth rejected");
+    }
+    {
+        // Each level references the previous one ten times: 10^6 instances exceed the instance budget.
+        QByteArray fan = "<object id='0'>" + tri + "</object>";
+        for (int i = 1; i <= 6; ++i) {
+            fan += "<object id='" + QByteArray::number(i) + "'><components>";
+            for (int k = 0; k < 10; ++k) fan += "<component objectid='" + QByteArray::number(i - 1) + "'/>";
+            fan += "</components></object>";
+        }
+        checkAssembly({{"3D/3dmodel.model", rootModel(fan, "<item objectid='6'/>")}}, false, "3MF instance explosion rejected");
+    }
     {
         const QString path = dir.filePath("archive.3mf");
         auto archiveCheck = [&](QByteArray data, bool expected, const char* name) {

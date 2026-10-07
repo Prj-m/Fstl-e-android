@@ -9,6 +9,9 @@
 #include "loaders/stepmeshloader.h"
 #include "loaders/occtsteploader.h"
 #include <QXmlStreamReader>
+#include <functional>
+#include <QSet>
+#include <QMap>
 #include <QFile>
 #include <QVector3D>
 
@@ -404,122 +407,259 @@ Mesh* Loader::load_3mf()
     }
     ALOG("File opened successfully, size: %lld", file.size());
     
-    QByteArray modelData;
-    if (!readBounded3mfModel(file, modelData))
+    QMap<QByteArray, QByteArray> parts;
+    if (!readBounded3mfParts(file, parts))
     {
         ALOG("Invalid or oversized 3MF model archive");
         emit error_bad_stl();
         return nullptr;
     }
-    ALOG("Model data loaded, size: %d bytes", int(modelData.size()));
-    
-    // Parse XML content
-    ALOG("Starting XML parse...");
-    QXmlStreamReader xml(modelData);
-    QVector<Vertex> verts;
-    QVector<float> vertex_coords;  // Store all vertex coordinates
-    uint32_t tri_count = 0;
-    int vertex_count = 0;
-    int object_count = 0, mesh_count = 0, item_count = 0;
-    
-    while (!xml.atEnd())
-    {
-        if (isCancelled()) return nullptr;
-        xml.readNext();
-        if (xml.tokenType() == QXmlStreamReader::DTD)
-        {
-            emit error_bad_stl();
-            return nullptr;
+    ALOG("3MF model parts: %d", int(parts.size()));
+
+    // 3MF stores row-vector affine transforms "m00 m01 m02 m10 m11 m12 m20 m21 m22 m30 m31 m32":
+    // p' = (x, y, z, 1) * M.
+    struct Affine {
+        double m[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+        Affine then(const Affine& o) const {   // apply *this first, then o
+            Affine r;
+            for (int row = 0; row < 3; ++row)
+                for (int col = 0; col < 3; ++col)
+                    r.m[row * 3 + col] = m[row * 3] * o.m[col] + m[row * 3 + 1] * o.m[3 + col]
+                                        + m[row * 3 + 2] * o.m[6 + col];
+            for (int col = 0; col < 3; ++col)
+                r.m[9 + col] = m[9] * o.m[col] + m[10] * o.m[3 + col] + m[11] * o.m[6 + col] + o.m[9 + col];
+            return r;
         }
-        
-        if (xml.isStartElement())
+    };
+    auto parseTransform = [](const QStringView text, Affine& out) {
+        if (text.isEmpty())
+            return true;
+        const auto fields = text.trimmed().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        if (fields.size() != 12)
+            return false;
+        for (int i = 0; i < 12; ++i) {
+            bool ok = false;
+            const double v = fields[i].toDouble(&ok);
+            if (!ok || !std::isfinite(v) || std::abs(v) > 1e9)
+                return false;
+            out.m[i] = v;
+        }
+        return true;
+    };
+    struct Component { QByteArray part; QByteArray id; Affine transform; };
+    struct Object {
+        QVector<float> coords;
+        QVector<qint32> indices;
+        QVector<Component> components;
+        bool drawable = true;
+    };
+    QMap<QByteArray, Object> objects;           // key: "<part>#<id>"
+    QVector<Component> items;
+    bool hasBuild = false;
+    qsizetype totalVertices = 0, totalIndices = 0;
+    const QByteArray root = "3d/3dmodel.model";
+    auto partKey = [&](QStringView path, const QByteArray& current) {
+        if (path.isEmpty())
+            return current;
+        QByteArray key = path.toUtf8().toLower();
+        while (key.startsWith('/'))
+            key.remove(0, 1);
+        return key;
+    };
+    auto attr = [](const QXmlStreamAttributes& attrs, QLatin1StringView name) {
+        for (const auto& a : attrs)
+            if (a.name() == name)
+                return a.value();
+        return QStringView();
+    };
+
+    for (auto part = parts.constBegin(); part != parts.constEnd(); ++part)
+    {
+        QXmlStreamReader xml(part.value());
+        Object* object = nullptr;
+        int implicitId = 0;
+        while (!xml.atEnd())
         {
-            // Use localName() to ignore namespaces
-            QString elemName = xml.name().toString();
-            // This viewer supports a single untransformed mesh. Reject
-            // assemblies instead of silently rendering the wrong geometry.
-            if ((elemName == "object" && ++object_count > 1)
-                || (elemName == "mesh" && ++mesh_count > 1)
-                || (elemName == "item" && ++item_count > 1)
-                || elemName == "components" || elemName == "component"
-                || xml.attributes().hasAttribute("transform"))
+            if (isCancelled()) return nullptr;
+            xml.readNext();
+            if (xml.tokenType() == QXmlStreamReader::DTD)
             {
                 emit error_bad_stl();
                 return nullptr;
             }
-            
-            if (elemName == "vertex" || elemName.endsWith(":vertex"))
+            if (xml.isEndElement() && xml.name() == QLatin1StringView("object"))
+                object = nullptr;
+            if (!xml.isStartElement())
+                continue;
+            const QStringView name = xml.name();
+            const QXmlStreamAttributes attrs = xml.attributes();
+            if (name == QLatin1StringView("object"))
             {
-                if (vertex_count >= ImportLimits::Coordinates)
+                QByteArray id = attr(attrs, QLatin1StringView("id")).toUtf8();
+                if (id.isEmpty())
+                    id = "implicit-" + QByteArray::number(++implicitId);
+                const QByteArray key = part.key() + '#' + id;
+                if (objects.contains(key))
                 {
                     emit error_bad_stl();
                     return nullptr;
                 }
-                // Read vertex coordinates
-                QXmlStreamAttributes attrs = xml.attributes();
-                bool validX = false, validY = false, validZ = false;
-                float x = attrs.value("x").toFloat(&validX);
-                float y = attrs.value("y").toFloat(&validY);
-                float z = attrs.value("z").toFloat(&validZ);
-                if (!validX || !validY || !validZ ||
-                    !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
-                {
-                    emit error_bad_stl();
-                    return nullptr;
-                }
-                vertex_coords.push_back(x);
-                vertex_coords.push_back(y);
-                vertex_coords.push_back(z);
-                vertex_count++;
+                const QStringView type = attr(attrs, QLatin1StringView("type"));
+                object = &objects[key];
+                object->drawable = type.isEmpty() || type == QLatin1StringView("model")
+                                   || type == QLatin1StringView("solidsupport");
             }
-            else if (elemName == "triangle" || elemName.endsWith(":triangle"))
+            else if (name == QLatin1StringView("vertex") && object)
             {
-                if (tri_count >= ImportLimits::Triangles)
+                if (++totalVertices > ImportLimits::Coordinates)
                 {
                     emit error_bad_stl();
                     return nullptr;
                 }
-                // Read triangle vertex indices
-                QXmlStreamAttributes attrs = xml.attributes();
-                bool valid1 = false, valid2 = false, valid3 = false;
-                int v1 = attrs.value("v1").toInt(&valid1);
-                int v2 = attrs.value("v2").toInt(&valid2);
-                int v3 = attrs.value("v3").toInt(&valid3);
-                const qsizetype availableVertices = vertex_coords.size() / 3;
-                if (!valid1 || !valid2 || !valid3 ||
-                    v1 < 0 || v2 < 0 || v3 < 0 ||
-                    v1 >= availableVertices || v2 >= availableVertices || v3 >= availableVertices)
+                bool vx = false, vy = false, vz = false;
+                const float x = attr(attrs, QLatin1StringView("x")).toFloat(&vx);
+                const float y = attr(attrs, QLatin1StringView("y")).toFloat(&vy);
+                const float z = attr(attrs, QLatin1StringView("z")).toFloat(&vz);
+                if (!vx || !vy || !vz || !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
                 {
                     emit error_bad_stl();
                     return nullptr;
                 }
-
-                const qsizetype i1 = qsizetype(v1) * 3, i2 = qsizetype(v2) * 3, i3 = qsizetype(v3) * 3;
-                verts.push_back(Vertex(vertex_coords[i1], vertex_coords[i1+1], vertex_coords[i1+2]));
-                verts.push_back(Vertex(vertex_coords[i2], vertex_coords[i2+1], vertex_coords[i2+2]));
-                verts.push_back(Vertex(vertex_coords[i3], vertex_coords[i3+1], vertex_coords[i3+2]));
-                tri_count++;
+                object->coords << x << y << z;
+            }
+            else if (name == QLatin1StringView("triangle") && object)
+            {
+                totalIndices += 3;
+                if (totalIndices > qsizetype(ImportLimits::Triangles) * 3)
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
+                bool ok1 = false, ok2 = false, ok3 = false;
+                const int v1 = attr(attrs, QLatin1StringView("v1")).toInt(&ok1);
+                const int v2 = attr(attrs, QLatin1StringView("v2")).toInt(&ok2);
+                const int v3 = attr(attrs, QLatin1StringView("v3")).toInt(&ok3);
+                const qsizetype available = object->coords.size() / 3;
+                if (!ok1 || !ok2 || !ok3 || v1 < 0 || v2 < 0 || v3 < 0
+                    || v1 >= available || v2 >= available || v3 >= available)
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
+                object->indices << v1 << v2 << v3;
+            }
+            else if (name == QLatin1StringView("component") && object)
+            {
+                Component c;
+                c.part = partKey(attr(attrs, QLatin1StringView("path")), part.key());
+                c.id = attr(attrs, QLatin1StringView("objectid")).toUtf8();
+                if (c.id.isEmpty() || !parseTransform(attr(attrs, QLatin1StringView("transform")), c.transform))
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
+                object->components << c;
+            }
+            else if (name == QLatin1StringView("build"))
+            {
+                if (part.key() != root)
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
+                hasBuild = true;
+            }
+            else if (name == QLatin1StringView("item") && part.key() == root)
+            {
+                Component c;
+                c.part = partKey(attr(attrs, QLatin1StringView("path")), root);
+                c.id = attr(attrs, QLatin1StringView("objectid")).toUtf8();
+                if (c.id.isEmpty() || !parseTransform(attr(attrs, QLatin1StringView("transform")), c.transform))
+                {
+                    emit error_bad_stl();
+                    return nullptr;
+                }
+                items << c;
             }
         }
+        if (xml.hasError())
+        {
+            ALOG("XML parse ERROR: %s", xml.errorString().toStdString().c_str());
+            emit error_bad_stl();
+            return nullptr;
+        }
     }
-    
-    ALOG("XML parse complete: vertices=%d, triangles=%d", vertex_count, tri_count);
-    
-    if (xml.hasError())
+
+    // Files without a <build> section draw every top-level object of the root part.
+    if (!hasBuild)
     {
-        ALOG("XML parse ERROR: %s", xml.errorString().toStdString().c_str());
-        emit error_bad_stl();
-        return nullptr;
+        QSet<QByteArray> referenced;
+        for (const Object& o : objects)
+            for (const Component& c : o.components)
+                referenced.insert(c.part + '#' + c.id);
+        for (auto it = objects.constBegin(); it != objects.constEnd(); ++it)
+            if (it.key().startsWith(root + '#') && !referenced.contains(it.key()))
+                items << Component{root, it.key().mid(root.size() + 1), Affine()};
     }
-    
+
+    QVector<Vertex> verts;
+    uint32_t tri_count = 0;
+    qsizetype instances = 0;
+    QSet<QByteArray> stack;
+    std::function<bool(const QByteArray&, const Affine&, int)> expand =
+        [&](const QByteArray& key, const Affine& world, int depth) -> bool
+    {
+        if (isCancelled() || depth > ImportLimits::ComponentDepth || ++instances > ImportLimits::Instances
+            || stack.contains(key))
+            return false;
+        const auto found = objects.constFind(key);
+        if (found == objects.constEnd())
+            return false;
+        const Object& o = found.value();
+        if (o.drawable)
+        {
+            if (quint64(tri_count) + quint64(o.indices.size() / 3) > ImportLimits::Triangles)
+                return false;
+            for (qsizetype i = 0; i < o.indices.size(); ++i)
+            {
+                const qsizetype v = qsizetype(o.indices[i]) * 3;
+                const double x = o.coords[v], y = o.coords[v + 1], z = o.coords[v + 2];
+                const double* m = world.m;
+                const float tx = float(x * m[0] + y * m[3] + z * m[6] + m[9]);
+                const float ty = float(x * m[1] + y * m[4] + z * m[7] + m[10]);
+                const float tz = float(x * m[2] + y * m[5] + z * m[8] + m[11]);
+                if (!std::isfinite(tx) || !std::isfinite(ty) || !std::isfinite(tz))
+                    return false;
+                verts.push_back(Vertex(tx, ty, tz));
+            }
+            tri_count += uint32_t(o.indices.size() / 3);
+        }
+        stack.insert(key);
+        for (const Component& c : o.components)
+            if (!expand(c.part + '#' + c.id, c.transform.then(world), depth + 1))
+                return false;
+        stack.remove(key);
+        return true;
+    };
+    for (const Component& item : items)
+    {
+        if (!expand(item.part + '#' + item.id, item.transform, 0))
+        {
+            if (isCancelled()) return nullptr;
+            ALOG("Invalid 3MF assembly (missing, cyclic, too deep or over budget)");
+            emit error_bad_stl();
+            return nullptr;
+        }
+    }
+
+    ALOG("3MF: objects=%d items=%d instances=%d triangles=%d",
+         int(objects.size()), int(items.size()), int(instances), int(tri_count));
     if (tri_count == 0)
     {
         ALOG("No triangles found in 3MF");
         emit error_empty_mesh();
         return nullptr;
     }
-    
-    ALOG("Creating mesh from %d triangles", tri_count);
     return mesh_from_verts(tri_count, verts);
 }
 
