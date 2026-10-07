@@ -87,7 +87,34 @@ int main(int argc, char** argv) {
         const bool passed = expected ? mesh && mesh->triCount() == expectedTriangles && errors == 0 : !mesh && errors == 1;
         if (!passed) { ++failures; std::cerr << "FAIL: " << name << '\n'; }
     };
+    // A cancelled import stops without a result and without an error signal;
+    // the window joins the worker on close instead of destroying a running QThread.
+    auto checkCancelled = [&](const QByteArray& bytes, bool zip, const char* name) {
+        const QString path = dir.filePath(zip ? "cancel.3mf" : "cancel.stl");
+        if (zip) {
+            QZipWriter writer(path);
+            writer.addFile("3D/3dmodel.model", bytes);
+            writer.close();
+            if (writer.status() != QZipWriter::NoError) std::abort();
+        } else {
+            QFile file(path);
+            if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size()) std::abort();
+        }
+        TestLoader loader(path);
+        int emitted = 0;
+        QObject::connect(&loader, &Loader::error_bad_stl, [&] { ++emitted; });
+        QObject::connect(&loader, &Loader::error_missing_file, [&] { ++emitted; });
+        QObject::connect(&loader, &Loader::error_empty_mesh, [&] { ++emitted; });
+        QObject::connect(&loader, &Loader::got_mesh, [&](Mesh*, bool) { ++emitted; });
+        loader.cancel();
+        if (!loader.isCancelled()) std::abort();
+        std::unique_ptr<Mesh> mesh(zip ? loader.load_3mf() : loader.load_stl());
+        ++checks;
+        if (mesh || emitted) { ++failures; std::cerr << "FAIL: " << name << '\n'; }
+    };
     const QByteArray ascii = "solid test\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid test\n";
+    checkCancelled(binaryStl(1), false, "cancelled binary STL stops silently");
+    checkCancelled(ascii, false, "cancelled ASCII STL stops silently");
     check(ascii, false, true, "valid ASCII STL");
     for (const QByteArray& invalid : {QByteArray("vertex"), QByteArray("vertex 0"), QByteArray("vertex 0 0"), QByteArray("vertex invalid 0 0"), QByteArray("vertex 0 invalid 0"), QByteArray("vertex nan 0 0"), QByteArray("vertex 0 0 inf")}) {
         QByteArray malformed = ascii;
@@ -106,6 +133,7 @@ int main(int argc, char** argv) {
     check(binaryStl(1, true, false), false, false, "nonfinite binary coordinates");
     const QByteArray model = "<model><resources><object><mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources></model>";
     check(model, true, true, "valid 3MF");
+    checkCancelled(model, true, "cancelled 3MF stops silently");
     check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);
     check(model, true, false, "understated ZIP XML size", 1, 1);
     check(model, true, false, "overstated ZIP XML size", 1, model.size() + 1);

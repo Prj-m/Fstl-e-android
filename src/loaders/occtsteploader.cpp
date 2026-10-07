@@ -20,19 +20,39 @@
 #include <TopLoc_Location.hxx>
 #include <BRep_Tool.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <IMeshTools_Parameters.hxx>
+#include <Message_ProgressIndicator.hxx>
+#include <Message_ProgressRange.hxx>
+#include <Message_ProgressScope.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Poly_Array1OfTriangle.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
+
+namespace {
+// Lets OCCT's transfer and meshing stages stop when the viewer is closing.
+class CancelProgressIndicator : public Message_ProgressIndicator
+{
+public:
+    explicit CancelProgressIndicator(const std::function<bool()>& cancel) : m_cancel(cancel) {}
+    Standard_Boolean UserBreak() override { return m_cancel && m_cancel(); }
+    void Show(const Message_ProgressScope&, const Standard_Boolean) override {}
+    DEFINE_STANDARD_RTTI_INLINE(CancelProgressIndicator, Message_ProgressIndicator)
+private:
+    std::function<bool()> m_cancel;
+};
+}
 #endif
 
 OcctStepLoader::OcctStepLoader() = default;
 
-bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts, unsigned int& outTriCount)
+bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts, unsigned int& outTriCount,
+                          const std::function<bool()>& cancel)
 {
     outVerts.clear();
     outTriCount = 0;
+    const auto cancelled = [&cancel] { return cancel && cancel(); };
 
 #ifdef FSTL_USE_OCCT_STEP
     // Full OCCT-based STEP import. This is compiled only when
@@ -68,6 +88,7 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
         }
 
         while (!inFile.atEnd()) {
+            if (cancelled()) return false;
             const QByteArray chunk = inFile.read(1024 * 1024);
             if (chunk.isEmpty() || tmp.size() + chunk.size() > ImportLimits::SourceBytes ||
                 tmp.write(chunk) != chunk.size()) {
@@ -87,6 +108,9 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
     }
 #endif
 
+    if (cancelled()) return false;
+    Handle(CancelProgressIndicator) progress = new CancelProgressIndicator(cancel);
+
     STEPControl_Reader reader;
     IFSelect_ReturnStatus status = reader.ReadFile(occtFilename.toStdString().c_str());
     if (status != IFSelect_RetDone)
@@ -94,11 +118,12 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
         qWarning() << "OCCT STEP: ReadFile failed with status" << static_cast<int>(status);
         return false;
     }
+    if (cancelled()) return false;
 
     // Transfer all roots to build a unified shape
-    if (reader.TransferRoots() <= 0)
+    if (reader.TransferRoots(progress->Start()) <= 0 || cancelled())
     {
-        qWarning() << "OCCT STEP: TransferRoots produced no shapes";
+        qWarning() << "OCCT STEP: TransferRoots produced no shapes or was cancelled";
         return false;
     }
 
@@ -117,17 +142,24 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
 
     try
     {
-        BRepMesh_IncrementalMesh mesher(shape, linDeflection, isRelative, angDeflection, true /*parallel*/);
+        IMeshTools_Parameters meshParams;
+        meshParams.Deflection = linDeflection;
+        meshParams.Relative = isRelative;
+        meshParams.Angle = angDeflection;
+        meshParams.InParallel = true;
+        BRepMesh_IncrementalMesh mesher(shape, meshParams, progress->Start());
     }
     catch (...)
     {
         qWarning() << "OCCT STEP: BRepMesh_IncrementalMesh threw an exception";
         return false;
     }
+    if (cancelled()) return false;
 
     // Iterate over faces and extract triangulations
     for (TopExp_Explorer exp(shape, TopAbs_FACE); exp.More(); exp.Next())
     {
+        if (cancelled()) return false;
         const TopoDS_Face& face = TopoDS::Face(exp.Current());
         TopLoc_Location loc;
         Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(face, loc);

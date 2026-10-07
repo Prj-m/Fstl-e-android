@@ -12,6 +12,8 @@
 #include <QTimer>
 
 class Canvas;
+class Loader;
+class QMessageBox;
 class ShaderLightPrefs;
 class BackdropSettingsDialog;
 class SpeedMouseDialog;
@@ -21,6 +23,7 @@ class Window : public QMainWindow
     Q_OBJECT
 public:
     explicit Window(QWidget* parent=0);
+    ~Window() override;
     bool load_stl(QString filename, bool is_reload=false);
     bool load_prev(void);
     bool load_next(void);
@@ -29,6 +32,7 @@ public:
     void setCanvasSize(int w, int h);
 
 protected:
+    void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -80,6 +84,14 @@ private slots:
 private:
     QString pending_import;
     bool pending_import_reload = false;
+    // The import worker currently running, if any. Destroying a running
+    // QThread aborts the process, so shutdown cancels and joins it first.
+    Loader* active_loader = nullptr;
+    void stop_active_import();
+    // One reusable error dialog: repeated failing imports update it instead
+    // of stacking a modal dialog per failure.
+    QMessageBox* import_error_box = nullptr;
+    void show_import_error(const QString& message);
     void rebuild_recent_files();
     void load_persist_settings();
     void sorted_insert(QStringList& list, const QCollator& collator, const QString& value);

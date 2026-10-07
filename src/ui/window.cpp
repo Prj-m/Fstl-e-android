@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QScreen>
 #include <QProxyStyle>
+#include <QCloseEvent>
 
 #ifndef FSTLE_VERSION
 #define FSTLE_VERSION "1.0.0"
@@ -1045,8 +1046,16 @@ void Window::load_persist_settings(){
     on_hide_menuBar();
     hide_menuBar_action->blockSignals(false);
 
-    // Don't set a hardcoded size - let Qt and Android handle window sizing
+#ifdef Q_OS_ANDROID
+    // Android sizes the activity window. Restoring a geometry saved while the
+    // task had different bounds (for example after the process was relaunched
+    // from another app's task) left the bottom of the screen blank on every
+    // later start, so the desktop geometry setting is not used here.
+    settings.remove(WINDOW_GEOM_KEY);
+#else
+    // Don't set a hardcoded size - let Qt handle window sizing
     restoreGeometry(settings.value(WINDOW_GEOM_KEY).toByteArray());
+#endif
     if (this->isFullScreen()) {
         fullscreen_action->blockSignals(true);
         fullscreen_action->setChecked(true);
@@ -1171,14 +1180,16 @@ void Window::on_about()
                        "<a href=\"https://github.com/Prj-m/Fstl-e-android\""
                        "   style=\"color: #93a1a1;\">Fstl-e-android source and releases</a></p>"
                        "<font size='small'>"
-                       "<p>It is a forked version of <b>fstl</b> 0.10.0<br>"
-                       "with some fancy enhancements"
-                       "</p>"
-                       "<p>Original version © 2014-2024 Matthew Keeter<br>"
+                       "<p>Android port of <b>fstl-e</b> © 2024-2025 William Daniau<br>"
+                       "<a href=\"https://github.com/wdaniau/fstl\""
+                       "   style=\"color: #93a1a1;\">https://github.com/wdaniau/fstl</a></p>"
+                       "<p>fstl-e is a fork of <b>fstl</b> 0.10.0<br>"
+                       "© 2014-2024 Matthew Keeter<br>"
                        "<a href=\"https://github.com/fstl-app/fstl\""
                        "   style=\"color: #93a1a1;\">https://github.com/fstl-app/fstl</a><br>"
                        "<a href=\"mailto:matt.j.keeter@gmail.com\""
                        "   style=\"color: #93a1a1;\">matt.j.keeter@gmail.com</a></p>"
+                       "<p>Licensed under the MIT License; see Licenses.</p>"
                        "</font>"
                        , QMessageBox::Ok, this);
     QPushButton* licenses = about.addButton(tr("Licenses"), QMessageBox::ActionRole);
@@ -1203,29 +1214,72 @@ void Window::on_about()
     }
 }
 
+void Window::show_import_error(const QString& message)
+{
+    // Keep the last valid model and its filename when an import fails. The
+    // dialog is opened without a nested event loop, so the window can still
+    // be closed by the system while it is shown. While one error is visible,
+    // further failures (for example a burst of file intents the app cannot
+    // read) do not stack additional dialogs.
+    if (import_error_box)
+    {
+        return;
+    }
+    auto* box = new QMessageBox(QMessageBox::Critical, tr("Error"), message,
+                                QMessageBox::Ok, this);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    import_error_box = box;
+    connect(box, &QObject::destroyed, this, [this] { import_error_box = nullptr; });
+    connect(box, &QDialog::finished, box, &QObject::deleteLater);
+    box->open();
+}
+
 void Window::on_bad_stl()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
-                          "Please re-export it from the original source or try a simpler version.");
-    // Keep the last valid model and its filename when an import fails.
+    show_import_error("<b>Error:</b><br>"
+                      "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
+                      "Please re-export it from the original source or try a simpler version.");
 }
 
 void Window::on_empty_mesh()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "This file is syntactically correct<br>but contains no triangles.");
-    // Keep the last valid model and its filename when an import fails.
+    show_import_error("<b>Error:</b><br>"
+                      "This file is syntactically correct<br>but contains no triangles.");
 }
 
 void Window::on_missing_file()
 {
-    QMessageBox::critical(this, "Error",
-                          "<b>Error:</b><br>"
-                          "The target file is missing.<br>");
-    // Keep the last valid model and its filename when an import fails.
+    show_import_error("<b>Error:</b><br>"
+                      "The target file is missing.<br>");
+}
+
+void Window::stop_active_import()
+{
+    Loader* loader = active_loader;
+    if (!loader)
+    {
+        return;
+    }
+    pending_import.clear();
+    active_loader = nullptr;
+    // Stop delivering results to a window that is going away, then join the
+    // worker. The loader polls cancellation inside its parsing loops and the
+    // OCCT transfer/meshing stages, so this returns promptly.
+    loader->cancel();
+    loader->disconnect(this);
+    loader->disconnect(canvas);
+    loader->wait();
+}
+
+Window::~Window()
+{
+    stop_active_import();
+}
+
+void Window::closeEvent(QCloseEvent* event)
+{
+    stop_active_import();
+    QMainWindow::closeEvent(event);
 }
 
 void Window::enable_open()
@@ -1544,6 +1598,7 @@ bool Window::load_stl(QString filename, bool is_reload)
     canvas->set_status("Loading " + filename);
 
     Loader* loader = new Loader(this, filename, is_reload);
+    active_loader = loader;
     connect(loader, &Loader::got_mesh,
             canvas, &Canvas::load_mesh);
     connect(loader, &Loader::error_bad_stl,
@@ -1555,7 +1610,11 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     connect(loader, &Loader::finished,
             loader, &Loader::deleteLater);
-    connect(loader, &Loader::finished, this, [this] {
+    connect(loader, &Loader::finished, this, [this, loader] {
+        if (active_loader == loader)
+        {
+            active_loader = nullptr;
+        }
         canvas->clear_status();
         enable_open();
     });
@@ -1626,7 +1685,9 @@ void Window::mousePressEvent(QMouseEvent *event) {
 
 void Window::resizeEvent(QResizeEvent *event)
 {
+#ifndef Q_OS_ANDROID
     QSettings().setValue(WINDOW_GEOM_KEY, saveGeometry());
+#endif
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }
@@ -1648,7 +1709,9 @@ void Window::resizeEvent(QResizeEvent *event)
 
 void Window::moveEvent(QMoveEvent *event)
 {
+#ifndef Q_OS_ANDROID
     QSettings().setValue(WINDOW_GEOM_KEY, saveGeometry());
+#endif
     if (speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
     }

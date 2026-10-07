@@ -37,6 +37,20 @@ def verify_manifest(xml, highest_version_code=None):
                 raise ValueError("Legacy storage permissions must stop at API 32")
         elif name != PACKAGE + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION":
             raise ValueError(f"Permission requires review for this offline viewer: {name}")
+    viewer_activities = [a for a in app.findall("activity") if a.get(ANDROID + "name") == ACTIVITY]
+    if len(viewer_activities) != 1:
+        raise ValueError("Expected exactly one viewer activity")
+    # Qt supports one running activity per process. With singleTop, a VIEW
+    # intent sent from another app's task creates a second instance and Qt
+    # restarts the process without the file. singleTask routes the intent to
+    # the running instance (bundletool dumps the enum as its integer, 2).
+    if viewer_activities[0].get(ANDROID + "launchMode") not in ("singleTask", "2"):
+        raise ValueError("Viewer activity must use launchMode singleTask so file intents reach the running instance")
+    # Freeform <layout> defaults were applied by some launchers when the task
+    # was started from another app, and the smaller task bounds persisted
+    # across relaunches, leaving the bottom of the screen blank.
+    if viewer_activities[0].find("layout") is not None:
+        raise ValueError("Viewer activity must not declare freeform layout defaults")
     for tag in ("activity", "activity-alias", "service", "receiver", "provider"):
         for component in app.findall(tag):
             exported = component.get(ANDROID + "exported")

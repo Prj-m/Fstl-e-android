@@ -26,6 +26,17 @@ Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
     // Nothing to do here
 }
 
+void Loader::cancel()
+{
+    cancelled.store(true);
+    requestInterruption();
+}
+
+bool Loader::isCancelled() const
+{
+    return cancelled.load() || isInterruptionRequested();
+}
+
 void Loader::run()
 try
 {
@@ -107,6 +118,13 @@ try
         mesh = load_stl();
     }
     
+    if (isCancelled())
+    {
+        // The owner is shutting down; it only waits for finished.
+        delete mesh;
+        return;
+    }
+
     if (mesh)
     {
         if (mesh->empty())
@@ -271,6 +289,7 @@ Mesh* Loader::load_stl()
     do {
         file_size_old = file_size;
         QThread::usleep(100000);
+        if (isCancelled()) return nullptr;
         file_size = file.size();
         if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
         {
@@ -333,6 +352,7 @@ Mesh* Loader::read_stl_binary(QFile& file)
     {
         if (nextRecord == bufferedRecords)
         {
+            if (isCancelled()) return nullptr;
             bufferedRecords = int(std::min<qsizetype>(1024, (verts.end() - v) / 3));
             const int bytesToRead = bufferedRecords * 50;
             if (data.readRawData(reinterpret_cast<char*>(buffer), bytesToRead) != bytesToRead)
@@ -404,6 +424,7 @@ Mesh* Loader::load_3mf()
     
     while (!xml.atEnd())
     {
+        if (isCancelled()) return nullptr;
         xml.readNext();
         if (xml.tokenType() == QXmlStreamReader::DTD)
         {
@@ -520,7 +541,13 @@ Mesh* Loader::load_step()
         ALOG("Trying Open CASCADE STEP loader first...");
         OcctStepLoader occtLoader;
         unsigned int occtTriCount = 0;
-        if (occtLoader.load(filename, stepVerts, occtTriCount) && !stepVerts.isEmpty())
+        const bool loaded = occtLoader.load(filename, stepVerts, occtTriCount,
+                                            [this] { return isCancelled(); });
+        if (isCancelled())
+        {
+            return nullptr;
+        }
+        if (loaded && !stepVerts.isEmpty())
         {
             tri_count = occtTriCount;
             ALOG("OCCT STEP loader succeeded with %d triangles", tri_count);
@@ -589,6 +616,7 @@ Mesh* Loader::read_stl_ascii(QFile& file)
     bool okay = true;
     while (!file.atEnd() && okay)
     {
+        if (isCancelled()) return nullptr;
         const auto line = file.readLine().simplified();
         if (line.startsWith("endsolid"))
         {

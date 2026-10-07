@@ -13,7 +13,7 @@ MANIFEST = '''<manifest xmlns:android="http://schemas.android.com/apk/res/androi
  package="com.github.prjm.fstl_e" android:versionCode="20">
  <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="36"/>
  <application android:debuggable="false" android:allowBackup="false" android:usesCleartextTraffic="false">
-  <activity android:name="org.qtproject.qt.android.bindings.QtActivity" android:exported="true"/>
+  <activity android:name="org.qtproject.qt.android.bindings.QtActivity" android:exported="true" android:launchMode="2"/>
  </application>
 </manifest>'''
 
@@ -40,6 +40,22 @@ class ReleaseManifestChecks(unittest.TestCase):
                     MANIFEST.replace('package="com.github.prjm.fstl_e"', 'package="com.github.prjm.fstl_e.dev"')):
             with self.assertRaises(ValueError):
                 manifest_check.verify_manifest(xml)
+
+    def test_requires_single_task_viewer(self):
+        for mode in ('android:launchMode="1"', 'android:launchMode="singleTop"', ''):
+            with self.assertRaises(ValueError):
+                manifest_check.verify_manifest(MANIFEST.replace('android:launchMode="2"', mode))
+        self.assertEqual(manifest_check.verify_manifest(MANIFEST.replace('android:launchMode="2"', 'android:launchMode="singleTask"')), 20)
+        source = ET.parse(ROOT / "android/AndroidManifest.xml").getroot()
+        activity = source.find("application/activity")
+        self.assertEqual(activity.get("{http://schemas.android.com/apk/res/android}launchMode"), "singleTask")
+
+    def test_rejects_freeform_layout_defaults(self):
+        xml = MANIFEST.replace('android:launchMode="2"/>', 'android:launchMode="2"><layout android:defaultWidth="600dp"/></activity>')
+        with self.assertRaises(ValueError):
+            manifest_check.verify_manifest(xml)
+        source = ET.parse(ROOT / "android/AndroidManifest.xml").getroot()
+        self.assertIsNone(source.find("application/activity/layout"))
 
     def test_rejects_old_target(self):
         for xml in (MANIFEST.replace('targetSdkVersion="36"', 'targetSdkVersion="35"'),
