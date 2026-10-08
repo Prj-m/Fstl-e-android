@@ -12,6 +12,13 @@
 #include "rendering/axis.h"
 #include "rendering/glmesh.h"
 #include "core/mesh.h"
+#include <QLoggingCategory>
+#include <QGuiApplication>
+#include <QSettings>
+#include <QTimer>
+
+// Touch tracing floods logcat on every move event; enable with QT_LOGGING_RULES="fstle.touch.debug=true".
+Q_LOGGING_CATEGORY(lcTouch, "fstle.touch", QtWarningMsg)
 
 const float Canvas::P_PERSPECTIVE = 0.25f;
 const float Canvas::P_ORTHOGRAPHIC = 0.0f;
@@ -146,6 +153,15 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
 
     resetTransform();
     anim.setDuration(100);
+
+    settingsTimer.setSingleShot(true);
+    settingsTimer.setInterval(400);
+    connect(&settingsTimer, &QTimer::timeout, this, &Canvas::flushSettings);
+    // Android may kill a backgrounded app without running destructors.
+    connect(qApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
+        if (state != Qt::ApplicationActive)
+            flushSettings();
+    });
     
     // Enable touch events; on Android we use raw touch handling instead of Qt gestures
     setAttribute(Qt::WA_AcceptTouchEvents);
@@ -157,7 +173,9 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
 
 Canvas::~Canvas()
 {
+    flushSettings();
     makeCurrent();
+    delete pendingMesh;
     delete mesh;
     delete mesh_vertshader;
     delete backdrop;
@@ -212,8 +230,10 @@ void Canvas::resetTransform() {
 
 void Canvas::load_mesh(Mesh* m, bool is_reload)
 {
-    delete mesh;
-    mesh = new GLMesh(m);
+    // Uploading here would run without a current GL context (and before
+    // initializeGL for startup/intent loads); paintGL uploads it instead.
+    delete pendingMesh;
+    pendingMesh = m;
     QVector3D lower(m->xmin(), m->ymin(), m->zmin());
     QVector3D upper(m->xmax(), m->ymax(), m->zmax());
     
@@ -240,12 +260,51 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
     }
     meshInfo = QStringLiteral("Triangles: %1\nX: [%2, %3]\nY: [%4, %5]\nZ: [%6, %7]").arg(m->triCount());
     for(int dIdx = 0; dIdx < 3; dIdx++) meshInfo = meshInfo.arg(lower[dIdx]).arg(upper[dIdx]);
-    if (axis) {
-        axis->setScale(lower, upper);
-    }
+    meshLower = lower;
+    meshUpper = upper;
+    hasMeshBounds = true;
     update();
+}
 
-    delete m;
+void Canvas::uploadPendingMesh()
+{
+    if (!pendingMesh)
+        return;
+    delete mesh;
+    mesh = new GLMesh(pendingMesh);
+    delete pendingMesh;
+    pendingMesh = nullptr;
+    axis->setScale(meshLower, meshUpper);
+}
+
+void Canvas::cacheLocations(DrawMode mode, QOpenGLShaderProgram& program)
+{
+    MeshLocations& l = meshLocations[mode];
+    l = MeshLocations();
+    if (!program.isLinked())
+        return;
+    l.transform = program.uniformLocation("transform_matrix");
+    l.view = program.uniformLocation("view_matrix");
+    l.zoom = program.uniformLocation("zoom");
+    l.ambient = program.uniformLocation("ambient_light_color");
+    l.directive = program.uniformLocation("directive_light_color");
+    l.direction = program.uniformLocation("directive_light_direction");
+    l.useWire = program.uniformLocation("useWire");
+    l.wireWidth = program.uniformLocation("wireWidth");
+    l.portSize = program.uniformLocation("portSize");
+    l.wireColor = program.uniformLocation("wireColor");
+    l.clipEnabled = program.uniformLocation("layerClipEnabled");
+    l.clipZ = program.uniformLocation("layerClipZ");
+    l.position = program.attributeLocation("vertex_position");
+    l.normal = program.attributeLocation("vertex_color");
+}
+
+bool Canvas::linkProgram(QOpenGLShaderProgram& program, const char* name)
+{
+    if (program.link())
+        return true;
+    qWarning() << "Failed to link" << name << "shader:" << program.log();
+    return false;
 }
 
 void Canvas::set_status(const QString &s)
@@ -277,36 +336,57 @@ void Canvas::initializeGL()
     initializeOpenGLFunctions();
 
     fallbackGlsl = false;
+    glError.clear();
+    const QSurfaceFormat actual = context()->format();
+    qInfo().noquote() << "GL:" << reinterpret_cast<const char*>(glGetString(GL_RENDERER))
+                      << "|" << reinterpret_cast<const char*>(glGetString(GL_VERSION))
+                      << "| samples" << actual.samples();
+    if (context()->isOpenGLES() && actual.majorVersion() < 3) {
+        glError = tr("fstl-e needs OpenGL ES 3.0 or newer; this device reports %1.%2.")
+                      .arg(actual.majorVersion()).arg(actual.minorVersion());
+        qWarning() << glError;
+        return;
+    }
 
     mesh_vertshader = new QOpenGLShader(QOpenGLShader::Vertex);
     mesh_vertshader->compileSourceFile(":/gl/shaders/mesh.vert");
     mesh_shader.addShader(mesh_vertshader);
     mesh_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh.frag");
-    mesh_shader.link();
+    // Other modes are skipped if they fail; without the shaded program there
+    // is nothing to show, so explain that instead of a blank canvas.
+    if (!linkProgram(mesh_shader, "shaded"))
+        glError = tr("This device's graphics driver could not compile the 3D shaders.");
     mesh_wireframe_shader.addShader(mesh_vertshader);
     mesh_wireframe_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_wireframe.frag");
-    mesh_wireframe_shader.link();
+    linkProgram(mesh_wireframe_shader, "wireframe");
     mesh_surfaceangle_shader.addShader(mesh_vertshader);
     mesh_surfaceangle_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_surfaceangle.frag");
-    mesh_surfaceangle_shader.link();
+    linkProgram(mesh_surfaceangle_shader, "surface angle");
     mesh_meshlight_shader.addShader(mesh_vertshader);
-    bool loadSuccess330 = mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/shaders/calc_altitudes.glsl") &&
+    // Geometry shaders need desktop GLSL 330; OpenGL ES always uses the fallback.
+    bool loadSuccess330 = !context()->isOpenGLES() &&
+                          QOpenGLShader::hasOpenGLShaders(QOpenGLShader::Geometry, context()) &&
+                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/shaders/calc_altitudes.glsl") &&
                           mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light.frag");
     if (!loadSuccess330) {
         // fallback to 120
         fallbackGlsl = true;
         mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light_120.frag");
-        qDebug() << "Cannot load a shader using glsl version 330, fall back to another using version 120";
-        qDebug() << "Adding wireframe on top of meshlight shader will be disabled.";
     }
     emit fallbackGlslUpdated(fallbackGlsl);
-    mesh_meshlight_shader.link();
+    linkProgram(mesh_meshlight_shader, "meshlight");
+    cacheLocations(shaded, mesh_shader);
+    cacheLocations(wireframe, mesh_wireframe_shader);
+    cacheLocations(surfaceangle, mesh_surfaceangle_shader);
+    cacheLocations(meshlight, mesh_meshlight_shader);
 
     backdrop = new Backdrop();
     // Apply persisted backdrop corner colors to the GL backdrop
     backdrop->setColors(backdropTL, backdropTR, backdropBL, backdropBR);
 
     axis = new Axis();
+    if (hasMeshBounds)
+        axis->setScale(meshLower, meshUpper);
 }
 
 
@@ -314,10 +394,20 @@ void Canvas::paintGL()
 {
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
+    if (!glError.isEmpty() || !backdrop) {
+        QPainter painter(this);
+        painter.setPen(Qt::white);
+        painter.drawText(rect().adjusted(16, 16, -16, -16), Qt::AlignCenter | Qt::TextWordWrap,
+                         glError.isEmpty() ? tr("3D view unavailable.") : glError);
+        return;
+    }
+    uploadPendingMesh();
+    // The backdrop is a full-screen quad behind everything: skip depth for it.
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     backdrop->draw();
-    // Ensure background quad does not interfere with mesh depth
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
     if (mesh)  draw_mesh();
     if (drawAxes) axis->draw(transform_matrix(), view_matrix(),
         orient_matrix(), aspect_matrix(), width() / float(height()));
@@ -378,28 +468,28 @@ void Canvas::draw_mesh()
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Not supported in OpenGL ES
     }
 
+    const MeshLocations& l = meshLocations[drawMode];
+    if (!selected_mesh_shader->isLinked() || l.position < 0)
+        return;
     selected_mesh_shader->bind();
 
     // Load the transform and view matrices into the shader
-    glUniformMatrix4fv(
-                selected_mesh_shader->uniformLocation("transform_matrix"),
-                1, GL_FALSE, transform_matrix().data());
-    glUniformMatrix4fv(
-                selected_mesh_shader->uniformLocation("view_matrix"),
-                1, GL_FALSE, view_matrix().data());
+    glUniformMatrix4fv(l.transform, 1, GL_FALSE, transform_matrix().data());
+    glUniformMatrix4fv(l.view, 1, GL_FALSE, view_matrix().data());
 
     // Compensate for z-flattening when zooming
-    glUniform1f(selected_mesh_shader->uniformLocation("zoom"), 1/zoom);
+    glUniform1f(l.zoom, 1/zoom);
 
     // Pass lighting uniforms for shaded and meshlight modes
     if (drawMode == shaded || drawMode == meshlight) {
-        // Ambient Light Color, followed by the ambient light coefficient to use
-        //glUniform4f(selected_mesh_shader->uniformLocation("ambient_light_color"),0.22f, 0.8f, 1.0f, 0.67f);
-        glUniform4f(selected_mesh_shader->uniformLocation("ambient_light_color"),ambientColor.redF(), ambientColor.greenF(), ambientColor.blueF(), ambientFactor);
-        // Directive Light Color, followed by the directive light coefficient to use
-        //glUniform4f(selected_mesh_shader->uniformLocation("directive_light_color"),1.0f,1.0f,1.0f,0.5f);
-        glUniform4f(selected_mesh_shader->uniformLocation("directive_light_color"),directiveColor.redF(),directiveColor.greenF(),directiveColor.blueF(),directiveFactor);
+        // Ambient/directive light colours, followed by the coefficient to use
+        glUniform4f(l.ambient, ambientColor.redF(), ambientColor.greenF(), ambientColor.blueF(), ambientFactor);
+        glUniform4f(l.directive, directiveColor.redF(), directiveColor.greenF(), directiveColor.blueF(), directiveFactor);
 
+        // Map UI directions (Top/Bottom, Front/Rear) to a more intuitive
+        // screen-space feel by flipping Y and Z. This makes the "Top" and
+        // "Bottom" radio buttons (and Front/Rear) behave as users expect
+        // when looking at the model on screen.
         // Directive Light Direction
         // dir 1,0,0  Light from the left
         // dir -1,0,0 Light from the right
@@ -409,34 +499,26 @@ void Canvas::draw_mesh()
         // dir 0,0,-1 Light from behind
         //
         // -1,-1,0 Light from top right
-        //glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),-1.0f,-1.0f,0.0f);
-        // Map UI directions (Top/Bottom, Front/Rear) to a more intuitive
-        // screen-space feel by flipping Y and Z. This makes the "Top" and
-        // "Bottom" radio buttons (and Front/Rear) behave as users expect
-        // when looking at the model on screen.
         QVector3D d = listDir.at(currentLightDirection);
-        glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"), d.x(), -d.y(), -d.z());
+        glUniform3f(l.direction, d.x(), -d.y(), -d.z());
         if (!fallbackGlsl) {
-            glUniform1i(selected_mesh_shader->uniformLocation("useWire"),useWire);
-            glUniform1f(selected_mesh_shader->uniformLocation("wireWidth"),wireWidth);
-            glUniform2f(selected_mesh_shader->uniformLocation("portSize"),(float)this->width(),(float)this->height());
-            glUniform3f(selected_mesh_shader->uniformLocation("wireColor"),wireColor.redF(),wireColor.greenF(),wireColor.blueF());
+            glUniform1i(l.useWire, useWire);
+            glUniform1f(l.wireWidth, wireWidth);
+            glUniform2f(l.portSize, (float)this->width(), (float)this->height());
+            glUniform3f(l.wireColor, wireColor.redF(), wireColor.greenF(), wireColor.blueF());
         }
     }
 
     // Layer peeling clip-plane uniforms (applies to all draw modes)
-    GLint locClipEnabled = selected_mesh_shader->uniformLocation("layerClipEnabled");
-    if (locClipEnabled >= 0) {
-        glUniform1i(locClipEnabled, layerClipEnabled ? 1 : 0);
-        GLint locClipZ = selected_mesh_shader->uniformLocation("layerClipZ");
-        if (locClipZ >= 0) {
-            glUniform1f(locClipZ, layerClipZ);
+    if (l.clipEnabled >= 0) {
+        glUniform1i(l.clipEnabled, layerClipEnabled ? 1 : 0);
+        if (l.clipZ >= 0) {
+            glUniform1f(l.clipZ, layerClipZ);
         }
     }
 
-    // Find and enable the attribute location for vertex position
-    const GLuint vp = selected_mesh_shader->attributeLocation("vertex_position");
-    const GLuint cp = selected_mesh_shader->attributeLocation("vertex_color");
+    const GLint vp = l.position;
+    const GLint cp = l.normal;
 
     // Draw the mesh - use edges for wireframe mode, regular drawing for others
     if (drawMode == wireframe) {
@@ -647,7 +729,7 @@ bool Canvas::event(QEvent* event)
             }
         }
         
-        qDebug() << "TOUCH EVENT type:" << event->type() << "reported:" << pts.count() << "active:" << active_touches.size();
+        qCDebug(lcTouch) << "TOUCH EVENT type:" << event->type() << "reported:" << pts.count() << "active:" << active_touches.size();
         
         // Check if we have 2+ active touches for pinch zoom
         if (active_touches.size() >= 2)
@@ -669,7 +751,7 @@ bool Canvas::event(QEvent* event)
                 touch_base_zoom = zoom;
                 touch_pinch_center = centerPt;
                 
-                qDebug() << "PINCH START at" << centerPt << "zoom:" << zoom << "dist:" << dist;
+                qCDebug(lcTouch) << "PINCH START at" << centerPt << "zoom:" << zoom << "dist:" << dist;
             }
             else
             {
@@ -702,7 +784,7 @@ bool Canvas::event(QEvent* event)
                 // Adjust center to compensate for the difference
                 center += b - a;
                 
-                qDebug() << "PINCH ratio:" << ratio << "zoom:" << zoom << "dist:" << dist;
+                qCDebug(lcTouch) << "PINCH ratio:" << ratio << "zoom:" << zoom << "dist:" << dist;
                 update();
             }
             event->accept();
@@ -713,7 +795,7 @@ bool Canvas::event(QEvent* event)
             // Less than 2 touches - end pinch if active
             if (touch_pinch_active)
             {
-                qDebug() << "PINCH END";
+                qCDebug(lcTouch) << "PINCH END";
                 touch_pinch_active = false;
             }
         }
@@ -743,12 +825,12 @@ bool Canvas::gestureEvent(QGestureEvent* event)
 
 void Canvas::pinchTriggered(QPinchGesture* gesture)
 {
-    qDebug() << "PINCH TRIGGERED state:" << gesture->state();
+    qCDebug(lcTouch) << "PINCH TRIGGERED state:" << gesture->state();
     if (gesture->state() == Qt::GestureStarted)
     {
         // Store initial zoom when gesture starts
         pinch_scale_factor = zoom;
-        qDebug() << "Pinch started, base zoom:" << pinch_scale_factor;
+        qCDebug(lcTouch) << "Pinch started, base zoom:" << pinch_scale_factor;
     }
     else if (gesture->state() == Qt::GestureUpdated)
     {
@@ -788,14 +870,14 @@ void Canvas::pinchTriggered(QPinchGesture* gesture)
     }
 }
 
-void Canvas::resizeGL(int width, int height)
+void Canvas::resizeGL(int, int)
 {
-    glViewport(0, 0, width, height);
+    // QOpenGLWidget sets the viewport in device pixels before each paintGL.
 }
 
 void Canvas::peelLayerStep()
 {
-    if (!mesh) {
+    if (!mesh && !pendingMesh) {
         return;
     }
 
@@ -832,8 +914,7 @@ QColor Canvas::getAmbientColor() {
 
 void Canvas::setAmbientColor(QColor c) {
     ambientColor = c;
-    QSettings settings;
-    settings.setValue(AMBIENT_COLOR,c);
+    persistSetting(AMBIENT_COLOR,c);
 }
 
 double Canvas::getAmbientFactor() {
@@ -842,8 +923,7 @@ double Canvas::getAmbientFactor() {
 
 void Canvas::setAmbientFactor(double f) {
     ambientFactor = (float) f;
-    QSettings settings;
-    settings.setValue(AMBIENT_FACTOR,f);
+    persistSetting(AMBIENT_FACTOR,f);
 }
 
 void Canvas::resetAmbientColor() {
@@ -857,8 +937,7 @@ QColor Canvas::getDirectiveColor() {
 
 void Canvas::setDirectiveColor(QColor c) {
     directiveColor = c;
-    QSettings settings;
-    settings.setValue(DIRECTIVE_COLOR,c);
+    persistSetting(DIRECTIVE_COLOR,c);
 }
 
 double Canvas::getDirectiveFactor() {
@@ -867,8 +946,7 @@ double Canvas::getDirectiveFactor() {
 
 void Canvas::setDirectiveFactor(double f) {
     directiveFactor = (float) f;
-    QSettings settings;
-    settings.setValue(DIRECTIVE_FACTOR,f);
+    persistSetting(DIRECTIVE_FACTOR,f);
 }
 
 void Canvas::resetDirectiveColor() {
@@ -890,8 +968,7 @@ int Canvas::getCurrentLightDirection() {
 
 void Canvas::setCurrentLightDirection(int ind) {
     currentLightDirection = ind;
-    QSettings settings;
-    settings.setValue(CURRENT_LIGHT_DIRECTION,currentLightDirection);
+    persistSetting(CURRENT_LIGHT_DIRECTION,currentLightDirection);
 }
 
 void Canvas::resetCurrentLightDirection() {
@@ -904,8 +981,7 @@ bool Canvas::getUseWire() {
 
 void Canvas::setUseWire(bool b) {
     useWire = b;
-    QSettings settings;
-    settings.setValue(USE_WIRE,useWire);
+    persistSetting(USE_WIRE,useWire);
 }
 
 void Canvas::resetUseWire() {
@@ -918,8 +994,7 @@ double Canvas::getWireWidth() {
 
 void Canvas::setWireWidth(double w) {
     wireWidth = (float) w;
-    QSettings settings;
-    settings.setValue(WIRE_WIDTH,w);
+    persistSetting(WIRE_WIDTH,w);
 }
 
 void Canvas::resetWireWidth() {
@@ -932,8 +1007,7 @@ QColor Canvas::getWireColor() {
 
 void Canvas::setWireColor(QColor c) {
     wireColor = c;
-    QSettings settings;
-    settings.setValue(WIRE_COLOR,wireColor);
+    persistSetting(WIRE_COLOR,wireColor);
 }
 
 void Canvas::resetWireColor() {
@@ -973,8 +1047,7 @@ QString Canvas::getDefaultView() {
 void Canvas::setDefaultView(QString v) {
     if (predefinedRotations.keys().contains(v.toLower())) {
         defaultView = v;
-        QSettings settings;
-        settings.setValue(DEFAULT_VIEW,v);
+        persistSetting(DEFAULT_VIEW,v);
     }
 }
 
@@ -989,8 +1062,7 @@ double Canvas::getAbFactor() {
 
 void Canvas::setAbFactor(double f) {
     abFactor = (float) f;
-    QSettings settings;
-    settings.setValue(AB_FACTOR,f);
+    persistSetting(AB_FACTOR,f);
 }
 
 void Canvas::resetAbFactor() {
@@ -1003,8 +1075,7 @@ int Canvas::getMsaa() {
 
 void Canvas::setMsaa(int m) {
     msaa = m;
-    QSettings settings;
-    settings.setValue(MSAA,msaa);
+    persistSetting(MSAA,msaa);
 }
 
 void Canvas::resetMsaa() {
@@ -1014,11 +1085,10 @@ void Canvas::resetMsaa() {
 void Canvas::setBackdropCorners(const QColor& tl, const QColor& tr,
                                 const QColor& bl, const QColor& br) {
     backdropTL = tl; backdropTR = tr; backdropBL = bl; backdropBR = br;
-    QSettings settings;
-    settings.setValue(BACKDROP_TOP_LEFT, tl);
-    settings.setValue(BACKDROP_TOP_RIGHT, tr);
-    settings.setValue(BACKDROP_BOTTOM_LEFT, bl);
-    settings.setValue(BACKDROP_BOTTOM_RIGHT, br);
+    persistSetting(BACKDROP_TOP_LEFT, tl);
+    persistSetting(BACKDROP_TOP_RIGHT, tr);
+    persistSetting(BACKDROP_BOTTOM_LEFT, bl);
+    persistSetting(BACKDROP_BOTTOM_RIGHT, br);
     if (backdrop) {
         backdrop->setColors(tl, tr, bl, br);
     }
@@ -1031,8 +1101,7 @@ void Canvas::setBackdropCorners(const QColor& tl, const QColor& tr,
 
 void Canvas::setBackdropTLCorner(const QColor& color) {
     backdropTL = color;
-    QSettings settings;
-    settings.setValue(BACKDROP_TOP_LEFT, color);
+    persistSetting(BACKDROP_TOP_LEFT, color);
     if (backdrop) {
         backdrop->setTopLeft(color);
     }
@@ -1043,8 +1112,7 @@ void Canvas::setBackdropTLCorner(const QColor& color) {
 
 void Canvas::setBackdropTRCorner(const QColor& color) {
     backdropTR = color;
-    QSettings settings;
-    settings.setValue(BACKDROP_TOP_RIGHT, color);
+    persistSetting(BACKDROP_TOP_RIGHT, color);
     if (backdrop) {
         backdrop->setTopRight(color);
     }
@@ -1055,8 +1123,7 @@ void Canvas::setBackdropTRCorner(const QColor& color) {
 
 void Canvas::setBackdropBLCorner(const QColor& color) {
     backdropBL = color;
-    QSettings settings;
-    settings.setValue(BACKDROP_BOTTOM_LEFT, color);
+    persistSetting(BACKDROP_BOTTOM_LEFT, color);
     if (backdrop) {
         backdrop->setBottomLeft(color);
     }
@@ -1067,8 +1134,7 @@ void Canvas::setBackdropBLCorner(const QColor& color) {
 
 void Canvas::setBackdropBRCorner(const QColor& color) {
     backdropBR = color;
-    QSettings settings;
-    settings.setValue(BACKDROP_BOTTOM_RIGHT, color);
+    persistSetting(BACKDROP_BOTTOM_RIGHT, color);
     if (backdrop) {
         backdrop->setBottomRight(color);
     }
@@ -1078,6 +1144,7 @@ void Canvas::setBackdropBRCorner(const QColor& color) {
 }
 
 void Canvas::loadBackdropFromSettings() {
+    flushSettings();
     const QSettings settings;
     backdropTL = settings.value(BACKDROP_TOP_LEFT, tlStandardBackdrop).value<QColor>();
     backdropTR = settings.value(BACKDROP_TOP_RIGHT, trStandardBackdrop).value<QColor>();
@@ -1086,11 +1153,30 @@ void Canvas::loadBackdropFromSettings() {
 }
 
 void Canvas::setBackdropPresetIndex(const int index) {
-    QSettings settings;
-    settings.setValue(BACKDROP_PRESET_INDEX, index);
+    persistSetting(BACKDROP_PRESET_INDEX, index);
 }
 
 int Canvas::getBackdropPresetIndex() {
+    flushSettings();
     const QSettings settings;
     return settings.value(BACKDROP_PRESET_INDEX, 1).toInt();
+}
+
+void Canvas::persistSetting(const QString& key, const QVariant& value)
+{
+    // Colour planes call setters on every drag move; each temporary QSettings
+    // would rewrite the settings file. Batch the writes instead.
+    pendingSettings.insert(key, value);
+    settingsTimer.start();
+}
+
+void Canvas::flushSettings()
+{
+    settingsTimer.stop();
+    if (pendingSettings.isEmpty())
+        return;
+    QSettings settings;
+    for (auto it = pendingSettings.constBegin(); it != pendingSettings.constEnd(); ++it)
+        settings.setValue(it.key(), it.value());
+    pendingSettings.clear();
 }

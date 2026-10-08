@@ -1,4 +1,5 @@
 #include "ui/shaderlightprefs.h"
+#include "ui/hsvplane.h"
 #include "ui/canvas.h"
 #include "ui/window.h"
 #include <QApplication>
@@ -21,17 +22,7 @@ protected:
         int h = height();
         if (w <= 0 || h <= 0) return;
 
-        QImage img(w, h, QImage::Format_RGB32);
-        for (int y = 0; y < h; ++y) {
-            double v = h > 1 ? 1.0 - double(y) / double(h - 1) : 1.0; // brightness
-            for (int x = 0; x < w; ++x) {
-                double hf = w > 1 ? double(x) / double(w - 1) : 0.0;  // hue
-                QColor c;
-                c.setHsvF(hf, 1.0, v);
-                img.setPixelColor(x, y, c);
-            }
-        }
-        p.drawImage(0, 0, img);
+        p.drawImage(0, 0, hsvPlaneImage(size(), image));
         p.setPen(QColor(80, 80, 80));
         p.drawRect(rect().adjusted(0, 0, -1, -1));
     }
@@ -43,6 +34,7 @@ protected:
 
 private:
     ShaderLightPrefs* prefs;
+    QImage image;
 
     void handle(QMouseEvent* ev) {
         if (!prefs) return;
@@ -468,13 +460,17 @@ void ShaderLightPrefs::resetDirection() {
 
 void ShaderLightPrefs::resizeEvent(QResizeEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(PREFS_GEOM, saveGeometry());
+#endif
     QWidget::resizeEvent(event);
 }
 
 void ShaderLightPrefs::moveEvent(QMoveEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(PREFS_GEOM, saveGeometry());
+#endif
     QWidget::moveEvent(event);
 }
 

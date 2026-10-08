@@ -12,8 +12,9 @@ public:
     Mesh(std::vector<GLfloat>&& vertices, std::vector<GLuint>&& indices);
     Mesh(std::vector<GLfloat>&& vertices, std::vector<GLfloat>&& normals, std::vector<GLuint>&& indices);
 
-    float min(size_t start) const;
-    float max(size_t start) const;
+    // Bounds are computed once in the constructor, on the loader thread.
+    float min(size_t start) const { return start < 3 ? lower[start] : -1; }
+    float max(size_t start) const { return start < 3 ? upper[start] : 1; }
 
     float xmin() const { return min(0); }
     float ymin() const { return min(1); }
@@ -29,6 +30,10 @@ private:
     std::vector<GLfloat> vertices;
     std::vector<GLfloat> normals;
     std::vector<GLuint> indices;
+    float lower[3] = {-1, -1, -1};
+    float upper[3] = {1, 1, 1};
+
+    void computeBounds();
 
     friend class GLMesh;
 };

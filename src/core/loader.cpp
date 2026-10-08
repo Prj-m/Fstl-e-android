@@ -1,6 +1,7 @@
 #include <future>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 #include "core/loader.h"
 #include "core/importlimits.h"
@@ -13,6 +14,8 @@
 #include <QSet>
 #include <QMap>
 #include <QFile>
+#include <QDir>
+#include <QStandardPaths>
 #include <QVector3D>
 
 #ifdef Q_OS_ANDROID
@@ -24,9 +27,54 @@
 #endif
 
 Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
-    : QThread(parent), filename(filename), is_reload(is_reload)
+    : QThread(parent), filename(filename), sourcePath(filename), is_reload(is_reload)
 {
     // Nothing to do here
+}
+
+bool Loader::copyUnsizedSource()
+{
+    QFile in(filename);
+    if (!in.open(QIODevice::ReadOnly))
+    {
+        emit error_missing_file();
+        return false;
+    }
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (cachePath.isEmpty() || !QDir().mkpath(cachePath))
+    {
+        emit error_missing_file();
+        return false;
+    }
+    sourceCopy = std::make_unique<QTemporaryFile>(cachePath + "/fstl_source_XXXXXX");
+    if (!sourceCopy->open())
+    {
+        emit error_missing_file();
+        return false;
+    }
+    // Read until the stream ends: size() and atEnd() are meaningless here.
+    for (;;)
+    {
+        if (isCancelled()) return false;
+        const QByteArray chunk = in.read(1024 * 1024);
+        if (chunk.isEmpty())
+            break;
+        if (sourceCopy->size() + chunk.size() > ImportLimits::SourceBytes ||
+            sourceCopy->write(chunk) != chunk.size())
+        {
+            emit error_bad_stl();
+            return false;
+        }
+    }
+    if (in.error() != QFileDevice::NoError || !sourceCopy->flush() || sourceCopy->size() == 0)
+    {
+        emit error_bad_stl();
+        return false;
+    }
+    sourceCopy->close();
+    sourcePath = sourceCopy->fileName();
+    ALOG("Copied unsized content URI to the cache");
+    return true;
 }
 
 void Loader::cancel()
@@ -46,11 +94,16 @@ try
     Mesh* mesh = nullptr;
     
     ALOG("Loader::run() called for file: %s", filename.toStdString().c_str());
+
+    // Some providers (cloud, messaging, unscanned media) report no size.
+    if (filename.startsWith(QLatin1String("content://")) && QFile(filename).size() <= 0 &&
+        !copyUnsizedSource())
+        return;
     
     // Detect 3MF and STEP by inspecting the file header.
     // 3MF: ZIP container (magic bytes "PK")
     // STEP: ISO-10303-21 text header and/or HEADER/DATA markers
-    QFile file(filename);
+    QFile file(sourcePath);
     bool is_3mf = false;
     bool is_step = false;
     
@@ -204,8 +257,10 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
         
         // Normalize
         float len = std::sqrt(nx*nx + ny*ny + nz*nz);
-        if (len > 0.0001f) {
+        if (len > 0.0f) {
             nx /= len; ny /= len; nz /= len;
+        } else {
+            nx = 0.0f; ny = 0.0f; nz = 1.0f; // degenerate; draws no pixels
         }
         
         // Store vertices
@@ -213,6 +268,7 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
         flat_verts.push_back(v1x); flat_verts.push_back(v1y); flat_verts.push_back(v1z);
         flat_verts.push_back(v2x); flat_verts.push_back(v2y); flat_verts.push_back(v2z);
         
+        // Store actual NORMALS (same for all 3 vertices of the triangle)
         // Store actual NORMALS (same for all 3 vertices of the triangle)
         for (int j = 0; j < 3; j++) {
             flat_normals.push_back(nx);
@@ -279,34 +335,56 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
 
 Mesh* Loader::load_stl()
 {
-    QFile file(filename);
+    QFile file(sourcePath);
     if (!file.open(QIODevice::ReadOnly))
     {
         emit error_missing_file();
         return NULL;
     }
 
-    qint64 file_size, file_size_old;
-    file_size = file.size();
-    int stabilityChecks = 0;
-    do {
-        file_size_old = file_size;
-        QThread::usleep(100000);
-        if (isCancelled()) return nullptr;
-        file_size = file.size();
-        if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
-        {
-            emit error_bad_stl();
-            return nullptr;
-        }
+    qint64 file_size = file.size();
+    if (file_size > ImportLimits::SourceBytes)
+    {
+        emit error_bad_stl();
+        return nullptr;
     }
-    while(file_size != file_size_old);
+    // Watcher-triggered reloads can see a file that is still being written;
+    // wait for its size to settle. First opens skip this delay.
+    if (is_reload)
+    {
+        qint64 file_size_old;
+        int stabilityChecks = 0;
+        do {
+            file_size_old = file_size;
+            QThread::usleep(100000);
+            if (isCancelled()) return nullptr;
+            file_size = file.size();
+            if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
+            {
+                emit error_bad_stl();
+                return nullptr;
+            }
+        }
+        while(file_size != file_size_old);
+    }
+
+    // A size matching the binary triangle count is binary even when the
+    // 80-byte header starts with "solid" (common with CAD exporters).
+    bool binarySize = false;
+    if (file_size >= 84 && file.seek(80))
+    {
+        uchar count[4];
+        binarySize = file.read(reinterpret_cast<char*>(count), 4) == 4 &&
+                     file_size == 84 + qint64(qFromLittleEndian<quint32>(count)) * 50;
+    }
+    file.seek(0);
 
     // First, try to read the stl as an ASCII file
-    if (file.read(5) == "solid")
+    if (!binarySize && file.read(5) == "solid")
     {
-        file.readLine(); // skip solid name
-        const auto line = file.readLine().trimmed();
+        // Bounded reads: a binary file may contain no newline for megabytes.
+        file.readLine(1024); // skip solid name
+        const auto line = file.readLine(1024).trimmed();
         if (line.startsWith("facet") ||
             line.startsWith("endsolid"))
         {
@@ -392,7 +470,7 @@ Mesh* Loader::load_3mf()
 {
     ALOG("load_3mf() START for: %s", filename.toStdString().c_str());
     
-    QFile file(filename);
+    QFile file(sourcePath);
     if (!file.open(QIODevice::ReadOnly))
     {
         ALOG("FAILED to open 3MF file: %s", filename.toStdString().c_str());
@@ -590,6 +668,8 @@ Mesh* Loader::load_3mf()
         }
     }
 
+    parts.clear(); // up to ModelXmlBytes of XML is no longer needed
+
     // Files without a <build> section draw every top-level object of the root part.
     if (!hasBuild)
     {
@@ -660,6 +740,7 @@ Mesh* Loader::load_3mf()
         emit error_empty_mesh();
         return nullptr;
     }
+    objects.clear(); // release per-object coordinates before building the mesh
     return mesh_from_verts(tri_count, verts);
 }
 
@@ -681,7 +762,7 @@ Mesh* Loader::load_step()
         ALOG("Trying Open CASCADE STEP loader first...");
         OcctStepLoader occtLoader;
         unsigned int occtTriCount = 0;
-        const bool loaded = occtLoader.load(filename, stepVerts, occtTriCount,
+        const bool loaded = occtLoader.load(sourcePath, stepVerts, occtTriCount,
                                             [this] { return isCancelled(); });
         if (isCancelled())
         {
@@ -704,7 +785,7 @@ Mesh* Loader::load_step()
     if (stepVerts.isEmpty())
     {
         StepMeshLoader stepLoader;
-        if (!stepLoader.parseFile(filename))
+        if (!stepLoader.parseFile(sourcePath))
         {
             ALOG("Failed to parse STEP file with internal parser");
             emit error_bad_stl();
@@ -749,21 +830,39 @@ Mesh* Loader::load_step()
 
 Mesh* Loader::read_stl_ascii(QFile& file)
 {
-    file.readLine();
+    // Next non-blank line, bounded so a malformed file cannot force a huge read.
+    auto nextLine = [&file]() {
+        QByteArray line;
+        while (line.isEmpty() && !file.atEnd())
+            line = file.readLine(1024).simplified();
+        return line;
+    };
+
+    nextLine(); // "solid name"
     uint32_t tri_count = 0;
-    QVector<Vertex> verts(tri_count*3);
+    QVector<Vertex> verts;
+    // Typical facets take ~250 bytes; reserving avoids repeated regrowth.
+    verts.reserve(qsizetype(std::min<qint64>(file.size() / 250, ImportLimits::Triangles)) * 3);
 
     bool okay = true;
     while (!file.atEnd() && okay)
     {
         if (isCancelled()) return nullptr;
-        const auto line = file.readLine().simplified();
+        const auto line = nextLine();
+        if (line.isEmpty())
+        {
+            break; // only trailing whitespace remained
+        }
         if (line.startsWith("endsolid"))
         {
-            break;
+            // Some exporters write one solid block per body.
+            const auto next = nextLine();
+            if (next.startsWith("solid"))
+                continue;
+            break; // ignore trailing data after the last block, as before
         }
         else if (!line.startsWith("facet normal") ||
-                 !file.readLine().simplified().startsWith("outer loop"))
+                 !nextLine().startsWith("outer loop"))
         {
             okay = false;
             break;
@@ -776,7 +875,7 @@ Mesh* Loader::read_stl_ascii(QFile& file)
         }
         for (int i=0; i < 3; ++i)
         {
-            auto line = file.readLine().simplified().split(' ');
+            auto line = nextLine().split(' ');
             if (line.size() != 4 || line[0] != "vertex")
             {
                 okay = false;
@@ -792,8 +891,9 @@ Mesh* Loader::read_stl_ascii(QFile& file)
                 break;
             verts.push_back(Vertex(x, y, z));
         }
-        if (!file.readLine().trimmed().startsWith("endloop") ||
-            !file.readLine().trimmed().startsWith("endfacet"))
+        if (!okay ||
+            !nextLine().startsWith("endloop") ||
+            !nextLine().startsWith("endfacet"))
         {
             okay = false;
             break;

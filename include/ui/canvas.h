@@ -6,6 +6,7 @@
 #include <QSurfaceFormat>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
+#include <QTimer>
 
 class GLMesh;
 class Mesh;
@@ -98,6 +99,9 @@ public:
     QColor brStandardBackdrop = QColor::fromRgbF(0.00000000f, 0.12156863f, 0.18039216f);
 
     void loadBackdropFromSettings();
+    // Debounced settings writes; flushSettings() writes anything pending now.
+    void persistSetting(const QString& key, const QVariant& value);
+    void flushSettings();
 
 public slots:
     void set_status(const QString& s);
@@ -127,6 +131,8 @@ signals:
 
 private:
     void draw_mesh();
+    void uploadPendingMesh();
+    bool linkProgram(QOpenGLShaderProgram& program, const char* name);
 
     QMatrix4x4 orient_matrix() const;
     QMatrix4x4 transform_matrix() const;
@@ -136,11 +142,23 @@ private:
     QPointF changeMouseCoordinates(QPoint p);
     void calcArcballTransform(QPointF p1, QPointF p2);
 
-    QOpenGLShader* mesh_vertshader;
+    QOpenGLShader* mesh_vertshader = nullptr;
     QOpenGLShaderProgram mesh_shader;
     QOpenGLShaderProgram mesh_wireframe_shader;
     QOpenGLShaderProgram mesh_surfaceangle_shader;
     QOpenGLShaderProgram mesh_meshlight_shader;
+
+    // Looked up once after linking; glGetUniformLocation per frame is a
+    // driver round-trip on every rotation/zoom frame.
+    struct MeshLocations {
+        GLint transform = -1, view = -1, zoom = -1;
+        GLint ambient = -1, directive = -1, direction = -1;
+        GLint useWire = -1, wireWidth = -1, portSize = -1, wireColor = -1;
+        GLint clipEnabled = -1, clipZ = -1;
+        GLint position = -1, normal = -1;
+    };
+    MeshLocations meshLocations[DRAWMODECOUNT];
+    void cacheLocations(DrawMode mode, QOpenGLShaderProgram& program);
 
     QColor ambientColor;
     QColor directiveColor;
@@ -189,6 +207,16 @@ private:
     GLMesh* mesh;
     Backdrop* backdrop;
     Axis* axis;
+    // GL objects need a current context, so loaded meshes are uploaded in paintGL.
+    Mesh* pendingMesh = nullptr;
+    bool hasMeshBounds = false;
+    QVector3D meshLower;
+    QVector3D meshUpper;
+    // Set when the device cannot provide a usable OpenGL ES 3.0 context or shaders.
+    QString glError;
+
+    QHash<QString, QVariant> pendingSettings;
+    QTimer settingsTimer;
 
     QVector3D center;
     QVector3D centerOrg;
@@ -199,11 +227,11 @@ private:
     float abFactor;
     int msaa;
 
-    float perspective;
-    enum DrawMode drawMode;
-    bool drawAxes;
-    bool invertZoom;
-    bool resetTransformOnLoad;
+    float perspective = 0.25f;
+    enum DrawMode drawMode = shaded;
+    bool drawAxes = false;
+    bool invertZoom = false;
+    bool resetTransformOnLoad = true;
     Q_PROPERTY(float perspective MEMBER perspective WRITE set_perspective);
     QPropertyAnimation anim;
 

@@ -17,6 +17,9 @@ void main() {
     gl_Position = ec_position;
     ec_pos = ec_position.xyz;
     vObjPos = vertex_position;
-    // Transform normal to world space
-    world_normal = mat3(transform_matrix) * vertex_color;
+    // Transform normal to world space and normalize here, at highp: the
+    // transform scales models to unit size, so the raw normal is ~0.005 long
+    // and its squared length underflows mediump (fp16 on Adreno/Mali) in the
+    // fragment shaders, which turned large models black and white.
+    world_normal = normalize(mat3(transform_matrix) * vertex_color);
 }

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <manifest package="com.github.prjm.fstl_e"
           xmlns:android="http://schemas.android.com/apk/res/android"
-android:versionName="1.0.4-rc.6"
-          android:versionCode="32"
+android:versionName="1.0.4-rc.7"
+          android:versionCode="33"
           android:installLocation="auto">
     <application android:allowBackup="false"
                  android:usesCleartextTraffic="false"
@@ -12,7 +12,7 @@ android:versionName="1.0.4-rc.6"
                  android:icon="@mipmap/ic_launcher"
                  android:roundIcon="@mipmap/ic_launcher_round"
                  android:resizeableActivity="true"
-                 android:extractNativeLibs="true">
+                 android:enableOnBackInvokedCallback="false">
         <activity android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
                   android:name="org.qtproject.qt.android.bindings.QtActivity"
                   android:label="fstl-e"
@@ -25,17 +25,48 @@ android:versionName="1.0.4-rc.6"
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Document providers rarely expose file names in content URIs, so
+                 match the model MIME types they report. The loader detects the
+                 format from file contents, not the extension. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content"/>
+                <data android:mimeType="model/stl"/>
+                <data android:mimeType="model/x.stl-binary"/>
+                <data android:mimeType="model/x.stl-ascii"/>
+                <data android:mimeType="application/sla"/>
+                <data android:mimeType="application/vnd.ms-pki.stl"/>
+                <data android:mimeType="model/3mf"/>
+                <data android:mimeType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+                <data android:mimeType="model/step"/>
+                <data android:mimeType="application/step"/>
+                <data android:mimeType="application/x-step"/>
+            </intent-filter>
+            <!-- Generic MIME types (e.g. application/octet-stream) by file name.
+                 pathPattern is case-sensitive and stops at the first dot, hence
+                 the upper-case and multi-dot variants. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="file"/>
                 <data android:scheme="content"/>
                 <data android:mimeType="*/*"/>
-                <data android:pathPattern=".*\\.stl"/>
-                <data android:pathPattern=".*\\.3mf"/>
-                <data android:pathPattern=".*\\.step"/>
-                <data android:pathPattern=".*\\.stp"/>
                 <data android:host="*"/>
+                <data android:pathPattern=".*\\.stl"/>
+                <data android:pathPattern=".*\\..*\\.stl"/>
+                <data android:pathPattern=".*\\..*\\..*\\.stl"/>
+                <data android:pathPattern=".*\\.STL"/>
+                <data android:pathPattern=".*\\..*\\.STL"/>
+                <data android:pathPattern=".*\\.3mf"/>
+                <data android:pathPattern=".*\\..*\\.3mf"/>
+                <data android:pathPattern=".*\\.3MF"/>
+                <data android:pathPattern=".*\\.step"/>
+                <data android:pathPattern=".*\\..*\\.step"/>
+                <data android:pathPattern=".*\\.STEP"/>
+                <data android:pathPattern=".*\\.stp"/>
+                <data android:pathPattern=".*\\..*\\.stp"/>
+                <data android:pathPattern=".*\\.STP"/>
             </intent-filter>
             <meta-data android:name="android.app.lib_name" android:value="fstl_viewer"/>
         </activity>
@@ -44,6 +75,9 @@ android:versionName="1.0.4-rc.6"
                      android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
                      android:maxSdkVersion="32"/>
+    <!-- Keyboard/trackpad-only Chromebooks have no touchscreen; mesh shaders need ES 3.0. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:glEsVersion="0x00030000" android:required="true"/>
     <supports-screens android:resizeable="true"
                       android:smallScreens="true"
                       android:normalScreens="true"

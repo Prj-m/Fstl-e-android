@@ -87,6 +87,8 @@ private:
     // The import worker currently running, if any. Destroying a running
     // QThread aborts the process, so shutdown cancels and joins it first.
     Loader* active_loader = nullptr;
+    bool active_import_is_startup = false;
+    bool loading_startup_file = false;
     void stop_active_import();
     // One reusable error dialog: repeated failing imports update it instead
     // of stacking a modal dialog per failure.

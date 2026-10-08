@@ -11,41 +11,31 @@
 Mesh::Mesh(std::vector<GLfloat>&& v, std::vector<GLuint>&& i)
     : vertices(std::move(v)), indices(std::move(i))
 {
-    // Nothing to do here
+    computeBounds();
 }
 
 Mesh::Mesh(std::vector<GLfloat>&& v, std::vector<GLfloat>&& n, std::vector<GLuint>&& i)
     : vertices(std::move(v)), normals(std::move(n)), indices(std::move(i))
 {
-    // Nothing to do here
+    computeBounds();
 }
 
-float Mesh::min(size_t start) const
+void Mesh::computeBounds()
 {
-    if (start >= vertices.size())
+    if (vertices.size() < 3)
+        return;
+    for (int axis = 0; axis < 3; ++axis)
+        lower[axis] = upper[axis] = vertices[axis];
+    // One pass on the loader thread instead of six on the UI thread.
+    for (size_t i = 0; i + 2 < vertices.size(); i += 3)
     {
-        return -1;
+        for (int axis = 0; axis < 3; ++axis)
+        {
+            const float value = vertices[i + axis];
+            lower[axis] = std::fmin(lower[axis], value);
+            upper[axis] = std::fmax(upper[axis], value);
+        }
     }
-    float v = vertices[start];
-    for (size_t i=start; i < vertices.size(); i += 3)
-    {
-        v = fmin(v, vertices[i]);
-    }
-    return v;
-}
-
-float Mesh::max(size_t start) const
-{
-    if (start >= vertices.size())
-    {
-        return 1;
-    }
-    float v = vertices[start];
-    for (size_t i=start; i < vertices.size(); i += 3)
-    {
-        v = fmax(v, vertices[i]);
-    }
-    return v;
 }
 
 int Mesh::triCount() const

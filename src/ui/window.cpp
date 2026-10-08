@@ -23,6 +23,10 @@
 #include <QIcon>
 #include "ui/canvas.h"
 #include "core/loader.h"
+#include "core/fileopenpath.h"
+#include <QDeadlineTimer>
+#include <QStandardPaths>
+#include <QDir>
 #include "ui/shaderlightprefs.h"
 #include "ui/speedmousedialog.h"
 #include "ui/backdropsettingsdialog.h"
@@ -167,11 +171,10 @@ Window::Window(QWidget* parent)
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
 #ifdef Q_OS_ANDROID
     // Android requires OpenGL ES
     format.setRenderableType(QSurfaceFormat::OpenGLES);
-    format.setVersion(3, 0);  // OpenGL ES 3.0 for flat qualifier support
+    format.setVersion(3, 0);  // mesh shaders use GLSL ES 3.00
 #else
     // Desktop OpenGL
     format.setVersion(2, 1);
@@ -948,7 +951,20 @@ Window::Window(QWidget* parent)
     connect(layerPeelButton, &QToolButton::clicked, canvas, &Canvas::peelLayerStep);
 #endif
 
+    // The startup model (last file or sphere) is cancelled if an "Open with"
+    // file arrives before it finishes, so a cold-start intent loads promptly.
+    // Cache copies of content URIs outlive the import if Android kills the
+    // process mid-load; nothing is importing yet, so remove any leftovers.
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!cachePath.isEmpty()) {
+        const QStringList stale = QDir(cachePath).entryList({"fstl_step_*", "fstl_source_*"}, QDir::Files);
+        for (const QString& name : stale)
+            QFile::remove(QDir(cachePath).filePath(name));
+    }
+
+    loading_startup_file = true;
     load_persist_settings();
+    loading_startup_file = false;
 }
 
 #ifdef Q_OS_ANDROID
@@ -1268,7 +1284,13 @@ void Window::stop_active_import()
     loader->cancel();
     loader->disconnect(this);
     loader->disconnect(canvas);
-    loader->wait();
+    // OCCT's file parsing has no cancellation point; don't block the UI thread
+    // (an ANR on Android) waiting for it. Detach the thread and let it finish.
+    if (!loader->wait(QDeadlineTimer(2000)))
+    {
+        loader->setParent(nullptr);
+        connect(loader, &QThread::finished, loader, &QObject::deleteLater);
+    }
 }
 
 Window::~Window()
@@ -1576,6 +1598,8 @@ bool Window::load_stl(QString filename, bool is_reload)
 {
     if (filename.isEmpty()) return false;
     if (!open_action->isEnabled()) {
+        if (active_loader && active_import_is_startup && !is_reload)
+            active_loader->cancel();
         pending_import = filename;
         pending_import_reload = is_reload;
         return true;
@@ -1599,6 +1623,7 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     Loader* loader = new Loader(this, filename, is_reload);
     active_loader = loader;
+    active_import_is_startup = loading_startup_file;
     connect(loader, &Loader::got_mesh,
             canvas, &Canvas::load_mesh);
     connect(loader, &Loader::error_bad_stl,
@@ -1649,9 +1674,13 @@ void Window::dragEnterEvent(QDragEnterEvent *event)
         auto urls = event->mimeData()->urls();
         if (urls.size() == 1)
         {
+            // Content URIs often hide the file name; the loader checks contents.
             QString path = urls.front().path();
-            if (path.endsWith(".stl", Qt::CaseInsensitive) || 
-                path.endsWith(".3mf", Qt::CaseInsensitive))
+            if (urls.front().scheme() == QLatin1String("content") ||
+                path.endsWith(".stl", Qt::CaseInsensitive) ||
+                path.endsWith(".3mf", Qt::CaseInsensitive) ||
+                path.endsWith(".step", Qt::CaseInsensitive) ||
+                path.endsWith(".stp", Qt::CaseInsensitive))
                 event->acceptProposedAction();
         }
     }
@@ -1659,7 +1688,8 @@ void Window::dragEnterEvent(QDragEnterEvent *event)
 
 void Window::dropEvent(QDropEvent *event)
 {
-    load_stl(event->mimeData()->urls().front().toLocalFile());
+    // ChromeOS/DeX drops carry content:// URIs, which toLocalFile() discards.
+    load_stl(fileOpenPath(event->mimeData()->urls().front()));
 }
 
 void Window::mousePressEvent(QMouseEvent *event) {
@@ -1875,9 +1905,13 @@ void Window::keyPressEvent(QKeyEvent* event)
     } else if (event->key() == Qt::Key_Down) {
         cycleShader(false);
         return;
+#ifndef Q_OS_ANDROID
+    // Android has no menu bar: menuBar() would create one and this would hide
+    // the toolbar with no touch way to restore it.
     } else if (event->key() == Qt::Key_Escape && !menuBar()->isVisible()) { // this is if user did not noticed the hide menu key
         hide_menuBar_action->toggle();
         return;
+#endif
     } else if (event->key() == Qt::Key_Escape && speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
         return;

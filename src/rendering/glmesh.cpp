@@ -2,11 +2,14 @@
 #include "core/mesh.h"
 #include <QSet>
 #include <QPair>
+#include <climits>
+
 
 GLMesh::GLMesh(const Mesh* const mesh)
     : vertices(QOpenGLBuffer::VertexBuffer), normals(QOpenGLBuffer::VertexBuffer),
       indices(QOpenGLBuffer::IndexBuffer), edge_indices(QOpenGLBuffer::IndexBuffer),
-      use_indices(!mesh->indices.empty()), has_normals(!mesh->normals.empty()), has_edges(false)
+      use_indices(!mesh->indices.empty()), has_normals(!mesh->normals.empty()), has_edges(false),
+      edges_built(false), edge_count(0)
 {
     initializeOpenGLFunctions();
 
@@ -40,67 +43,68 @@ GLMesh::GLMesh(const Mesh* const mesh)
     vertex_count = mesh->vertices.size() / 3;
     index_count = mesh->indices.size();
     
-    // Generate edge indices for wireframe mode
-    // Each triangle has 3 edges, we need to create unique edges
-    QVector<uint32_t> edges;
+    // Indexed meshes need the CPU index list to find unique edges, so build them
+    // now. Non-indexed (Android) edges depend only on vertex_count and are built
+    // on first wireframe draw, saving memory for models never shown as wireframe.
     if (use_indices) {
-        // Use a set to track unique edges
         QSet<QPair<uint32_t, uint32_t>> unique_edges;
-        
-        // Iterate through triangles
-        for (size_t i = 0; i < mesh->indices.size(); i += 3) {
+        unique_edges.reserve(int(qMin<size_t>(index_count, INT_MAX)));
+        for (size_t i = 0; i + 2 < mesh->indices.size(); i += 3) {
             uint32_t i0 = mesh->indices[i];
             uint32_t i1 = mesh->indices[i + 1];
             uint32_t i2 = mesh->indices[i + 2];
-            
-            // Add three edges of the triangle (order vertices to avoid duplicates)
-            auto edge1 = qMakePair(qMin(i0, i1), qMax(i0, i1));
-            auto edge2 = qMakePair(qMin(i1, i2), qMax(i1, i2));
-            auto edge3 = qMakePair(qMin(i2, i0), qMax(i2, i0));
-            
-            unique_edges.insert(edge1);
-            unique_edges.insert(edge2);
-            unique_edges.insert(edge3);
+            // Order vertices so shared edges are stored once
+            unique_edges.insert(qMakePair(qMin(i0, i1), qMax(i0, i1)));
+            unique_edges.insert(qMakePair(qMin(i1, i2), qMax(i1, i2)));
+            unique_edges.insert(qMakePair(qMin(i2, i0), qMax(i2, i0)));
         }
-        
-        // Convert set to vector of indices
+        QVector<uint32_t> edges;
+        edges.reserve(unique_edges.size() * 2);
         for (const auto& edge : unique_edges) {
             edges.push_back(edge.first);
             edges.push_back(edge.second);
         }
-    } else {
-        // For non-indexed meshes, create edges from sequential triangles
-        for (size_t i = 0; i < vertex_count; i += 3) {
-            // Triangle edges: 0-1, 1-2, 2-0
-            edges.push_back(i);
-            edges.push_back(i + 1);
-            edges.push_back(i + 1);
-            edges.push_back(i + 2);
-            edges.push_back(i + 2);
-            edges.push_back(i);
-        }
-    }
-    
-    if (!edges.empty()) {
-        if (edge_indices.create()) {
-            edge_indices.setUsagePattern(QOpenGLBuffer::StaticDraw);
-            if (edge_indices.bind()) {
-                edge_indices.allocate(edges.data(), edges.size() * sizeof(uint32_t));
-                edge_indices.release();
-                edge_count = edges.size();
-                has_edges = true;
-            }
-        }
+        uploadEdges(edges);
     }
 }
 
-void GLMesh::draw(GLuint vp, GLuint np)
+void GLMesh::uploadEdges(const QVector<uint32_t>& edges)
+{
+    if (edges.empty() || !edge_indices.create())
+        return;
+    edge_indices.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    if (edge_indices.bind()) {
+        edge_indices.allocate(edges.data(), edges.size() * sizeof(uint32_t));
+        edge_indices.release();
+        edge_count = edges.size();
+        has_edges = true;
+    }
+}
+
+void GLMesh::buildSequentialEdges()
+{
+    edges_built = true;
+    // Triangle edges: 0-1, 1-2, 2-0
+    QVector<uint32_t> edges;
+    edges.reserve(vertex_count / 3 * 6);
+    for (uint32_t i = 0; i + 2 < vertex_count; i += 3) {
+        edges.push_back(i);
+        edges.push_back(i + 1);
+        edges.push_back(i + 1);
+        edges.push_back(i + 2);
+        edges.push_back(i + 2);
+        edges.push_back(i);
+    }
+    uploadEdges(edges);
+}
+
+void GLMesh::draw(GLint vp, GLint np)
 {
     vertices.bind();
     glVertexAttribPointer(vp, 3, GL_FLOAT, false, 3*sizeof(float), NULL);
     glEnableVertexAttribArray(vp);
     
-    if (has_normals && np != (GLuint)-1)
+    if (has_normals && np >= 0)
     {
         normals.bind();
         glVertexAttribPointer(np, 3, GL_FLOAT, false, 3*sizeof(float), NULL);
@@ -120,7 +124,7 @@ void GLMesh::draw(GLuint vp, GLuint np)
         glDrawArrays(GL_TRIANGLES, 0, vertex_count);
     }
     
-    if (has_normals && np != (GLuint)-1)
+    if (has_normals && np >= 0)
     {
         glDisableVertexAttribArray(np);
     }
@@ -128,8 +132,10 @@ void GLMesh::draw(GLuint vp, GLuint np)
     vertices.release();
 }
 
-void GLMesh::drawEdges(GLuint vp)
+void GLMesh::drawEdges(GLint vp)
 {
+    if (!use_indices && !edges_built)
+        buildSequentialEdges();
     if (!has_edges)
         return;
         

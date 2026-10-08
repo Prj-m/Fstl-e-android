@@ -43,8 +43,8 @@ public:
 #endif
 
 private:
-    static void setCustomBackdropCorners(const QColor& tl, const QColor& tr,
-                                         const QColor& bl, const QColor& br);
+    void setCustomBackdropCorners(const QColor& tl, const QColor& tr,
+                                         const QColor& bl, const QColor& br) const;
     void restoreCustomBackdropCorners() const;
     void applyCustomPreset() const;
     bool confirmCustomColorChange();

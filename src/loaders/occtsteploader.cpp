@@ -29,6 +29,10 @@
 #include <TColgp_Array1OfPnt.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
+#include <Bnd_Box.hxx>
+#include <BRepBndLib.hxx>
+#include <algorithm>
+#include <cmath>
 
 namespace {
 // Lets OCCT's transfer and meshing stages stop when the viewer is closing.
@@ -97,7 +101,8 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
             }
         }
         if (inFile.error() != QFileDevice::NoError || tmp.size() == 0 || !tmp.flush()) {
-            qWarning() << "OCCT STEP: Source read or temporary file write failed";
+            qWarning() << "OCCT STEP: Source read or temporary file write failed" << inFile.error()
+                       << inFile.errorString() << "copied" << tmp.size() << "source size" << inFile.size();
             return false;
         }
         tmp.close();
@@ -111,32 +116,41 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
     if (cancelled()) return false;
     Handle(CancelProgressIndicator) progress = new CancelProgressIndicator(cancel);
 
-    STEPControl_Reader reader;
-    IFSelect_ReturnStatus status = reader.ReadFile(occtFilename.toStdString().c_str());
-    if (status != IFSelect_RetDone)
+    TopoDS_Shape shape;
     {
-        qWarning() << "OCCT STEP: ReadFile failed with status" << static_cast<int>(status);
-        return false;
-    }
-    if (cancelled()) return false;
+        // Scoped so the reader's STEP entity model is freed before meshing.
+        STEPControl_Reader reader;
+        IFSelect_ReturnStatus status = reader.ReadFile(occtFilename.toStdString().c_str());
+        if (status != IFSelect_RetDone)
+        {
+            qWarning() << "OCCT STEP: ReadFile failed with status" << static_cast<int>(status);
+            return false;
+        }
+        if (cancelled()) return false;
 
-    // Transfer all roots to build a unified shape
-    if (reader.TransferRoots(progress->Start()) <= 0 || cancelled())
-    {
-        qWarning() << "OCCT STEP: TransferRoots produced no shapes or was cancelled";
-        return false;
-    }
+        // Transfer all roots to build a unified shape
+        if (reader.TransferRoots(progress->Start()) <= 0 || cancelled())
+        {
+            qWarning() << "OCCT STEP: TransferRoots produced no shapes or was cancelled";
+            return false;
+        }
 
-    TopoDS_Shape shape = reader.OneShape();
+        shape = reader.OneShape();
+    }
     if (shape.IsNull())
     {
         qWarning() << "OCCT STEP: OneShape is null";
         return false;
     }
 
-    // Create triangulation for all faces in the shape.
-    // Deflection value is a tradeoff between quality and speed.
-    const double linDeflection = 0.1;   // you can tweak this later
+    // Create triangulation for all faces in the shape. A fixed 0.1 deflection
+    // turns large parts into millions of triangles (and exhausts memory before
+    // the triangle budget can be checked), so scale it with the model size.
+    double linDeflection = 0.1;
+    Bnd_Box bounds;
+    BRepBndLib::Add(shape, bounds);
+    if (!bounds.IsVoid())
+        linDeflection = std::max(linDeflection, 0.001 * std::sqrt(bounds.SquareExtent()));
     const bool isRelative = false;
     const double angDeflection = 0.5;   // radians
 
@@ -155,6 +169,21 @@ bool OcctStepLoader::load(const QString& filename, QVector<QVector3D>& outVerts,
         return false;
     }
     if (cancelled()) return false;
+
+    quint64 totalTris = 0;
+    for (TopExp_Explorer exp(shape, TopAbs_FACE); exp.More(); exp.Next())
+    {
+        TopLoc_Location loc;
+        Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(exp.Current()), loc);
+        if (!tri.IsNull())
+            totalTris += quint64(std::max(0, tri->NbTriangles()));
+    }
+    if (totalTris > ImportLimits::Triangles)
+    {
+        qWarning() << "OCCT STEP: Triangle budget exceeded";
+        return false;
+    }
+    outVerts.reserve(qsizetype(totalTris) * 3);
 
     // Iterate over faces and extract triangulations
     for (TopExp_Explorer exp(shape, TopAbs_FACE); exp.More(); exp.Next())

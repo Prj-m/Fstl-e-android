@@ -1,4 +1,5 @@
 #include "ui/backdropsettingsdialog.h"
+#include "ui/hsvplane.h"
 #include "ui/canvas.h"
 
 #include <QApplication>
@@ -41,17 +42,7 @@ protected:
         int h = height();
         if (w <= 0 || h <= 0) return;
 
-        QImage img(w, h, QImage::Format_RGB32);
-        for (int y = 0; y < h; ++y) {
-            double v = h > 1 ? 1.0 - double(y) / double(h - 1) : 1.0; // brightness
-            for (int x = 0; x < w; ++x) {
-                double hf = w > 1 ? double(x) / double(w - 1) : 0.0;  // hue
-                QColor c;
-                c.setHsvF(hf, 1.0, v);
-                img.setPixelColor(x, y, c);
-            }
-        }
-        p.drawImage(0, 0, img);
+        p.drawImage(0, 0, hsvPlaneImage(size(), image));
         p.setPen(QColor(80, 80, 80));
         p.drawRect(rect().adjusted(0, 0, -1, -1));
     }
@@ -64,6 +55,7 @@ protected:
 
 private:
     BackdropSettingsDialog* dialog;
+    QImage image;
 
     void handle(QMouseEvent* ev)
     {
@@ -426,17 +418,17 @@ void BackdropSettingsDialog::onBRColorButtonClicked()
 }
 
 void BackdropSettingsDialog::setCustomBackdropCorners(const QColor& tl, const QColor& tr,
-                                                      const QColor& bl, const QColor& br)
+                                                      const QColor& bl, const QColor& br) const
 {
-    QSettings settings;
-    settings.setValue(BACKDROP_TOP_LEFT_CUSTOM, tl);
-    settings.setValue(BACKDROP_TOP_RIGHT_CUSTOM, tr);
-    settings.setValue(BACKDROP_BOTTOM_LEFT_CUSTOM, bl);
-    settings.setValue(BACKDROP_BOTTOM_RIGHT_CUSTOM, br);
+    canvas->persistSetting(BACKDROP_TOP_LEFT_CUSTOM, tl);
+    canvas->persistSetting(BACKDROP_TOP_RIGHT_CUSTOM, tr);
+    canvas->persistSetting(BACKDROP_BOTTOM_LEFT_CUSTOM, bl);
+    canvas->persistSetting(BACKDROP_BOTTOM_RIGHT_CUSTOM, br);
 }
 
 void BackdropSettingsDialog::restoreCustomBackdropCorners() const
 {
+    canvas->flushSettings();
     const QSettings settings;
     const QColor tl = settings.value(BACKDROP_TOP_LEFT_CUSTOM, canvas->tlStandardBackdrop).value<QColor>();
     const QColor tr = settings.value(BACKDROP_TOP_RIGHT_CUSTOM, canvas->trStandardBackdrop).value<QColor>();
@@ -534,13 +526,17 @@ bool BackdropSettingsDialog::confirmCustomColorChange()
 
 void BackdropSettingsDialog::resizeEvent(QResizeEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(SETTINGS_DIALOG_GEOMETRY, saveGeometry());
+#endif
     QWidget::resizeEvent(event);
 }
 
 void BackdropSettingsDialog::moveEvent(QMoveEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(SETTINGS_DIALOG_GEOMETRY, saveGeometry());
+#endif
     QWidget::moveEvent(event);
 }
 
