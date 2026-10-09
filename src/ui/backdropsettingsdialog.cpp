@@ -1,4 +1,5 @@
 #include "ui/backdropsettingsdialog.h"
+#include <QScrollArea>
 #include "ui/hsvplane.h"
 #include "ui/canvas.h"
 
@@ -77,9 +78,28 @@ private:
 BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas) : QWidget(parent)
 {
     canvas = _canvas;
+#ifndef Q_OS_ANDROID
     this->setMinimumWidth(400);
+#endif
 
+#ifdef Q_OS_ANDROID
+    // Android: the window sizes this panel to the screen; scroll when the
+    // content is taller than the space (landscape phones, large font scale).
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->viewport()->setAutoFillBackground(false);
+    auto* content = new QWidget(scroll);
+    content->setAutoFillBackground(false);
+    scroll->setWidget(content);
+    outerLayout->addWidget(scroll);
+    auto* mainLayout = new QVBoxLayout(content);
+#else
     auto* mainLayout = new QVBoxLayout(this);
+#endif
 
     auto* title = new QLabel("Background Color Settings");
     QFont boldFont = QApplication::font();
@@ -441,7 +461,14 @@ void BackdropSettingsDialog::applyCustomPreset() const
 {
     setCustomBackdropCorners(canvas->backdropTL, canvas->backdropTR,
                              canvas->backdropBL, canvas->backdropBR);
-#ifndef Q_OS_ANDROID
+    canvas->setBackdropPresetIndex(0); // reopen as "Custom Colors", not the old preset
+#ifdef Q_OS_ANDROID
+    // Show that the colours no longer match the named preset.
+    if (presetButton && presetListWidget) {
+        presetButton->setText(presetNames.at(0)); // Custom Colors
+        presetListWidget->setCurrentRow(0);
+    }
+#else
     if (comboBackdropPresets) {
         // Block signals to prevent triggering onPresetChanged() recursion
         comboBackdropPresets->blockSignals(true);
@@ -473,8 +500,7 @@ void BackdropSettingsDialog::applyPlaneColor(const QColor& c)
         buttonColorBR->setIcon(createColorPatch(c));
         break;
     }
-    // Note: canvas->update() removed to avoid Qt 6 Android OpenGL deadlock
-    // Background will update on next natural repaint event
+    // The canvas corner setters schedule the repaint.
     applyCustomPreset();
 }
 

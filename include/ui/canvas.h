@@ -102,6 +102,8 @@ public:
     // Debounced settings writes; flushSettings() writes anything pending now.
     void persistSetting(const QString& key, const QVariant& value);
     void flushSettings();
+    // Repaint after the current event finishes (safe from panel handlers).
+    void scheduleUpdate();
 
 public slots:
     void set_status(const QString& s);
@@ -246,6 +248,7 @@ private:
     qreal touch_start_distance = 0.0;
     qreal touch_base_zoom = 1.0;
     QPointF touch_pinch_center;     // screen-space pinch center
+    QPointF touch_last_center;      // previous midpoint, for two-finger pan
     QMap<int, QPointF> active_touches;  // track all active touch points by ID
 
     // Layer peeling / clip-plane state (object-space Z slicing)

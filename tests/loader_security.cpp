@@ -156,12 +156,32 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 1025; ++i) multipleRecords += record;
     check(multipleRecords, false, true, "binary record buffer boundary", 1025);
     check(binaryStl(1).chopped(1), false, false, "truncated binary STL");
+    check(binaryStl(1) + QByteArray(16, '\0'), false, true, "binary STL with trailing padding");
+    check(binaryStl(1) + QByteArray(5000, '\0'), false, false, "binary STL with excessive trailing data");
+    {
+        QByteArray zeroCount = binaryStl(1);
+        zeroCount.replace(80, 4, QByteArray(4, '\0'));
+        check(zeroCount, false, true, "binary STL with zero triangle count");
+    }
     check(QByteArray(82, '\0'), false, false, "truncated binary count");
     // 50 * count wraps to 50 in 32-bit arithmetic: old parser accepts 134 bytes.
     check(binaryStl(0x80000001U), false, false, "overflowed binary count");
     check(binaryStl(1, true, false), false, false, "nonfinite binary coordinates");
     const QByteArray model = "<model><resources><object><mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources></model>";
     check(model, true, true, "valid 3MF");
+    {
+        // 3MF units: coordinates are converted to millimetres.
+        QByteArray inches = model;
+        inches.replace("<model>", "<model unit='inch'>");
+        const QString path = dir.filePath("units.3mf");
+        QZipWriter writer(path);
+        writer.addFile("3D/3dmodel.model", inches);
+        writer.close();
+        TestLoader loader(path);
+        std::unique_ptr<Mesh> mesh(loader.load_3mf());
+        ++checks;
+        if (!mesh || std::abs(mesh->xmax() - 25.4f) > 1e-4f) { ++failures; std::cerr << "FAIL: 3MF inch units\n"; }
+    }
     checkCancelled(model, true, "cancelled 3MF stops silently");
     check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);
     check(model, true, false, "understated ZIP XML size", 1, 1);

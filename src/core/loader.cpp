@@ -372,10 +372,16 @@ Mesh* Loader::read_stl_binary(QFile& file)
     uint32_t tri_count = 0;
     data >> tri_count;
 
-    // Verify that the file is the right size
+    // Some exporters leave the count at 0; recover it from an exact payload.
+    const qint64 records = file.size() - 84;
+    if (tri_count == 0 && records > 0 && records % 50 == 0)
+        tri_count = uint32_t(std::min<qint64>(records / 50, qint64(ImportLimits::Triangles) + 1));
+
+    // Verify the size. A little trailing data (padding some exporters append)
+    // is ignored; the size check otherwise doubles as format validation.
     const qint64 payloadSize = qint64(tri_count) * 50;
     if (tri_count > ImportLimits::Triangles || data.status() != QDataStream::Ok ||
-        file.size() != 84 + payloadSize ||
+        file.size() < 84 + payloadSize || file.size() > 84 + payloadSize + 4096 ||
         quint64(tri_count) * 3 > quint64(std::numeric_limits<int>::max()))
     {
         emit error_bad_stl();
@@ -522,6 +528,7 @@ Mesh* Loader::load_3mf()
         QXmlStreamReader xml(&xmlSource);
         Object* object = nullptr;
         int implicitId = 0;
+        float unitScale = 1.0f; // coordinates are converted to millimetres
         while (!xml.atEnd())
         {
             if (isCancelled()) return nullptr;
@@ -537,7 +544,18 @@ Mesh* Loader::load_3mf()
                 continue;
             const QStringView name = xml.name();
             const QXmlStreamAttributes attrs = xml.attributes();
-            if (name == QLatin1StringView("object"))
+            if (name == QLatin1StringView("model"))
+            {
+                // 3MF core spec units; millimetre is the default.
+                const QStringView unit = attr(attrs, QLatin1StringView("unit"));
+                unitScale = unit == QLatin1StringView("micron") ? 0.001f
+                          : unit == QLatin1StringView("centimeter") ? 10.0f
+                          : unit == QLatin1StringView("inch") ? 25.4f
+                          : unit == QLatin1StringView("foot") ? 304.8f
+                          : unit == QLatin1StringView("meter") ? 1000.0f
+                          : 1.0f;
+            }
+            else if (name == QLatin1StringView("object"))
             {
                 QByteArray id = attr(attrs, QLatin1StringView("id")).toUtf8();
                 if (id.isEmpty())
@@ -569,7 +587,7 @@ Mesh* Loader::load_3mf()
                     emit error_bad_stl();
                     return nullptr;
                 }
-                object->coords << x << y << z;
+                object->coords << x * unitScale << y * unitScale << z * unitScale;
             }
             else if (name == QLatin1StringView("triangle") && object)
             {

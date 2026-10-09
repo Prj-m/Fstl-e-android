@@ -652,6 +652,12 @@ void Canvas::mouseMoveEvent(QMouseEvent* event)
 {
     auto p = event->pos();
     auto d = p - mouse_pos;
+    if (touch_pinch_active)
+    {
+        // Synthesized from the primary finger during a pinch: no rotation.
+        mouse_pos = p;
+        return;
+    }
     
 
     if (event->buttons() & Qt::LeftButton)
@@ -759,11 +765,21 @@ bool Canvas::event(QEvent* event)
                 touch_start_distance = std::max(1.0, (double)dist);
                 touch_base_zoom = zoom;
                 touch_pinch_center = centerPt;
+                touch_last_center = centerPt;
                 
                 qCDebug(lcTouch) << "PINCH START at" << centerPt << "zoom:" << zoom << "dist:" << dist;
             }
             else
             {
+                // Two-finger drag pans: move the model with the finger midpoint,
+                // the same mapping as a right-button mouse drag.
+                const QPointF d = centerPt - touch_last_center;
+                touch_last_center = centerPt;
+                center = transform_matrix().inverted().map(
+                         view_matrix().inverted().map(
+                         QVector3D(-d.x() / (0.5*width()),
+                                    d.y() / (0.5*height()), 0)));
+
                 // Update pinch center to current finger midpoint
                 touch_pinch_center = centerPt;
                 
@@ -806,6 +822,10 @@ bool Canvas::event(QEvent* event)
             {
                 qCDebug(lcTouch) << "PINCH END";
                 touch_pinch_active = false;
+                // Rotation resumes from where the remaining finger is now, not
+                // from where the pinch started (which made the model jump).
+                if (!active_touches.isEmpty())
+                    mouse_pos = active_touches.first().toPoint();
             }
         }
         
@@ -1101,11 +1121,7 @@ void Canvas::setBackdropCorners(const QColor& tl, const QColor& tr,
     if (backdrop) {
         backdrop->setColors(tl, tr, bl, br);
     }
-#ifndef Q_OS_ANDROID
-    // On Android, skip update() to avoid Qt 6 RHI deadlock (QTBUG-108762)
-    // Background will update on next natural repaint (touch, rotation, etc.)
-    update();
-#endif
+    scheduleUpdate();
 }
 
 void Canvas::setBackdropTLCorner(const QColor& color) {
@@ -1114,9 +1130,7 @@ void Canvas::setBackdropTLCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setTopLeft(color);
     }
-#ifndef Q_OS_ANDROID
-    update();
-#endif
+    scheduleUpdate();
 }
 
 void Canvas::setBackdropTRCorner(const QColor& color) {
@@ -1125,9 +1139,7 @@ void Canvas::setBackdropTRCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setTopRight(color);
     }
-#ifndef Q_OS_ANDROID
-    update();
-#endif
+    scheduleUpdate();
 }
 
 void Canvas::setBackdropBLCorner(const QColor& color) {
@@ -1136,9 +1148,7 @@ void Canvas::setBackdropBLCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setBottomLeft(color);
     }
-#ifndef Q_OS_ANDROID
-    update();
-#endif
+    scheduleUpdate();
 }
 
 void Canvas::setBackdropBRCorner(const QColor& color) {
@@ -1147,9 +1157,7 @@ void Canvas::setBackdropBRCorner(const QColor& color) {
     if (backdrop) {
         backdrop->setBottomRight(color);
     }
-#ifndef Q_OS_ANDROID
-    update();
-#endif
+    scheduleUpdate();
 }
 
 void Canvas::loadBackdropFromSettings() {
@@ -1169,6 +1177,15 @@ int Canvas::getBackdropPresetIndex() {
     flushSettings();
     const QSettings settings;
     return settings.value(BACKDROP_PRESET_INDEX, 1).toInt();
+}
+
+void Canvas::scheduleUpdate()
+{
+    // Queued so backdrop changes made from panel event handlers never repaint
+    // re-entrantly. Skipping the repaint entirely (the old workaround for the
+    // Qt 6.10 popup/EGL deadlock fixed by removing QComboBox on Android) left
+    // colour changes invisible until the next touch.
+    QMetaObject::invokeMethod(this, qOverload<>(&QWidget::update), Qt::QueuedConnection);
 }
 
 void Canvas::persistSetting(const QString& key, const QVariant& value)

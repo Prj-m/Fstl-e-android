@@ -31,6 +31,7 @@
 #include "ui/speedmousedialog.h"
 #include "ui/backdropsettingsdialog.h"
 #include <QDrag>
+#include <QScrollArea>
 
 const QString Window::RECENT_FILE_KEY = "recentFiles";
 const QString Window::INVERT_ZOOM_KEY = "invertZoom";
@@ -683,44 +684,7 @@ Window::Window(QWidget* parent)
     // Make Qt use a wider overflow (extension) area on Android
     windowToolBar->setStyle(new AndroidOverflowStyle(windowToolBar->style()));
 
-    // Use density-independent sizing for consistent icon size across all devices
-    // Physical size calculation: physicalDotsPerInch gives real-world DPI
-    QScreen* screen = QGuiApplication::primaryScreen();
-    qreal physicalDpi = screen ? screen->physicalDotsPerInch() : 160.0;
-    qreal logicalDpi = screen ? screen->logicalDotsPerInch() : 160.0;
-    qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
-    
-    // Target: ~6mm (0.24 inches) icons = comfortable tap target
-    // At 160 DPI baseline, that's ~38 pixels
-    // Reduced to 32 to fit more icons with minimal gap
-    int iconPx = static_cast<int>(32 * scaleFactor);
-
-    // Default clamp for phones: 32px–56px
-    int minPx = 32;
-    int maxPx = 56;
-
-    // Detect large / tablet-style layouts using the shortest side in dp so
-    // phones in landscape aren't mis-detected as tablets.
-    if (screen) {
-        QRect geom = screen->geometry();
-        int shortPx = qMin(geom.width(), geom.height());
-        qreal shortDp = (logicalDpi > 0.0)
-                ? (shortPx * 160.0 / logicalDpi)
-                : shortPx;
-        if (shortDp > 720) {
-            // True tablet / external display — bump size a bit
-            iconPx = qMax(iconPx, 52);
-            maxPx = 72;
-        } else if (shortDp > 600) {
-            iconPx = qMax(iconPx, 48);
-            maxPx = 64;
-        }
-    }
-
-    // Clamp to reasonable range: phones unchanged, large screens get slightly bigger icons
-    iconPx = qBound(minPx, iconPx, maxPx);
-    
-    windowToolBar->setIconSize(QSize(iconPx, iconPx));
+    updateToolbarIconSize();
     // Remove all padding/margins to maximize space
     windowToolBar->setStyleSheet(
         "QToolButton { margin: 0px; padding: 0px; }"
@@ -923,6 +887,7 @@ Window::Window(QWidget* parent)
     labelMsaa->setStatusTip("Current Anti-Aliasing status");
 
     filenameStatusLabel = new QLabel("File:none");
+    filenameText = "File:none";
     filenameStatusLabel->setStatusTip("Current file (click and hold to drop to another application)");
 
     statusBar->addPermanentWidget(filenameStatusLabel);
@@ -1109,6 +1074,89 @@ void Window::load_persist_settings(){
     }
  }
 
+#ifdef Q_OS_ANDROID
+void Window::placeAndroidPanel(QWidget* panel)
+{
+    // Fit the canvas area (below the toolbar, above the status bar), use the
+    // full width on phones but cap it on unfolded and tablet screens, and
+    // size the height to the content, scrolling when it does not fit.
+    const QRect area = centralWidget() ? centralWidget()->geometry() : rect();
+    const int margin = 12;
+    const int w = qMax(0, qMin(area.width() - 2 * margin, 720));
+    int wanted = area.height() * 6 / 10;
+    if (const auto* scroll = panel->findChild<QScrollArea*>()) {
+        wanted = scroll->widget()->sizeHint().height() + 2 * scroll->frameWidth();
+        // Re-fit when the content grows or shrinks (e.g. the inline preset list).
+        if (!scroll->widget()->property("fstlePanelWatched").toBool()) {
+            scroll->widget()->setProperty("fstlePanelWatched", true);
+            scroll->widget()->installEventFilter(this);
+        }
+    }
+    const int h = qMax(0, qMin(wanted, area.height() - 2 * margin));
+    panel->setFixedSize(w, h);
+    panel->move(area.x() + (area.width() - w) / 2, area.y() + (area.height() - h) / 2);
+}
+#endif
+
+#ifdef Q_OS_ANDROID
+int Window::toolbarIconSize() const
+{
+    // Use density-independent sizing for consistent icon size across all devices
+    // Physical size calculation: physicalDotsPerInch gives real-world DPI
+    const QScreen* screen = this->screen() ? this->screen() : QGuiApplication::primaryScreen();
+    qreal physicalDpi = screen ? screen->physicalDotsPerInch() : 160.0;
+    qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
+
+    // Target: ~6mm (0.24 inches) icons = comfortable tap target
+    // At 160 DPI baseline, that's ~38 pixels
+    // Reduced to 32 to fit more icons with minimal gap
+    int iconPx = static_cast<int>(32 * scaleFactor);
+
+    // Default clamp for phones: 32px–56px
+    int minPx = 32;
+    int maxPx = 56;
+
+    // Tier by the window's shortest side in logical pixels (dp on Android),
+    // not the screen's: it follows fold/unfold, split screen and DeX windows,
+    // and phones in landscape aren't mis-detected as tablets.
+    // Before the first show the window still has its default size, so use the
+    // screen then (the toolbar's first layout must already be right).
+    const QRect geometry = (isVisible() || !screen) ? rect() : screen->geometry();
+    const int shortDp = qMin(geometry.width(), geometry.height());
+    if (shortDp > 720) {
+        // True tablet / external display — bump size a bit
+        iconPx = qMax(iconPx, 52);
+        maxPx = 72;
+    } else if (shortDp > 600) {
+        iconPx = qMax(iconPx, 48);
+        maxPx = 64;
+    }
+
+    // Clamp to reasonable range: phones unchanged, large screens get slightly bigger icons
+    return qBound(minPx, iconPx, maxPx);
+}
+
+void Window::updateToolbarIconSize()
+{
+    const int iconPx = toolbarIconSize();
+    if (windowToolBar && windowToolBar->iconSize() != QSize(iconPx, iconPx))
+        windowToolBar->setIconSize(QSize(iconPx, iconPx));
+}
+#endif
+
+bool Window::eventFilter(QObject* watched, QEvent* event)
+{
+#ifdef Q_OS_ANDROID
+    if (event->type() == QEvent::LayoutRequest) {
+        for (QWidget* panel : {static_cast<QWidget*>(meshlightprefs), static_cast<QWidget*>(backdropsettingsdialog)}) {
+            if (panel && panel->isVisible() && panel->isAncestorOf(static_cast<QWidget*>(watched)))
+                QTimer::singleShot(0, this, [this, panel] { if (panel->isVisible()) placeAndroidPanel(panel); });
+        }
+    }
+#endif
+    return QMainWindow::eventFilter(watched, event);
+}
+
 void Window::on_drawModePrefs() {
 #ifdef Q_OS_ANDROID
     // Android: show preferences as in-window panel centered over the canvas
@@ -1117,13 +1165,7 @@ void Window::on_drawModePrefs() {
         return;
     }
 
-    // Size relative to main window (slightly more compact)
-    int w = static_cast<int>(width() * 0.85);
-    int h = static_cast<int>(height() * 0.6);
-    meshlightprefs->setFixedSize(w, h);
-    int x = (width() - w) / 2;
-    int y = (height() - h) / 2;
-    meshlightprefs->move(x, y);
+    placeAndroidPanel(meshlightprefs);
     meshlightprefs->show();
     meshlightprefs->raise();
 #else
@@ -1145,12 +1187,7 @@ void Window::on_backdropSettings() {
         backdropsettingsdialog->hide();
         return;
     }
-    int w = static_cast<int>(width() * 0.85);
-    int h = static_cast<int>(height() * 0.6);
-    backdropsettingsdialog->setFixedSize(w, h);
-    int x = (width() - w) / 2;
-    int y = (height() - h) / 2;
-    backdropsettingsdialog->move(x, y);
+    placeAndroidPanel(backdropsettingsdialog);
     backdropsettingsdialog->show();
     backdropsettingsdialog->raise();
 #else
@@ -1467,7 +1504,7 @@ void Window::on_loaded(const QString& filename)
 {
     current_file = QFileInfo(filename).absoluteFilePath();
     QFileInfo fileInfo = QFileInfo(current_file);
-    filenameStatusLabel->setText("File:"+fileInfo.fileName());
+    setFilenameLabel("File:" + fileInfo.fileName());
 }
 
 void Window::on_save_screenshot()
@@ -1657,7 +1694,7 @@ bool Window::load_stl(QString filename, bool is_reload)
         // Resource file - just track it for reload
         connect(loader, &Loader::loaded_file, this, [this, filename](const QString&) {
             current_file = filename;
-            filenameStatusLabel->setText("File:" + QFileInfo(filename).fileName());
+            setFilenameLabel("File:" + QFileInfo(filename).fileName());
         });
     }
     // Enable reload for all files (regular and resource)
@@ -1693,6 +1730,9 @@ void Window::dropEvent(QDropEvent *event)
 }
 
 void Window::mousePressEvent(QMouseEvent *event) {
+#ifndef Q_OS_ANDROID
+    // Dragging the file out to other apps is a desktop feature; on Android a
+    // tap on the label started a modal system drag with a content URI.
     if (event->button() == Qt::LeftButton && filenameStatusLabel->underMouse() && !current_file.isEmpty()) {
         // we do not want to drop on ourselves
         this->setAcceptDrops(false);
@@ -1710,6 +1750,7 @@ void Window::mousePressEvent(QMouseEvent *event) {
         // accept drops again
         this->setAcceptDrops(true);
     }
+#endif
     QMainWindow::mousePressEvent(event);
 }
 
@@ -1723,8 +1764,15 @@ void Window::resizeEvent(QResizeEvent *event)
     }
 
     QWidget::resizeEvent(event);
+    setFilenameLabel(filenameText);
 
 #ifdef Q_OS_ANDROID
+    updateToolbarIconSize();
+    // Re-fit open panels after rotation, fold/unfold or window resizing.
+    if (meshlightprefs && meshlightprefs->isVisible())
+        placeAndroidPanel(meshlightprefs);
+    if (backdropsettingsdialog && backdropsettingsdialog->isVisible())
+        placeAndroidPanel(backdropsettingsdialog);
     if (layerPeelButton && canvas) {
         const int margin = 24;
         const int x = canvas->width() - layerPeelButton->width() - margin;
@@ -2052,6 +2100,18 @@ void Window::onApplyView(QAction* act) {
 }
 
 
+void Window::setFilenameLabel(const QString& text)
+{
+    // A long name would otherwise set the status bar's minimum width and
+    // push the window wider than a phone screen.
+    filenameText = text;
+    if (!filenameStatusLabel)
+        return;
+    const int available = qMax(80, width() / 2);
+    filenameStatusLabel->setText(filenameStatusLabel->fontMetrics().elidedText(text, Qt::ElideMiddle, available));
+    filenameStatusLabel->setToolTip(text);
+}
+
 void Window::onSpeedMouseButton() {
     // toggle
     if (speedMouseDialog->isVisible()) {
@@ -2067,6 +2127,16 @@ void Window::onSpeedMouseButton() {
     // modifying it
     dialogPos.setX(dialogPos.x()+buttonWidth);
     dialogPos.setY(dialogPos.y()+buttonHeight/2);
+    // Keep it on screen: the button is often the last toolbar item (or in the
+    // overflow area) at the right edge, especially on phones.
+    if (const QScreen* s = screen()) {
+        const QRect available = s->availableGeometry();
+        const QSize size = speedMouseDialog->sizeHint();
+        if (dialogPos.x() + size.width() > available.right())
+            dialogPos.setX(dialogPos.x() - buttonWidth - size.width());
+        dialogPos.setX(qBound(available.left(), dialogPos.x(), available.right() - size.width()));
+        dialogPos.setY(qBound(available.top(), dialogPos.y(), available.bottom() - size.height()));
+    }
     // under X11 and windows the move isglobal, relative to the mainwindow under Wayland
     speedMouseDialog->move(dialogPos);
     speedMouseDialog->show();

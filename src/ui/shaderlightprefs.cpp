@@ -1,4 +1,5 @@
 #include "ui/shaderlightprefs.h"
+#include <QScrollArea>
 #include "ui/hsvplane.h"
 #include "ui/canvas.h"
 #include "ui/window.h"
@@ -69,7 +70,24 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     // Slightly tighter margins/spacing so the dialog feels less massive
     prefsLayout->setContentsMargins(4, 4, 4, 4);
     prefsLayout->setSpacing(4);
+#ifdef Q_OS_ANDROID
+    // Android: the window sizes this panel to the screen; scroll when the
+    // content is taller than the space (landscape phones, large font scale).
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->viewport()->setAutoFillBackground(false);
+    auto* content = new QWidget(scroll);
+    content->setAutoFillBackground(false);
+    scroll->setWidget(content);
+    outerLayout->addWidget(scroll);
+    content->setLayout(prefsLayout);
+#else
     this->setLayout(prefsLayout);
+#endif
 
     ambientPlane = nullptr;
     planeTarget = PlaneTargetAmbient;
@@ -86,7 +104,7 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     middleLayout->setHorizontalSpacing(6);
     middleLayout->setVerticalSpacing(4);
     middleWidget->setLayout(middleLayout);
-    this->layout()->addWidget(middleWidget);
+    prefsLayout->addWidget(middleWidget);
 
     // labels
     middleLayout->addWidget(new QLabel("Ambient Color"),0,0);
@@ -320,7 +338,7 @@ ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(p
     QPushButton* okButton = new QPushButton("Ok");
     boxButtonLayout->addWidget(spacerL);
     boxButtonLayout->addWidget(okButton);
-    this->layout()->addWidget(boxButton);
+    prefsLayout->addWidget(boxButton);
     okButton->setFocusPolicy(Qt::NoFocus);
     connect(okButton,SIGNAL(clicked(bool)),this,SLOT(okButtonClicked()));
 
@@ -445,11 +463,7 @@ void ShaderLightPrefs::comboDirectionsChanged(int ind) {
     setRadio(ind);
     setPix(ind);
     canvas->setCurrentLightDirection(ind);
-#ifdef Q_OS_ANDROID
-    canvas->repaint();
-#else
-    canvas->update();
-#endif
+    canvas->scheduleUpdate();
 }
 
 void ShaderLightPrefs::resetDirection() {
@@ -559,12 +573,7 @@ void ShaderLightPrefs::radioSourceClicked(int ind) {
     // Update cube icon and canvas directly
     setPix(pos);
     canvas->setCurrentLightDirection(pos);
-#ifdef Q_OS_ANDROID
-    // On Android, force immediate repaint since dialog may cover canvas
-    canvas->repaint();
-#else
-    canvas->update();
-#endif
+    canvas->scheduleUpdate();
 }
 
 void ShaderLightPrefs::setRadio(int ind) {
