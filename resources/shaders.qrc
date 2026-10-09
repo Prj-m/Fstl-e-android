@@ -12,5 +12,6 @@
         <file>shaders/sphere.stl</file>
         <file>shaders/calc_altitudes.glsl</file>
         <file>shaders/mesh_light_120.frag</file>
+        <file>shaders/mesh_pick.frag</file>
     </qresource>
 </RCC>
