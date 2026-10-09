@@ -1,4 +1,6 @@
 #include "ui/backdropsettingsdialog.h"
+#include <QScrollArea>
+#include "ui/hsvplane.h"
 #include "ui/canvas.h"
 
 #include <QApplication>
@@ -41,17 +43,7 @@ protected:
         int h = height();
         if (w <= 0 || h <= 0) return;
 
-        QImage img(w, h, QImage::Format_RGB32);
-        for (int y = 0; y < h; ++y) {
-            double v = h > 1 ? 1.0 - double(y) / double(h - 1) : 1.0; // brightness
-            for (int x = 0; x < w; ++x) {
-                double hf = w > 1 ? double(x) / double(w - 1) : 0.0;  // hue
-                QColor c;
-                c.setHsvF(hf, 1.0, v);
-                img.setPixelColor(x, y, c);
-            }
-        }
-        p.drawImage(0, 0, img);
+        p.drawImage(0, 0, hsvPlaneImage(size(), image));
         p.setPen(QColor(80, 80, 80));
         p.drawRect(rect().adjusted(0, 0, -1, -1));
     }
@@ -64,6 +56,7 @@ protected:
 
 private:
     BackdropSettingsDialog* dialog;
+    QImage image;
 
     void handle(QMouseEvent* ev)
     {
@@ -85,9 +78,31 @@ private:
 BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas) : QWidget(parent)
 {
     canvas = _canvas;
+#ifndef Q_OS_ANDROID
+    // Desktop: a framed dialog window, not a transparent child over the view.
+    setWindowFlags(Qt::Dialog);
+    setWindowTitle(tr("Background Color Settings"));
     this->setMinimumWidth(400);
+#endif
 
+#ifdef Q_OS_ANDROID
+    // Android: the window sizes this panel to the screen; scroll when the
+    // content is taller than the space (landscape phones, large font scale).
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->viewport()->setAutoFillBackground(false);
+    auto* content = new QWidget(scroll);
+    content->setAutoFillBackground(false);
+    scroll->setWidget(content);
+    outerLayout->addWidget(scroll);
+    auto* mainLayout = new QVBoxLayout(content);
+#else
     auto* mainLayout = new QVBoxLayout(this);
+#endif
 
     auto* title = new QLabel("Background Color Settings");
     QFont boldFont = QApplication::font();
@@ -426,30 +441,39 @@ void BackdropSettingsDialog::onBRColorButtonClicked()
 }
 
 void BackdropSettingsDialog::setCustomBackdropCorners(const QColor& tl, const QColor& tr,
-                                                      const QColor& bl, const QColor& br)
+                                                      const QColor& bl, const QColor& br) const
 {
-    QSettings settings;
-    settings.setValue(BACKDROP_TOP_LEFT_CUSTOM, tl);
-    settings.setValue(BACKDROP_TOP_RIGHT_CUSTOM, tr);
-    settings.setValue(BACKDROP_BOTTOM_LEFT_CUSTOM, bl);
-    settings.setValue(BACKDROP_BOTTOM_RIGHT_CUSTOM, br);
+    canvas->persistSetting(BACKDROP_TOP_LEFT_CUSTOM, tl);
+    canvas->persistSetting(BACKDROP_TOP_RIGHT_CUSTOM, tr);
+    canvas->persistSetting(BACKDROP_BOTTOM_LEFT_CUSTOM, bl);
+    canvas->persistSetting(BACKDROP_BOTTOM_RIGHT_CUSTOM, br);
 }
 
 void BackdropSettingsDialog::restoreCustomBackdropCorners() const
 {
+    canvas->flushSettings();
     const QSettings settings;
     const QColor tl = settings.value(BACKDROP_TOP_LEFT_CUSTOM, canvas->tlStandardBackdrop).value<QColor>();
     const QColor tr = settings.value(BACKDROP_TOP_RIGHT_CUSTOM, canvas->trStandardBackdrop).value<QColor>();
     const QColor bl = settings.value(BACKDROP_BOTTOM_LEFT_CUSTOM, canvas->blStandardBackdrop).value<QColor>();
     const QColor br = settings.value(BACKDROP_BOTTOM_RIGHT_CUSTOM, canvas->brStandardBackdrop).value<QColor>();
     canvas->setBackdropCorners(tl, tr, bl, br);
+    // Keep the corner swatches in step with the restored set.
+    buttonColorTL->setIcon(createColorPatch(tl));
+    buttonColorTR->setIcon(createColorPatch(tr));
+    buttonColorBL->setIcon(createColorPatch(bl));
+    buttonColorBR->setIcon(createColorPatch(br));
 }
 
-void BackdropSettingsDialog::applyCustomPreset() const
+void BackdropSettingsDialog::applyCustomPreset()
 {
     setCustomBackdropCorners(canvas->backdropTL, canvas->backdropTR,
                              canvas->backdropBL, canvas->backdropBR);
-#ifndef Q_OS_ANDROID
+    canvas->setBackdropPresetIndex(0); // reopen as "Custom Colors", not the old preset
+#ifdef Q_OS_ANDROID
+    // Show that the colours no longer match the named preset.
+    syncPresetUi(0); // Custom Colors
+#else
     if (comboBackdropPresets) {
         // Block signals to prevent triggering onPresetChanged() recursion
         comboBackdropPresets->blockSignals(true);
@@ -481,8 +505,7 @@ void BackdropSettingsDialog::applyPlaneColor(const QColor& c)
         buttonColorBR->setIcon(createColorPatch(c));
         break;
     }
-    // Note: canvas->update() removed to avoid Qt 6 Android OpenGL deadlock
-    // Background will update on next natural repaint event
+    // The canvas corner setters schedule the repaint.
     applyCustomPreset();
 }
 
@@ -494,19 +517,24 @@ void BackdropSettingsDialog::onPresetButtonClicked()
     }
 }
 
+void BackdropSettingsDialog::syncPresetUi(const int index)
+{
+    // The preset index, button label and list row must agree, or the old
+    // preset could not be re-selected after a corner edit.
+    currentPresetIndex = index;
+    if (presetButton)
+        presetButton->setText(presetNames.at(index));
+    if (presetListWidget)
+        presetListWidget->setCurrentRow(index);
+}
+
 void BackdropSettingsDialog::onPresetItemClicked(QListWidgetItem* item)
 {
     if (!item) return;
     
     int newIndex = presetListWidget->row(item);
     if (newIndex >= 0 && newIndex < presetNames.size() && newIndex != currentPresetIndex) {
-        currentPresetIndex = newIndex;
-        
-        // Update button text
-        if (presetButton) {
-            presetButton->setText(presetNames.at(newIndex));
-        }
-        
+        syncPresetUi(newIndex);
         // Apply preset
         onPresetChanged(newIndex);
     }
@@ -520,7 +548,15 @@ void BackdropSettingsDialog::onPresetItemClicked(QListWidgetItem* item)
 
 bool BackdropSettingsDialog::confirmCustomColorChange()
 {
-#ifndef Q_OS_ANDROID
+#ifdef Q_OS_ANDROID
+    // As on desktop: editing a corner switches to the saved custom set first,
+    // instead of overwriting it with the current preset plus one corner.
+    if (currentPresetIndex != 0) {
+        restoreCustomBackdropCorners();
+        syncPresetUi(0);
+        canvas->setBackdropPresetIndex(0);
+    }
+#else
     if (comboBackdropPresets && comboBackdropPresets->currentIndex() != 0) {
         // Block signals to prevent triggering onPresetChanged() recursion
         comboBackdropPresets->blockSignals(true);
@@ -534,13 +570,17 @@ bool BackdropSettingsDialog::confirmCustomColorChange()
 
 void BackdropSettingsDialog::resizeEvent(QResizeEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(SETTINGS_DIALOG_GEOMETRY, saveGeometry());
+#endif
     QWidget::resizeEvent(event);
 }
 
 void BackdropSettingsDialog::moveEvent(QMoveEvent *event)
 {
+#ifndef Q_OS_ANDROID // Android positions the panel itself
     QSettings().setValue(SETTINGS_DIALOG_GEOMETRY, saveGeometry());
+#endif
     QWidget::moveEvent(event);
 }
 
@@ -548,7 +588,7 @@ void BackdropSettingsDialog::onResetButtonClicked()
 {
 #ifdef Q_OS_ANDROID
     // On Android, reset to Standard preset directly
-    currentPresetIndex = 1; // Standard
+    syncPresetUi(1); // Standard
     onPresetChanged(1);
 #else
     // Reset to the Standard preset (id 1) which restores default backdrop colors

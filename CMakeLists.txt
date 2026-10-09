@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
     include/core/app.h
     include/core/loader.h
     include/core/boundedzip.h
+    include/core/fastfloat.h
     include/core/mesh.h
     include/core/vertex.h
     
@@ -72,6 +73,7 @@ set(PROJECT_SOURCES
     include/ui/canvas.h
     include/ui/window.h
     include/ui/shaderlightprefs.h
+    include/ui/hsvplane.h
     include/ui/speedmousedialog.h
     include/ui/backdropsettingsdialog.h
     
@@ -82,6 +84,7 @@ set(PROJECT_SOURCES
     include/rendering/axis.h
     include/rendering/backdrop.h
     include/rendering/glmesh.h
+    include/rendering/shadersource.h
     
     # Resources
     resources/qml.qrc
@@ -91,10 +94,8 @@ set(PROJECT_SOURCES
 )
 
 if(ANDROID)
-    # Explicitly set the Android ABI if not already set
-    if(NOT ANDROID_ABI)
-        set(ANDROID_ABI "arm64-v8a")
-    endif()
+    # Every Qt kit sets ANDROID_ABI; additional ABIs are built by Qt as sub-projects.
+    set(FSTL_ANDROID_ABIS "arm64-v8a" CACHE STRING "Android ABIs packaged into the app")
     message(STATUS "Building for Android ABI: ${ANDROID_ABI}")
     
     # Set minimum Android API level - use qt6_add_executable for Android
@@ -109,14 +110,12 @@ if(ANDROID)
         QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/android
         QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION ${FSTL_ANDROID_TARGET_SDK}
-        QT_ANDROID_ABIS "arm64-v8a"
+        QT_ANDROID_ABIS "${FSTL_ANDROID_ABIS}"
         QT_ANDROID_NO_COMPRESS_RESOURCES_ARS YES
     )
     
     # Disable Qt Accessibility on Android to prevent OpenGL deadlock crashes
     target_compile_definitions(fstl_viewer PRIVATE QT_NO_ACCESSIBILITY)
-    # Log Android architecture for debugging
-    message(STATUS "Building for Android architecture: ${ANDROID_ABI}")
 else()
     qt6_add_executable(fstl_viewer MANUAL_FINALIZATION ${PROJECT_SOURCES})
 endif()
@@ -130,7 +129,7 @@ set_target_properties(fstl_viewer PROPERTIES
 )
 
 # Add include directories for new structure
-target_compile_definitions(fstl_viewer PRIVATE FSTLE_VERSION="${PROJECT_VERSION}-rc.6")
+target_compile_definitions(fstl_viewer PRIVATE FSTLE_VERSION="${PROJECT_VERSION}-rc.7")
 
 target_include_directories(fstl_viewer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -167,6 +166,10 @@ target_link_libraries(fstl_viewer
 if(ENABLE_OCCT_STEP)
     if(ANDROID)
         # For Android, manually link OCCT libraries from android/libs
+        # Multi-ABI builds pass one OCCT prefix per ABI, e.g. FSTL_OCCT_ROOT_armeabi-v7a.
+        if(FSTL_OCCT_ROOT_${ANDROID_ABI})
+            set(FSTL_OCCT_ROOT "${FSTL_OCCT_ROOT_${ANDROID_ABI}}")
+        endif()
         if(FSTL_OCCT_ROOT)
             set(OCCT_LIB_DIR "${FSTL_OCCT_ROOT}/lib")
             set(OCCT_INCLUDE_DIR "${FSTL_OCCT_ROOT}/include/opencascade")
@@ -219,6 +222,7 @@ if(ENABLE_OCCT_STEP)
                 TKGeomBase
                 TKGeomAlgo
                 TKMesh
+                TKTopAlgo
             )
             set(FSTL_OCCT_ENABLED TRUE)
         else()

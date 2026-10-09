@@ -1,4 +1,6 @@
 #include "rendering/axis.h"
+#include "rendering/shadersource.h"
+#include <QDebug>
 
 const float xLet[] = {
     -0.1, -0.2, 0,
@@ -29,9 +31,17 @@ Axis::Axis()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/colored_lines.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/colored_lines.frag");
-    shader.link();
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(":/gl/shaders/colored_lines.vert"));
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/colored_lines.frag"));
+    if (shader.link())
+    {
+        locTransform = shader.uniformLocation("transform_matrix");
+        locView = shader.uniformLocation("view_matrix");
+        locPosition = shader.attributeLocation("vertex_position");
+        locColor = shader.attributeLocation("vertex_color");
+    }
+    if (locPosition < 0 || locColor < 0)
+        qWarning() << "Axis shader unavailable:" << shader.isLinked() << locPosition << locColor << shader.log();
     const int ptSize = 6*sizeof(float);
     for(int lIdx = 0; lIdx < 3; lIdx++)
     {
@@ -101,20 +111,18 @@ void Axis::setScale(QVector3D min, QVector3D max)
 void Axis::draw(QMatrix4x4 transMat, QMatrix4x4 viewMat,
     QMatrix4x4 orientMat, QMatrix4x4 aspectMat, float aspectRatio)
 {
+    if (!shader.isLinked() || locPosition < 0 || locColor < 0)
+        return;
     shader.bind();
     vertices.bind();
     // Load the transform and view matrices into the shader
     auto loadMatrixUniforms = [&](QMatrix4x4 transform, QMatrix4x4 view)
     {
-        glUniformMatrix4fv(
-                    shader.uniformLocation("transform_matrix"),
-                    1, GL_FALSE, transform.data());
-        glUniformMatrix4fv(
-                    shader.uniformLocation("view_matrix"),
-                    1, GL_FALSE, view.data());
+        glUniformMatrix4fv(locTransform, 1, GL_FALSE, transform.data());
+        glUniformMatrix4fv(locView, 1, GL_FALSE, view.data());
     };
-    const GLuint vp = shader.attributeLocation("vertex_position");
-    const GLuint vc = shader.attributeLocation("vertex_color");
+    const GLuint vp = locPosition;
+    const GLuint vc = locColor;
     glEnableVertexAttribArray(vp);
     glEnableVertexAttribArray(vc);
     auto loadAttribPtr = [&]()
@@ -128,7 +136,7 @@ void Axis::draw(QMatrix4x4 transMat, QMatrix4x4 viewMat,
     loadMatrixUniforms(transMat, viewMat);
     loadAttribPtr();
 
-    glDrawArrays(GL_LINES, 0, 3*6);
+    glDrawArrays(GL_LINES, 0, 3*2); // 3 axes, 2 vertices each (buffer holds 6)
 
     vertices.release();
     //Next, we draw the hud axis-flower
@@ -149,7 +157,7 @@ void Axis::draw(QMatrix4x4 transMat, QMatrix4x4 viewMat,
     hudMat.scale(hudSize, hudSize, 1);
     loadMatrixUniforms(orientMat, aspectMat*hudMat);
     loadAttribPtr();
-    glDrawArrays(GL_LINES, 0, 3*6);
+    glDrawArrays(GL_LINES, 0, 3*2); // 3 axes, 2 vertices each (buffer holds 6)
     flowerAxisVertices.release();
     for(int aIdx = 0; aIdx < 3; aIdx++){
         QVector3D transVec = QVector3D();
@@ -161,8 +169,10 @@ void Axis::draw(QMatrix4x4 transMat, QMatrix4x4 viewMat,
         b.bind();
         loadMatrixUniforms(labelTransMat, aspectMat * hudMat);
         loadAttribPtr();
-        glDrawArrays(GL_LINES, 0, axisSegCount[aIdx]*2*6);
+        glDrawArrays(GL_LINES, 0, axisSegCount[aIdx]*2); // vertices, not floats
         b.release();
     }
+    glDisableVertexAttribArray(vc);
+    glDisableVertexAttribArray(vp);
     shader.release();
 }

@@ -2,6 +2,7 @@
 #define WINDOW_H
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QActionGroup>
 #include <QFileSystemWatcher>
 #include <QCollator>
@@ -87,6 +88,18 @@ private:
     // The import worker currently running, if any. Destroying a running
     // QThread aborts the process, so shutdown cancels and joins it first.
     Loader* active_loader = nullptr;
+    bool active_import_is_startup = false;
+    bool startup_import_failed = false;
+    QList<QPointer<Loader>> detached_loaders; // timed out on close; joined on exit
+    QString filenameText;
+    void setFilenameLabel(const QString& text);
+    bool eventFilter(QObject* watched, QEvent* event) override;
+#ifdef Q_OS_ANDROID
+    void placeAndroidPanel(QWidget* panel);
+    int toolbarIconSize() const;
+    void updateToolbarIconSize();
+#endif
+    bool loading_startup_file = false;
     void stop_active_import();
     // One reusable error dialog: repeated failing imports update it instead
     // of stacking a modal dialog per failure.
@@ -127,12 +140,12 @@ private:
     QMenu* defaultViewMenu;
     QMenu* draw_menu;
     QToolButton* shaderButton;
-    QToolBar* windowToolBar;
+    QToolBar* windowToolBar = nullptr;
     QMenu* projection_menu;
     QToolButton* projectionButton;
     QToolButton* defaultViewButton;
     QStatusBar* statusBar;
-    QLabel* filenameStatusLabel;
+    QLabel* filenameStatusLabel = nullptr;
     QToolButton* speedMouseButton;
 
     QActionGroup* const recent_files_group;
@@ -178,8 +191,8 @@ private:
 
     Canvas* canvas;
 
-    ShaderLightPrefs* meshlightprefs;
-    BackdropSettingsDialog* backdropsettingsdialog;
+    ShaderLightPrefs* meshlightprefs = nullptr;
+    BackdropSettingsDialog* backdropsettingsdialog = nullptr;
     SpeedMouseDialog* speedMouseDialog;
     QList<QAction*> dm_acts;
 
@@ -187,7 +200,7 @@ private:
     QList<QAction*> applyViewActions;
  
     // Android-only floating layer-peel button (bottom-right over canvas)
-    QToolButton* layerPeelButton;
+    QToolButton* layerPeelButton = nullptr;
 public:
     // Exposed so ShaderLightPrefs can toggle visibility from "settings"
     void setLayerButtonVisible(bool visible);

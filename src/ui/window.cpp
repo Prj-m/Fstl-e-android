@@ -23,10 +23,15 @@
 #include <QIcon>
 #include "ui/canvas.h"
 #include "core/loader.h"
+#include "core/fileopenpath.h"
+#include <QDeadlineTimer>
+#include <QStandardPaths>
+#include <QDir>
 #include "ui/shaderlightprefs.h"
 #include "ui/speedmousedialog.h"
 #include "ui/backdropsettingsdialog.h"
 #include <QDrag>
+#include <QScrollArea>
 
 const QString Window::RECENT_FILE_KEY = "recentFiles";
 const QString Window::INVERT_ZOOM_KEY = "invertZoom";
@@ -167,11 +172,10 @@ Window::Window(QWidget* parent)
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
 #ifdef Q_OS_ANDROID
     // Android requires OpenGL ES
     format.setRenderableType(QSurfaceFormat::OpenGLES);
-    format.setVersion(3, 0);  // OpenGL ES 3.0 for flat qualifier support
+    format.setVersion(3, 0);  // mesh shaders use GLSL ES 3.00
 #else
     // Desktop OpenGL
     format.setVersion(2, 1);
@@ -185,6 +189,12 @@ Window::Window(QWidget* parent)
 
     statusBar = new QStatusBar;
 
+    // A recreated GL context (e.g. moving to another display) drops the
+    // uploaded model; load the current file again.
+    connect(canvas, &Canvas::glResourcesLost, this, [this] {
+        if (!current_file.isEmpty())
+            load_stl(current_file, true);
+    });
     meshlightprefs = new ShaderLightPrefs(this, canvas);
     meshlightprefs->hide();
     backdropsettingsdialog = new BackdropSettingsDialog(this, canvas);
@@ -376,8 +386,6 @@ Window::Window(QWidget* parent)
     backdropSettings_action->setShortcut(shortcutBackdropSettings);
     backdropSettings_action->setIcon(QIcon(":/qt/icons/backdrop-settings.png"));
     this->addAction(backdropSettings_action);
-    QObject::connect(backdropSettings_action, &QAction::triggered,
-                     this, &Window::on_backdropSettings);
 
     view_menu->addAction(axes_action);
     axes_action->setCheckable(true);
@@ -411,13 +419,6 @@ Window::Window(QWidget* parent)
     fullscreen_action->setShortcut(shortcutFullscreen);
     fullscreen_action->setIcon(QIcon(":/qt/icons/view-fullscreen.png"));
     fullscreen_action->setCheckable(true);
-    if (!isWayland) {
-        QObject::connect(fullscreen_action, &QAction::toggled,
-            this, &Window::on_fullscreen);
-    } else {
-        fullscreen_action->setDisabled(true);
-    }
-    this->addAction(fullscreen_action);
 
     QMenu *resolutionMenu = view_menu->addMenu("Set Viewport Size");
     resolutionMenu->setIcon(QIcon(":/qt/icons/resolution_1_32.png"));
@@ -680,44 +681,7 @@ Window::Window(QWidget* parent)
     // Make Qt use a wider overflow (extension) area on Android
     windowToolBar->setStyle(new AndroidOverflowStyle(windowToolBar->style()));
 
-    // Use density-independent sizing for consistent icon size across all devices
-    // Physical size calculation: physicalDotsPerInch gives real-world DPI
-    QScreen* screen = QGuiApplication::primaryScreen();
-    qreal physicalDpi = screen ? screen->physicalDotsPerInch() : 160.0;
-    qreal logicalDpi = screen ? screen->logicalDotsPerInch() : 160.0;
-    qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
-    
-    // Target: ~6mm (0.24 inches) icons = comfortable tap target
-    // At 160 DPI baseline, that's ~38 pixels
-    // Reduced to 32 to fit more icons with minimal gap
-    int iconPx = static_cast<int>(32 * scaleFactor);
-
-    // Default clamp for phones: 32px–56px
-    int minPx = 32;
-    int maxPx = 56;
-
-    // Detect large / tablet-style layouts using the shortest side in dp so
-    // phones in landscape aren't mis-detected as tablets.
-    if (screen) {
-        QRect geom = screen->geometry();
-        int shortPx = qMin(geom.width(), geom.height());
-        qreal shortDp = (logicalDpi > 0.0)
-                ? (shortPx * 160.0 / logicalDpi)
-                : shortPx;
-        if (shortDp > 720) {
-            // True tablet / external display — bump size a bit
-            iconPx = qMax(iconPx, 52);
-            maxPx = 72;
-        } else if (shortDp > 600) {
-            iconPx = qMax(iconPx, 48);
-            maxPx = 64;
-        }
-    }
-
-    // Clamp to reasonable range: phones unchanged, large screens get slightly bigger icons
-    iconPx = qBound(minPx, iconPx, maxPx);
-    
-    windowToolBar->setIconSize(QSize(iconPx, iconPx));
+    updateToolbarIconSize();
     // Remove all padding/margins to maximize space
     windowToolBar->setStyleSheet(
         "QToolButton { margin: 0px; padding: 0px; }"
@@ -920,6 +884,7 @@ Window::Window(QWidget* parent)
     labelMsaa->setStatusTip("Current Anti-Aliasing status");
 
     filenameStatusLabel = new QLabel("File:none");
+    filenameText = "File:none";
     filenameStatusLabel->setStatusTip("Current file (click and hold to drop to another application)");
 
     statusBar->addPermanentWidget(filenameStatusLabel);
@@ -948,7 +913,20 @@ Window::Window(QWidget* parent)
     connect(layerPeelButton, &QToolButton::clicked, canvas, &Canvas::peelLayerStep);
 #endif
 
+    // The startup model (last file or sphere) is cancelled if an "Open with"
+    // file arrives before it finishes, so a cold-start intent loads promptly.
+    // Cache copies of content URIs outlive the import if Android kills the
+    // process mid-load; nothing is importing yet, so remove any leftovers.
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!cachePath.isEmpty()) {
+        const QStringList stale = QDir(cachePath).entryList({"fstl_step_*", "fstl_source_*"}, QDir::Files);
+        for (const QString& name : stale)
+            QFile::remove(QDir(cachePath).filePath(name));
+    }
+
+    loading_startup_file = true;
     load_persist_settings();
+    loading_startup_file = false;
 }
 
 #ifdef Q_OS_ANDROID
@@ -1040,7 +1018,13 @@ void Window::load_persist_settings(){
     on_drawMode(dm_acts[draw_mode]);
 
     // menu bar
+#ifdef Q_OS_ANDROID
+    // Hiding is only possible with a keyboard and has no touch undo: always
+    // start with the toolbar visible.
+    bool hideMenu = false;
+#else
     bool hideMenu = settings.value(HIDE_MENU_BAR, false).toBool();
+#endif
     hide_menuBar_action->blockSignals(true);
     hide_menuBar_action->setChecked(hideMenu);
     on_hide_menuBar();
@@ -1093,6 +1077,89 @@ void Window::load_persist_settings(){
     }
  }
 
+#ifdef Q_OS_ANDROID
+void Window::placeAndroidPanel(QWidget* panel)
+{
+    // Fit the canvas area (below the toolbar, above the status bar), use the
+    // full width on phones but cap it on unfolded and tablet screens, and
+    // size the height to the content, scrolling when it does not fit.
+    const QRect area = centralWidget() ? centralWidget()->geometry() : rect();
+    const int margin = 12;
+    const int w = qMax(0, qMin(area.width() - 2 * margin, 720));
+    int wanted = area.height() * 6 / 10;
+    if (const auto* scroll = panel->findChild<QScrollArea*>()) {
+        wanted = scroll->widget()->sizeHint().height() + 2 * scroll->frameWidth();
+        // Re-fit when the content grows or shrinks (e.g. the inline preset list).
+        if (!scroll->widget()->property("fstlePanelWatched").toBool()) {
+            scroll->widget()->setProperty("fstlePanelWatched", true);
+            scroll->widget()->installEventFilter(this);
+        }
+    }
+    const int h = qMax(0, qMin(wanted, area.height() - 2 * margin));
+    panel->setFixedSize(w, h);
+    panel->move(area.x() + (area.width() - w) / 2, area.y() + (area.height() - h) / 2);
+}
+#endif
+
+#ifdef Q_OS_ANDROID
+int Window::toolbarIconSize() const
+{
+    // Use density-independent sizing for consistent icon size across all devices
+    // Physical size calculation: physicalDotsPerInch gives real-world DPI
+    const QScreen* screen = this->screen() ? this->screen() : QGuiApplication::primaryScreen();
+    qreal physicalDpi = screen ? screen->physicalDotsPerInch() : 160.0;
+    qreal scaleFactor = physicalDpi / 160.0; // 160 DPI = baseline Android density
+
+    // Target: ~6mm (0.24 inches) icons = comfortable tap target
+    // At 160 DPI baseline, that's ~38 pixels
+    // Reduced to 32 to fit more icons with minimal gap
+    int iconPx = static_cast<int>(32 * scaleFactor);
+
+    // Default clamp for phones: 32px–56px
+    int minPx = 32;
+    int maxPx = 56;
+
+    // Tier by the window's shortest side in logical pixels (dp on Android),
+    // not the screen's: it follows fold/unfold, split screen and DeX windows,
+    // and phones in landscape aren't mis-detected as tablets.
+    // Before the first show the window still has its default size, so use the
+    // screen then (the toolbar's first layout must already be right).
+    const QRect geometry = (isVisible() || !screen) ? rect() : screen->geometry();
+    const int shortDp = qMin(geometry.width(), geometry.height());
+    if (shortDp > 720) {
+        // True tablet / external display — bump size a bit
+        iconPx = qMax(iconPx, 52);
+        maxPx = 72;
+    } else if (shortDp > 600) {
+        iconPx = qMax(iconPx, 48);
+        maxPx = 64;
+    }
+
+    // Clamp to reasonable range: phones unchanged, large screens get slightly bigger icons
+    return qBound(minPx, iconPx, maxPx);
+}
+
+void Window::updateToolbarIconSize()
+{
+    const int iconPx = toolbarIconSize();
+    if (windowToolBar && windowToolBar->iconSize() != QSize(iconPx, iconPx))
+        windowToolBar->setIconSize(QSize(iconPx, iconPx));
+}
+#endif
+
+bool Window::eventFilter(QObject* watched, QEvent* event)
+{
+#ifdef Q_OS_ANDROID
+    if (event->type() == QEvent::LayoutRequest) {
+        for (QWidget* panel : {static_cast<QWidget*>(meshlightprefs), static_cast<QWidget*>(backdropsettingsdialog)}) {
+            if (panel && panel->isVisible() && panel->isAncestorOf(static_cast<QWidget*>(watched)))
+                QTimer::singleShot(0, this, [this, panel] { if (panel->isVisible()) placeAndroidPanel(panel); });
+        }
+    }
+#endif
+    return QMainWindow::eventFilter(watched, event);
+}
+
 void Window::on_drawModePrefs() {
 #ifdef Q_OS_ANDROID
     // Android: show preferences as in-window panel centered over the canvas
@@ -1101,13 +1168,7 @@ void Window::on_drawModePrefs() {
         return;
     }
 
-    // Size relative to main window (slightly more compact)
-    int w = static_cast<int>(width() * 0.85);
-    int h = static_cast<int>(height() * 0.6);
-    meshlightprefs->setFixedSize(w, h);
-    int x = (width() - w) / 2;
-    int y = (height() - h) / 2;
-    meshlightprefs->move(x, y);
+    placeAndroidPanel(meshlightprefs);
     meshlightprefs->show();
     meshlightprefs->raise();
 #else
@@ -1129,12 +1190,7 @@ void Window::on_backdropSettings() {
         backdropsettingsdialog->hide();
         return;
     }
-    int w = static_cast<int>(width() * 0.85);
-    int h = static_cast<int>(height() * 0.6);
-    backdropsettingsdialog->setFixedSize(w, h);
-    int x = (width() - w) / 2;
-    int y = (height() - h) / 2;
-    backdropsettingsdialog->move(x, y);
+    placeAndroidPanel(backdropsettingsdialog);
     backdropsettingsdialog->show();
     backdropsettingsdialog->raise();
 #else
@@ -1163,7 +1219,8 @@ void Window::on_open()
                 this, "Load 3D file", lastDir, "All files (*)");
 #else
     const QString filename = QFileDialog::getOpenFileName(
-                this, "Load 3D file", lastDir, "3D files (*.stl *.STL *.3mf *.3MF)");
+                this, "Load 3D file", lastDir,
+                "3D files (*.stl *.STL *.3mf *.3MF *.step *.STEP *.stp *.STP)");
 #endif
     if (!filename.isNull())
     {
@@ -1236,6 +1293,7 @@ void Window::show_import_error(const QString& message)
 
 void Window::on_bad_stl()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
                       "Please re-export it from the original source or try a simpler version.");
@@ -1243,12 +1301,14 @@ void Window::on_bad_stl()
 
 void Window::on_empty_mesh()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "This file is syntactically correct<br>but contains no triangles.");
 }
 
 void Window::on_missing_file()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "The target file is missing.<br>");
 }
@@ -1268,12 +1328,27 @@ void Window::stop_active_import()
     loader->cancel();
     loader->disconnect(this);
     loader->disconnect(canvas);
-    loader->wait();
+    // OCCT's file parsing has no cancellation point; don't block the UI thread
+    // (an ANR on Android) waiting for it. Detach the thread and let it finish.
+    if (!loader->wait(QDeadlineTimer(2000)))
+    {
+        loader->setParent(nullptr);
+        connect(loader, &QThread::finished, loader, &QObject::deleteLater);
+        detached_loaders << loader;
+    }
 }
 
 Window::~Window()
 {
     stop_active_import();
+#ifndef Q_OS_ANDROID
+    // A detached import thread must not keep running while the application
+    // tears down. (Android ends the process instead, and blocking here could
+    // trigger an ANR.)
+    for (const QPointer<Loader>& loader : std::as_const(detached_loaders))
+        if (loader)
+            loader->wait();
+#endif
 }
 
 void Window::closeEvent(QCloseEvent* event)
@@ -1445,7 +1520,7 @@ void Window::on_loaded(const QString& filename)
 {
     current_file = QFileInfo(filename).absoluteFilePath();
     QFileInfo fileInfo = QFileInfo(current_file);
-    filenameStatusLabel->setText("File:"+fileInfo.fileName());
+    setFilenameLabel("File:" + fileInfo.fileName());
 }
 
 void Window::on_save_screenshot()
@@ -1469,7 +1544,8 @@ void Window::on_save_screenshot()
     output.close();
     if(save_ok)
     {
-        canvas->set_status("Screenshot saved: " + filename);
+        // The picker may have renamed it; the content URI has no readable name.
+        canvas->set_status("Screenshot saved");
         QTimer::singleShot(2000, canvas, &Canvas::clear_status);
     }
     else
@@ -1521,8 +1597,10 @@ void Window::on_hide_menuBar()
 #endif
     windowToolBar->setVisible(!hide_menuBar_action->isChecked());
     statusBar->setVisible(!hide_menuBar_action->isChecked());
+#ifndef Q_OS_ANDROID
     QSettings settings;
     settings.setValue(HIDE_MENU_BAR,hide_menuBar_action->isChecked());
+#endif
 }
 
 void Window::rebuild_recent_files()
@@ -1575,7 +1653,12 @@ void Window::on_reload()
 bool Window::load_stl(QString filename, bool is_reload)
 {
     if (filename.isEmpty()) return false;
-    if (!open_action->isEnabled()) {
+    if (active_loader) {
+        // A watcher reload must not replace a file the user asked to open.
+        if (is_reload && !pending_import.isEmpty() && !pending_import_reload)
+            return true;
+        if (active_import_is_startup && !is_reload)
+            active_loader->cancel();
         pending_import = filename;
         pending_import_reload = is_reload;
         return true;
@@ -1592,13 +1675,16 @@ bool Window::load_stl(QString filename, bool is_reload)
         }
     }
 
-    // Reserve the import before starting the thread. Its started signal is
-    // queued, so rapid file intents could otherwise start concurrent imports.
-    disable_open();
+    // Reserve the import before starting the thread (active_loader is the busy
+    // flag). Open stays available during the startup model so the user can
+    // pick a file at once; choosing one cancels the startup import.
+    if (!loading_startup_file)
+        disable_open();
     canvas->set_status("Loading " + filename);
 
     Loader* loader = new Loader(this, filename, is_reload);
     active_loader = loader;
+    active_import_is_startup = loading_startup_file;
     connect(loader, &Loader::got_mesh,
             canvas, &Canvas::load_mesh);
     connect(loader, &Loader::error_bad_stl,
@@ -1610,11 +1696,18 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     connect(loader, &Loader::finished,
             loader, &Loader::deleteLater);
-    connect(loader, &Loader::finished, this, [this, loader] {
+    const bool startupImport = loading_startup_file;
+    connect(loader, &Loader::finished, this, [this, loader, startupImport] {
         if (active_loader == loader)
         {
             active_loader = nullptr;
         }
+        // The last file can still exist but fail (offline cloud file, corrupt
+        // replacement): show the sphere rather than an empty viewer each launch.
+        if (startupImport && startup_import_failed && pending_import.isEmpty())
+            pending_import = ":/gl/shaders/sphere.stl";
+        if (startupImport)
+            startup_import_failed = false;
         canvas->clear_status();
         enable_open();
     });
@@ -1632,7 +1725,7 @@ bool Window::load_stl(QString filename, bool is_reload)
         // Resource file - just track it for reload
         connect(loader, &Loader::loaded_file, this, [this, filename](const QString&) {
             current_file = filename;
-            filenameStatusLabel->setText("File:" + QFileInfo(filename).fileName());
+            setFilenameLabel("File:" + QFileInfo(filename).fileName());
         });
     }
     // Enable reload for all files (regular and resource)
@@ -1649,9 +1742,13 @@ void Window::dragEnterEvent(QDragEnterEvent *event)
         auto urls = event->mimeData()->urls();
         if (urls.size() == 1)
         {
+            // Content URIs often hide the file name; the loader checks contents.
             QString path = urls.front().path();
-            if (path.endsWith(".stl", Qt::CaseInsensitive) || 
-                path.endsWith(".3mf", Qt::CaseInsensitive))
+            if (urls.front().scheme() == QLatin1String("content") ||
+                path.endsWith(".stl", Qt::CaseInsensitive) ||
+                path.endsWith(".3mf", Qt::CaseInsensitive) ||
+                path.endsWith(".step", Qt::CaseInsensitive) ||
+                path.endsWith(".stp", Qt::CaseInsensitive))
                 event->acceptProposedAction();
         }
     }
@@ -1659,10 +1756,14 @@ void Window::dragEnterEvent(QDragEnterEvent *event)
 
 void Window::dropEvent(QDropEvent *event)
 {
-    load_stl(event->mimeData()->urls().front().toLocalFile());
+    // ChromeOS/DeX drops carry content:// URIs, which toLocalFile() discards.
+    load_stl(fileOpenPath(event->mimeData()->urls().front()));
 }
 
 void Window::mousePressEvent(QMouseEvent *event) {
+#ifndef Q_OS_ANDROID
+    // Dragging the file out to other apps is a desktop feature; on Android a
+    // tap on the label started a modal system drag with a content URI.
     if (event->button() == Qt::LeftButton && filenameStatusLabel->underMouse() && !current_file.isEmpty()) {
         // we do not want to drop on ourselves
         this->setAcceptDrops(false);
@@ -1674,12 +1775,13 @@ void Window::mousePressEvent(QMouseEvent *event) {
         drag->setPixmap(QPixmap(":/qt/icons/fstl-e_64x64.png").scaledToWidth(32));
         // Possibly move source file to the drop destination :-(, but works well on every
         // configurations xcb,wayland,windows
-        Qt::DropAction dropAction = drag->exec();
-        //qDebug() << dropAction;
+        // CopyAction: the default (MoveAction) let a drop target move the file.
+        drag->exec(Qt::CopyAction);
 
         // accept drops again
         this->setAcceptDrops(true);
     }
+#endif
     QMainWindow::mousePressEvent(event);
 }
 
@@ -1693,8 +1795,15 @@ void Window::resizeEvent(QResizeEvent *event)
     }
 
     QWidget::resizeEvent(event);
+    setFilenameLabel(filenameText);
 
 #ifdef Q_OS_ANDROID
+    updateToolbarIconSize();
+    // Re-fit open panels after rotation, fold/unfold or window resizing.
+    if (meshlightprefs && meshlightprefs->isVisible())
+        placeAndroidPanel(meshlightprefs);
+    if (backdropsettingsdialog && backdropsettingsdialog->isVisible())
+        placeAndroidPanel(backdropsettingsdialog);
     if (layerPeelButton && canvas) {
         const int margin = 24;
         const int x = canvas->width() - layerPeelButton->width() - margin;
@@ -1854,7 +1963,33 @@ bool Window::load_next(void)
 
 void Window::keyPressEvent(QKeyEvent* event)
 {
-    if (!open_action->isEnabled())
+    if (event->key() == Qt::Key_Back || event->key() == Qt::Key_Escape)
+    {
+        // Close an open panel or popup first. An unhandled Back makes Qt close
+        // the window, which quit the app instead of closing the panel.
+        for (QWidget* w : {static_cast<QWidget*>(meshlightprefs),
+                           static_cast<QWidget*>(backdropsettingsdialog),
+                           static_cast<QWidget*>(speedMouseDialog)})
+        {
+            if (w && w->isVisible())
+            {
+                w->hide();
+                event->accept();
+                return;
+            }
+        }
+#ifdef Q_OS_ANDROID
+        // A keyboard 'M' hides the toolbar; there is no touch control to undo it.
+        if (hide_menuBar_action->isChecked())
+        {
+            hide_menuBar_action->setChecked(false);
+            event->accept();
+            return;
+        }
+#endif
+    }
+
+    if (active_loader)
     {
         QMainWindow::keyPressEvent(event);
         return;
@@ -1875,9 +2010,13 @@ void Window::keyPressEvent(QKeyEvent* event)
     } else if (event->key() == Qt::Key_Down) {
         cycleShader(false);
         return;
+#ifndef Q_OS_ANDROID
+    // Android has no menu bar: menuBar() would create one and this would hide
+    // the toolbar with no touch way to restore it.
     } else if (event->key() == Qt::Key_Escape && !menuBar()->isVisible()) { // this is if user did not noticed the hide menu key
         hide_menuBar_action->toggle();
         return;
+#endif
     } else if (event->key() == Qt::Key_Escape && speedMouseDialog->isVisible()) {
         speedMouseDialog->hide();
         return;
@@ -2018,6 +2157,18 @@ void Window::onApplyView(QAction* act) {
 }
 
 
+void Window::setFilenameLabel(const QString& text)
+{
+    // A long name would otherwise set the status bar's minimum width and
+    // push the window wider than a phone screen.
+    filenameText = text;
+    if (!filenameStatusLabel)
+        return;
+    const int available = qMax(80, width() / 2);
+    filenameStatusLabel->setText(filenameStatusLabel->fontMetrics().elidedText(text, Qt::ElideMiddle, available));
+    filenameStatusLabel->setToolTip(text);
+}
+
 void Window::onSpeedMouseButton() {
     // toggle
     if (speedMouseDialog->isVisible()) {
@@ -2033,6 +2184,16 @@ void Window::onSpeedMouseButton() {
     // modifying it
     dialogPos.setX(dialogPos.x()+buttonWidth);
     dialogPos.setY(dialogPos.y()+buttonHeight/2);
+    // Keep it on screen: the button is often the last toolbar item (or in the
+    // overflow area) at the right edge, especially on phones.
+    if (const QScreen* s = screen()) {
+        const QRect available = s->availableGeometry();
+        const QSize size = speedMouseDialog->sizeHint();
+        if (dialogPos.x() + size.width() > available.right())
+            dialogPos.setX(dialogPos.x() - buttonWidth - size.width());
+        dialogPos.setX(qBound(available.left(), dialogPos.x(), available.right() - size.width()));
+        dialogPos.setY(qBound(available.top(), dialogPos.y(), available.bottom() - size.height()));
+    }
     // under X11 and windows the move isglobal, relative to the mainwindow under Wayland
     speedMouseDialog->move(dialogPos);
     speedMouseDialog->show();

@@ -6,13 +6,13 @@
 #include <QSurfaceFormat>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
+#include <memory>
+#include <QTimer>
 
 class GLMesh;
 class Mesh;
 class Backdrop;
 class Axis;
-class QGestureEvent;
-class QPinchGesture;
 
 enum DrawMode {shaded, wireframe, surfaceangle, meshlight, DRAWMODECOUNT};
 
@@ -98,9 +98,16 @@ public:
     QColor brStandardBackdrop = QColor::fromRgbF(0.00000000f, 0.12156863f, 0.18039216f);
 
     void loadBackdropFromSettings();
+    // Debounced settings writes; flushSettings() writes anything pending now.
+    void persistSetting(const QString& key, const QVariant& value);
+    void flushSettings();
+    // Repaint after the current event finishes (safe from panel handlers).
+    void scheduleUpdate();
 
 public slots:
     void set_status(const QString& s);
+    // Frees GL objects while the old context is still current.
+    void cleanupGL();
     void clear_status();
     void load_mesh(Mesh* m, bool is_reload);
     // Advance the layer-peeling clip plane; used by the Android floating button
@@ -116,31 +123,50 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     bool event(QEvent* event) override;
-    bool gestureEvent(QGestureEvent* event);
-    void pinchTriggered(QPinchGesture* gesture);
     
     void set_perspective(float p);
     void view_anim(float v);
 
 signals:
     void fallbackGlslUpdated(bool b);
+    // The GL context was recreated and the uploaded model went with it.
+    void glResourcesLost();
 
 private:
     void draw_mesh();
+    void uploadPendingMesh();
+    bool linkProgram(QOpenGLShaderProgram& program, const char* name);
 
     QMatrix4x4 orient_matrix() const;
     QMatrix4x4 transform_matrix() const;
     QMatrix4x4 aspect_matrix() const;
     QMatrix4x4 view_matrix() const;
+    float depthRadius() const;
     void resetTransform();
     QPointF changeMouseCoordinates(QPoint p);
     void calcArcballTransform(QPointF p1, QPointF p2);
 
-    QOpenGLShader* mesh_vertshader;
-    QOpenGLShaderProgram mesh_shader;
-    QOpenGLShaderProgram mesh_wireframe_shader;
-    QOpenGLShaderProgram mesh_surfaceangle_shader;
-    QOpenGLShaderProgram mesh_meshlight_shader;
+    // Recreated by every initializeGL(): a program belongs to the context it
+    // was first used in, and Qt calls initializeGL() again with a new context
+    // when it recreates the widget's context.
+    std::unique_ptr<QOpenGLShaderProgram> mesh_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_wireframe_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_surfaceangle_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_meshlight_shader;
+    void releaseGLResources();
+    bool meshDroppedWithContext = false;
+
+    // Looked up once after linking; glGetUniformLocation per frame is a
+    // driver round-trip on every rotation/zoom frame.
+    struct MeshLocations {
+        GLint transform = -1, view = -1, zoom = -1;
+        GLint ambient = -1, directive = -1, direction = -1;
+        GLint useWire = -1, wireWidth = -1, portSize = -1, wireColor = -1;
+        GLint clipEnabled = -1, clipZ = -1;
+        GLint position = -1;
+    };
+    MeshLocations meshLocations[DRAWMODECOUNT];
+    void cacheLocations(DrawMode mode, QOpenGLShaderProgram& program);
 
     QColor ambientColor;
     QColor directiveColor;
@@ -189,6 +215,16 @@ private:
     GLMesh* mesh;
     Backdrop* backdrop;
     Axis* axis;
+    // GL objects need a current context, so loaded meshes are uploaded in paintGL.
+    Mesh* pendingMesh = nullptr;
+    bool hasMeshBounds = false;
+    QVector3D meshLower;
+    QVector3D meshUpper;
+    // Set when the device cannot provide a usable OpenGL ES 3.0 context or shaders.
+    QString glError;
+
+    QHash<QString, QVariant> pendingSettings;
+    QTimer settingsTimer;
 
     QVector3D center;
     QVector3D centerOrg;
@@ -199,11 +235,11 @@ private:
     float abFactor;
     int msaa;
 
-    float perspective;
-    enum DrawMode drawMode;
-    bool drawAxes;
-    bool invertZoom;
-    bool resetTransformOnLoad;
+    float perspective = 0.25f;
+    enum DrawMode drawMode = shaded;
+    bool drawAxes = false;
+    bool invertZoom = false;
+    bool resetTransformOnLoad = true;
     Q_PROPERTY(float perspective MEMBER perspective WRITE set_perspective);
     QPropertyAnimation anim;
 
@@ -212,13 +248,16 @@ private:
     QString meshInfo;
     
     // Pinch zoom support
-    qreal pinch_scale_factor; // stores initial zoom during gesture
 
     // Raw touch pinch zoom - track touch points manually
     bool touch_pinch_active = false;
     qreal touch_start_distance = 0.0;
     qreal touch_base_zoom = 1.0;
     QPointF touch_pinch_center;     // screen-space pinch center
+    QPointF touch_last_center;      // previous midpoint, for two-finger pan
+    bool touch_rotate_active = false;
+    QPair<int, int> touch_pair{-1, -1}; // touch IDs driving the current pinch
+    QPointF touch_last_point;       // previous single-finger position
     QMap<int, QPointF> active_touches;  // track all active touch points by ID
 
     // Layer peeling / clip-plane state (object-space Z slicing)

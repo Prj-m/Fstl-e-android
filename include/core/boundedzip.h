@@ -77,6 +77,7 @@ inline bool readBounded3mfParts(QFile& file, QMap<QByteArray, QByteArray>& parts
                             || u32(local + 14) != u32(model + 16)))
             return false;
         QByteArray output;
+        output.reserve(expected); // bounded by ModelXmlBytes above; avoids regrowth copies
         if (method == 0) {
             if (compressed != expected)
                 return false;
