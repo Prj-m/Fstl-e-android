@@ -6,7 +6,6 @@
 #include <QSurfaceFormat>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
-#include <QOpenGLFramebufferObject>
 #include <QTimer>
 
 class GLMesh;
@@ -149,14 +148,6 @@ private:
     QOpenGLShaderProgram mesh_wireframe_shader;
     QOpenGLShaderProgram mesh_surfaceangle_shader;
     QOpenGLShaderProgram mesh_meshlight_shader;
-    // Depth-pick pass: finds the surface point under a finger (rotation pivot).
-    QOpenGLShaderProgram mesh_pick_shader;
-    QOpenGLFramebufferObject* pickFbo = nullptr;
-    bool pickPending = false;
-    QPointF pickPosition;
-    bool pickSurface(const QPointF& pos, QVector3D& objectPoint);
-    void applyPendingPick();
-    void panByScreenDelta(const QPointF& d);
 
     // Looked up once after linking; glGetUniformLocation per frame is a
     // driver round-trip on every rotation/zoom frame.
@@ -217,10 +208,6 @@ private:
     GLMesh* mesh;
     Backdrop* backdrop;
     Axis* axis;
-    // World-space translation applied after rotation. With center as the
-    // rotation pivot, this lets the pivot be any picked surface point while
-    // the image stays where it is.
-    QVector3D pivotOffset;
     // GL objects need a current context, so loaded meshes are uploaded in paintGL.
     Mesh* pendingMesh = nullptr;
     bool hasMeshBounds = false;

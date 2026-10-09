@@ -177,7 +177,6 @@ Canvas::~Canvas()
     flushSettings();
     makeCurrent();
     delete pendingMesh;
-    delete pickFbo;
     delete mesh;
     delete backdrop;
     delete axis;
@@ -265,76 +264,6 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
     meshUpper = upper;
     hasMeshBounds = true;
     update();
-}
-
-bool Canvas::pickSurface(const QPointF& pos, QVector3D& objectPoint)
-{
-    if (!mesh || !mesh_pick_shader.isLinked() || width() <= 0 || height() <= 0)
-        return false;
-    if (!pickFbo)
-        pickFbo = new QOpenGLFramebufferObject(1, 1, QOpenGLFramebufferObject::Depth);
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    if (!pickFbo->isValid() || !pickFbo->bind())
-        return false;
-
-    // Pick matrix: scale and shift clip space so the one logical pixel under
-    // pos fills the 1x1 target.
-    const float ndcX = float(2.0 * pos.x() / width() - 1.0);
-    const float ndcY = float(1.0 - 2.0 * pos.y() / height());
-    QMatrix4x4 pickView;
-    pickView.scale(width(), height(), 1);
-    pickView.translate(-ndcX, -ndcY, 0);
-    pickView *= view_matrix();
-
-    glViewport(0, 0, 1, 1);
-    glDisable(GL_BLEND);
-    glDisable(GL_SCISSOR_TEST);
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glClearColor(1, 1, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    mesh_pick_shader.bind();
-    mesh_pick_shader.setUniformValue("transform_matrix", transform_matrix());
-    mesh_pick_shader.setUniformValue("view_matrix", pickView);
-    mesh_pick_shader.setUniformValue("layerClipEnabled", layerClipEnabled);
-    mesh_pick_shader.setUniformValue("layerClipZ", layerClipZ);
-    const GLint position = mesh_pick_shader.attributeLocation("vertex_position");
-    if (position >= 0)
-        mesh->draw(position);
-    mesh_pick_shader.release();
-
-    uchar pixel[4] = {255, 255, 255, 255};
-    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-    // Back to the widget's framebuffer and viewport for the rest of the frame.
-    glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
-    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    glClearColor(0, 0, 0, 0);
-
-    if (pixel[0] == 255 && pixel[1] == 255 && pixel[2] == 255 && pixel[3] == 255)
-        return false; // background: keep the current pivot
-    const double depth = pixel[0] / 255.0 + pixel[1] / 65025.0 +
-                         pixel[2] / 16581375.0 + pixel[3] / 4228250625.0;
-    const QVector3D world = view_matrix().inverted().map(
-        QVector3D(ndcX, ndcY, float(2.0 * depth - 1.0)));
-    objectPoint = transform_matrix().inverted().map(world);
-    return std::isfinite(objectPoint.x()) && std::isfinite(objectPoint.y()) &&
-           std::isfinite(objectPoint.z());
-}
-
-void Canvas::applyPendingPick()
-{
-    if (!pickPending)
-        return;
-    pickPending = false;
-    QVector3D picked;
-    if (!pickSurface(pickPosition, picked))
-        return;
-    // Make the picked point the pivot without moving the image: it keeps its
-    // current world position through pivotOffset.
-    pivotOffset = transform_matrix().map(picked);
-    center = picked;
 }
 
 void Canvas::uploadPendingMesh()
@@ -455,9 +384,6 @@ void Canvas::initializeGL()
     }
     emit fallbackGlslUpdated(fallbackGlsl);
     linkProgram(mesh_meshlight_shader, "meshlight");
-    mesh_pick_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
-    mesh_pick_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_pick.frag");
-    linkProgram(mesh_pick_shader, "pick");
     cacheLocations(shaded, mesh_shader);
     cacheLocations(wireframe, mesh_wireframe_shader);
     cacheLocations(surfaceangle, mesh_surfaceangle_shader);
@@ -486,7 +412,6 @@ void Canvas::paintGL()
         return;
     }
     uploadPendingMesh();
-    applyPendingPick();
     // The backdrop is a full-screen quad behind everything: skip depth for it.
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -624,23 +549,10 @@ QMatrix4x4 Canvas::orient_matrix() const
 }
 QMatrix4x4 Canvas::transform_matrix() const
 {
-    QMatrix4x4 m;
-    m.translate(pivotOffset);
-    m *= orient_matrix();
+    QMatrix4x4 m = orient_matrix();
     m.scale(scale);
     m.translate(-center);
     return m;
-}
-
-void Canvas::panByScreenDelta(const QPointF& d)
-{
-    // Move the model with the pointer/fingers: shift the pivot by the object-
-    // space image of the screen delta (correct for any pivotOffset).
-    const QMatrix4x4 inverseView = view_matrix().inverted();
-    const QVector3D worldDelta =
-        inverseView.map(QVector3D(-d.x() / (0.5*width()), d.y() / (0.5*height()), 0)) -
-        inverseView.map(QVector3D(0, 0, 0));
-    center += transform_matrix().inverted().mapVector(worldDelta);
 }
 QMatrix4x4 Canvas::aspect_matrix() const
 {
@@ -671,17 +583,6 @@ void Canvas::mousePressEvent(QMouseEvent* event)
         mouse_pos = event->pos();
         setCursor(Qt::ClosedHandCursor);
     }
-#ifdef Q_OS_ANDROID
-    // Orbit around the surface point under the finger, so a feature brought
-    // into view stays put while rotating instead of swinging off screen. The
-    // pick needs the GL context, so it runs at the start of the next frame.
-    if (event->button() == Qt::LeftButton && !touch_pinch_active)
-    {
-        pickPending = true;
-        pickPosition = event->position();
-        update();
-    }
-#endif
 }
 
 void Canvas::mouseReleaseEvent(QMouseEvent* event)
@@ -769,7 +670,10 @@ void Canvas::mouseMoveEvent(QMouseEvent* event)
     }
     else if (event->buttons() & Qt::RightButton)
     {
-        panByScreenDelta(d);
+        center = transform_matrix().inverted().map(
+                 view_matrix().inverted().map(
+                 QVector3D(-d.x() / (0.5*width()),
+                            d.y() / (0.5*height()), 0)));
         update();
     }
     mouse_pos = p;
@@ -869,8 +773,12 @@ bool Canvas::event(QEvent* event)
             {
                 // Two-finger drag pans: move the model with the finger midpoint,
                 // the same mapping as a right-button mouse drag.
-                panByScreenDelta(centerPt - touch_last_center);
+                const QPointF d = centerPt - touch_last_center;
                 touch_last_center = centerPt;
+                center = transform_matrix().inverted().map(
+                         view_matrix().inverted().map(
+                         QVector3D(-d.x() / (0.5*width()),
+                                    d.y() / (0.5*height()), 0)));
 
                 // Update pinch center to current finger midpoint
                 touch_pinch_center = centerPt;
@@ -1149,10 +1057,6 @@ void Canvas::resetView() {
 }
 
 void Canvas::applyRotation(QString name) {
-    // Keep what is at the screen centre there: fold the pivot offset back into
-    // the centre so standard views are not shifted by an earlier picked pivot.
-    center = transform_matrix().inverted().map(QVector3D(0, 0, 0));
-    pivotOffset = QVector3D();
     QString rot = name.toLower();
     // if name is not valid we use "default 1"
     if (!predefinedRotations.keys().contains(rot)) {
@@ -1181,7 +1085,6 @@ void Canvas::setDefaultView(QString v) {
 void Canvas::recenterView() {
     center = centerOrg;
     scale = scaleOrg;
-    pivotOffset = QVector3D();
 }
 
 double Canvas::getAbFactor() {
