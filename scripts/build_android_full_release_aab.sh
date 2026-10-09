@@ -36,6 +36,9 @@ command -v "$QT_CMAKE" >/dev/null || fail "CMake not found: $QT_CMAKE"
 command -v ninja >/dev/null || fail "Ninja is required"
 [[ -x "$ANDROIDDEPLOYQT" ]] || fail "androiddeployqt not executable: $ANDROIDDEPLOYQT"
 [[ -f "$QT_ANDROID_ROOT/lib/cmake/Qt6/qt.toolchain.cmake" ]] || fail "Invalid Qt Android kit"
+# A kit for another ABI fails much later, deep inside Qt's CMake macros.
+[[ -f "$QT_ANDROID_ROOT/plugins/platforms/libplugins_platforms_qtforandroid_arm64-v8a.so" ]] \
+    || fail "QT_ANDROID_ROOT is not the arm64-v8a Qt kit: $QT_ANDROID_ROOT"
 [[ -f "$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" ]] || fail "Invalid Android NDK"
 [[ -d "$ANDROID_SDK_ROOT/platforms/android-36" ]] || fail "Install Android SDK platform 36"
 [[ -f "$FSTL_OCCT_ROOT/lib/libTKDESTEP.so" ]] || fail "Android OCCT STEP library is missing"
@@ -51,7 +54,8 @@ for abi in "${fstl_android_abis[@]:1}"; do
     [[ -f "$occt_root/lib/libTKDESTEP.so" ]] || fail "OCCT for $abi is missing; set $abi_var"
     case "$abi" in armeabi-v7a) kit=android_armv7 ;; *) kit="android_$abi" ;; esac
     qt_kit="$(dirname "$QT_ANDROID_ROOT")/$kit"
-    [[ -f "$qt_kit/lib/cmake/Qt6/qt.toolchain.cmake" ]] || fail "Qt Android kit for $abi is missing: $qt_kit"
+    [[ -f "$qt_kit/lib/cmake/Qt6/qt.toolchain.cmake" && -f "$qt_kit/plugins/platforms/libplugins_platforms_qtforandroid_$abi.so" ]] \
+        || fail "Qt Android kit for $abi is missing: $qt_kit"
     abi_args+=("-DFSTL_OCCT_ROOT_$abi=$occt_root" "-DQT_PATH_ANDROID_ABI_$abi=$qt_kit")
     forward_vars+=";FSTL_OCCT_ROOT_$abi"
     prefix_map_flags+=" -ffile-prefix-map=$qt_kit=/deps/qt -ffile-prefix-map=$occt_root=/deps/occt"

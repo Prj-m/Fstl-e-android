@@ -171,7 +171,7 @@ class ReleaseBuildChecks(unittest.TestCase):
             "FSTL_TEST_ROOT": str(self.base),
             "FSTL_ANDROID_ABIS": "arm64-v8a",
         })
-        for path in ("qt/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake", "ndk/build/cmake/android.toolchain.cmake", "occt/lib/libTKDESTEP.so", "occt/include/opencascade/STEPControl_Reader.hxx"):
+        for path in ("qt/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_arm64_v8a/plugins/platforms/libplugins_platforms_qtforandroid_arm64-v8a.so", "ndk/build/cmake/android.toolchain.cmake", "occt/lib/libTKDESTEP.so", "occt/include/opencascade/STEPControl_Reader.hxx"):
             file = self.base / path
             file.parent.mkdir(parents=True, exist_ok=True)
             file.touch()
@@ -272,7 +272,7 @@ if sys.argv[1] == 'dump':
 
     def test_multi_abi_build_forwards_dependencies_and_stages_every_abi(self):
         self.env["FSTL_ANDROID_ABIS"] = "arm64-v8a armeabi-v7a x86_64"
-        for path in ("qt/android_armv7/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_x86_64/lib/cmake/Qt6/qt.toolchain.cmake", "occt-armeabi-v7a/lib/libTKDESTEP.so", "occt-x86_64/lib/libTKDESTEP.so"):
+        for path in ("qt/android_armv7/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_armv7/plugins/platforms/libplugins_platforms_qtforandroid_armeabi-v7a.so", "qt/android_x86_64/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_x86_64/plugins/platforms/libplugins_platforms_qtforandroid_x86_64.so", "occt-armeabi-v7a/lib/libTKDESTEP.so", "occt-x86_64/lib/libTKDESTEP.so"):
             file = self.base / path
             file.parent.mkdir(parents=True, exist_ok=True)
             file.touch()
@@ -288,6 +288,14 @@ if sys.argv[1] == 'dump':
         self.assertIn("FSTL_OCCT_ROOT_x86_64", calls)
         copies = (self.base / "dependency-copies").read_text().split()
         self.assertEqual([Path(c).parent.name for c in copies], ["armeabi-v7a", "x86_64"])
+
+    def test_wrong_abi_qt_kit_fails_before_build(self):
+        # CI once exported the x86_64 kit as QT_ROOT_DIR; reject it up front.
+        (self.base / "qt/android_arm64_v8a/plugins/platforms/libplugins_platforms_qtforandroid_arm64-v8a.so").unlink()
+        result = self.run_build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not the arm64-v8a Qt kit", result.stderr)
+        self.assertFalse((self.base / "cmake-calls").exists())
 
     def test_missing_secondary_abi_dependency_fails_before_build(self):
         self.env["FSTL_ANDROID_ABIS"] = "arm64-v8a x86_64"

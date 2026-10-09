@@ -157,7 +157,9 @@ jobs:
         env:
           FSTL_SIGN_WITH_KEYSTORE: '0'
         run: |
-          export QT_ANDROID_ROOT="$QT_ROOT_DIR"
+          # install-qt-action's QT_ROOT_DIR names whichever kit it exported last;
+          # the kits share a version directory, so pick arm64 explicitly.
+          export QT_ANDROID_ROOT="$(dirname "$QT_ROOT_DIR")/android_arm64_v8a"
           export FSTL_ANDROID_BUILD_DIR="$GITHUB_WORKSPACE/build/android-release"
           bash scripts/build_android_full_release_aab.sh
       - name: Validate the packaged release manifest
@@ -165,7 +167,9 @@ jobs:
       - name: Package phone test APK
         if: github.event_name == 'pull_request' || inputs.phone_apk
         run: |
-          export QT_ANDROID_ROOT="$QT_ROOT_DIR"
+          # install-qt-action's QT_ROOT_DIR names whichever kit it exported last;
+          # the kits share a version directory, so pick arm64 explicitly.
+          export QT_ANDROID_ROOT="$(dirname "$QT_ROOT_DIR")/android_arm64_v8a"
           export FSTL_ANDROID_BUILD_DIR="$GITHUB_WORKSPACE/build/android-release"
           bash scripts/package_android_phone_apk.sh
       - name: Save phone test APK
