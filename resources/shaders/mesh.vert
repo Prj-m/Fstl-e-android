@@ -3,23 +3,19 @@
 precision highp float;
 
 in vec3 vertex_position;
-in vec3 vertex_color;  // Actually normal data
 
 uniform mat4 transform_matrix;
 uniform mat4 view_matrix;
 
-out vec3 world_normal;
+out vec3 world_pos;   // Model-rotation space; fragment shaders derive the face normal from it
 out vec3 ec_pos;      // Eye coordinate position for mesh_light shader
 out vec3 vObjPos;     // Object-space position for layer-peeling clip plane
 
 void main() {
-    vec4 ec_position = view_matrix * transform_matrix * vec4(vertex_position, 1.0);
+    vec4 world = transform_matrix * vec4(vertex_position, 1.0);
+    vec4 ec_position = view_matrix * world;
     gl_Position = ec_position;
     ec_pos = ec_position.xyz;
     vObjPos = vertex_position;
-    // Transform normal to world space and normalize here, at highp: the
-    // transform scales models to unit size, so the raw normal is ~0.005 long
-    // and its squared length underflows mediump (fp16 on Adreno/Mali) in the
-    // fragment shaders, which turned large models black and white.
-    world_normal = normalize(mat3(transform_matrix) * vertex_color);
+    world_pos = world.xyz;
 }

@@ -16,6 +16,7 @@
 #include <QGuiApplication>
 #include <QSettings>
 #include <QTimer>
+#include <QElapsedTimer>
 
 // Touch tracing floods logcat on every move event; enable with QT_LOGGING_RULES="fstle.touch.debug=true".
 Q_LOGGING_CATEGORY(lcTouch, "fstle.touch", QtWarningMsg)
@@ -177,7 +178,6 @@ Canvas::~Canvas()
     makeCurrent();
     delete pendingMesh;
     delete mesh;
-    delete mesh_vertshader;
     delete backdrop;
     delete axis;
     doneCurrent();
@@ -270,8 +270,11 @@ void Canvas::uploadPendingMesh()
 {
     if (!pendingMesh)
         return;
+    QElapsedTimer uploadTimer;
+    uploadTimer.start();
     delete mesh;
     mesh = new GLMesh(pendingMesh);
+    qInfo() << "GPU upload took" << uploadTimer.elapsed() << "ms";
     delete pendingMesh;
     pendingMesh = nullptr;
     axis->setScale(meshLower, meshUpper);
@@ -296,7 +299,6 @@ void Canvas::cacheLocations(DrawMode mode, QOpenGLShaderProgram& program)
     l.clipEnabled = program.uniformLocation("layerClipEnabled");
     l.clipZ = program.uniformLocation("layerClipZ");
     l.position = program.attributeLocation("vertex_position");
-    l.normal = program.attributeLocation("vertex_color");
 }
 
 bool Canvas::linkProgram(QOpenGLShaderProgram& program, const char* name)
@@ -348,30 +350,37 @@ void Canvas::initializeGL()
         return;
     }
 
-    mesh_vertshader = new QOpenGLShader(QOpenGLShader::Vertex);
-    mesh_vertshader->compileSourceFile(":/gl/shaders/mesh.vert");
-    mesh_shader.addShader(mesh_vertshader);
-    mesh_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh.frag");
+    // Cacheable shaders let Qt store linked program binaries in the app cache
+    // (glProgramBinary, core in ES 3.0): later launches skip the compile,
+    // which dominated the time to the first frame on slow drivers.
+    QElapsedTimer shaderTimer;
+    shaderTimer.start();
+    const QString meshVert = QStringLiteral(":/gl/shaders/mesh.vert");
+    mesh_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
+    mesh_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh.frag");
     // Other modes are skipped if they fail; without the shaded program there
     // is nothing to show, so explain that instead of a blank canvas.
     if (!linkProgram(mesh_shader, "shaded"))
         glError = tr("This device's graphics driver could not compile the 3D shaders.");
-    mesh_wireframe_shader.addShader(mesh_vertshader);
-    mesh_wireframe_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_wireframe.frag");
+    mesh_wireframe_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
+    mesh_wireframe_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_wireframe.frag");
     linkProgram(mesh_wireframe_shader, "wireframe");
-    mesh_surfaceangle_shader.addShader(mesh_vertshader);
-    mesh_surfaceangle_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_surfaceangle.frag");
+    mesh_surfaceangle_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
+    mesh_surfaceangle_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_surfaceangle.frag");
     linkProgram(mesh_surfaceangle_shader, "surface angle");
-    mesh_meshlight_shader.addShader(mesh_vertshader);
     // Geometry shaders need desktop GLSL 330; OpenGL ES always uses the fallback.
+    // That desktop path compiles eagerly (non-cacheable) so failure is detected here.
     bool loadSuccess330 = !context()->isOpenGLES() &&
                           QOpenGLShader::hasOpenGLShaders(QOpenGLShader::Geometry, context()) &&
+                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Vertex, meshVert) &&
                           mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/shaders/calc_altitudes.glsl") &&
                           mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light.frag");
     if (!loadSuccess330) {
         // fallback to 120
         fallbackGlsl = true;
-        mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light_120.frag");
+        mesh_meshlight_shader.removeAllShaders();
+        mesh_meshlight_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
+        mesh_meshlight_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light_120.frag");
     }
     emit fallbackGlslUpdated(fallbackGlsl);
     linkProgram(mesh_meshlight_shader, "meshlight");
@@ -387,6 +396,7 @@ void Canvas::initializeGL()
     axis = new Axis();
     if (hasMeshBounds)
         axis->setScale(meshLower, meshUpper);
+    qInfo() << "Shaders ready in" << shaderTimer.elapsed() << "ms";
 }
 
 
@@ -518,13 +528,12 @@ void Canvas::draw_mesh()
     }
 
     const GLint vp = l.position;
-    const GLint cp = l.normal;
 
     // Draw the mesh - use edges for wireframe mode, regular drawing for others
     if (drawMode == wireframe) {
         mesh->drawEdges(vp);
     } else {
-        mesh->draw(vp, cp);
+        mesh->draw(vp);
     }
 
     // Reset draw mode for the background and anything else that needs to be drawn

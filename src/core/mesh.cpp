@@ -14,11 +14,6 @@ Mesh::Mesh(std::vector<GLfloat>&& v, std::vector<GLuint>&& i)
     computeBounds();
 }
 
-Mesh::Mesh(std::vector<GLfloat>&& v, std::vector<GLfloat>&& n, std::vector<GLuint>&& i)
-    : vertices(std::move(v)), normals(std::move(n)), indices(std::move(i))
-{
-    computeBounds();
-}
 
 void Mesh::computeBounds()
 {
@@ -40,8 +35,7 @@ void Mesh::computeBounds()
 
 int Mesh::triCount() const
 {
-    // On Android, we use non-indexed rendering (indices is empty)
-    // so calculate from vertices instead
+    // Non-indexed meshes store 3 vertices per triangle
     if (indices.empty()) {
         return vertices.size() / 9;  // 9 floats per triangle (3 vertices * 3 coords)
     }

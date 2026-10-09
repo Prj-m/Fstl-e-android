@@ -11,17 +11,26 @@ uniform vec3 directive_light_direction;
 uniform bool layerClipEnabled;
 uniform highp float layerClipZ;  // highp: mediump is fp16 on many GPUs
 
-in vec3 world_normal;
+in highp vec3 world_pos;
 in highp vec3 vObjPos;
 
 out vec4 fragColor;
+
+// Flat face normal from screen-space derivatives: no per-vertex normal buffer
+// is needed, so meshes can share vertices. gl_FrontFacing restores the
+// winding-based (outward) orientation. highp: per-pixel derivatives of the
+// unit-scaled model are far below the mediump range.
+vec3 faceNormal() {
+    highp vec3 n = normalize(cross(dFdx(world_pos), dFdy(world_pos)));
+    return gl_FrontFacing ? n : -n;
+}
 
 void main() {
     if (layerClipEnabled && vObjPos.z > layerClipZ) {
         discard;
     }
 
-    vec3 norm = normalize(world_normal);
+    vec3 norm = faceNormal();
     vec3 light_dir = normalize(directive_light_direction);
     
     // Use half-lambert lighting for softer shadows (wraps around more)

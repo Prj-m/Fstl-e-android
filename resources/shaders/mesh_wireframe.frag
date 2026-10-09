@@ -6,7 +6,6 @@ precision mediump float;
 uniform bool layerClipEnabled;
 uniform highp float layerClipZ;  // highp: mediump is fp16 on many GPUs
 
-in vec3 world_normal;
 in highp vec3 vObjPos;
 out vec4 fragColor;
 

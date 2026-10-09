@@ -30,8 +30,8 @@ Axis::Axis()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/colored_lines.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/colored_lines.frag");
+    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/colored_lines.vert");
+    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/colored_lines.frag");
     if (shader.link())
     {
         locTransform = shader.uniformLocation("transform_matrix");

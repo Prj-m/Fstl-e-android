@@ -142,7 +142,6 @@ private:
     QPointF changeMouseCoordinates(QPoint p);
     void calcArcballTransform(QPointF p1, QPointF p2);
 
-    QOpenGLShader* mesh_vertshader = nullptr;
     QOpenGLShaderProgram mesh_shader;
     QOpenGLShaderProgram mesh_wireframe_shader;
     QOpenGLShaderProgram mesh_surfaceangle_shader;
@@ -155,7 +154,7 @@ private:
         GLint ambient = -1, directive = -1, direction = -1;
         GLint useWire = -1, wireWidth = -1, portSize = -1, wireColor = -1;
         GLint clipEnabled = -1, clipZ = -1;
-        GLint position = -1, normal = -1;
+        GLint position = -1;
     };
     MeshLocations meshLocations[DRAWMODECOUNT];
     void cacheLocations(DrawMode mode, QOpenGLShaderProgram& program);

@@ -5,8 +5,8 @@ Backdrop::Backdrop()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex,   ":/gl/shaders/quad.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/quad.frag");
+    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex,   ":/gl/shaders/quad.vert");
+    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/quad.frag");
     if (shader.link())
     {
         locPosition = shader.attributeLocation("vertex_position");

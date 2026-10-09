@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
     include/core/app.h
     include/core/loader.h
     include/core/boundedzip.h
+    include/core/fastfloat.h
     include/core/mesh.h
     include/core/vertex.h
     
