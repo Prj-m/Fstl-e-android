@@ -6,6 +6,7 @@
 #include <QSurfaceFormat>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
+#include <memory>
 #include <QTimer>
 
 class GLMesh;
@@ -105,6 +106,8 @@ public:
 
 public slots:
     void set_status(const QString& s);
+    // Frees GL objects while the old context is still current.
+    void cleanupGL();
     void clear_status();
     void load_mesh(Mesh* m, bool is_reload);
     // Advance the layer-peeling clip plane; used by the Android floating button
@@ -126,6 +129,8 @@ protected:
 
 signals:
     void fallbackGlslUpdated(bool b);
+    // The GL context was recreated and the uploaded model went with it.
+    void glResourcesLost();
 
 private:
     void draw_mesh();
@@ -141,10 +146,15 @@ private:
     QPointF changeMouseCoordinates(QPoint p);
     void calcArcballTransform(QPointF p1, QPointF p2);
 
-    QOpenGLShaderProgram mesh_shader;
-    QOpenGLShaderProgram mesh_wireframe_shader;
-    QOpenGLShaderProgram mesh_surfaceangle_shader;
-    QOpenGLShaderProgram mesh_meshlight_shader;
+    // Recreated by every initializeGL(): a program belongs to the context it
+    // was first used in, and Qt calls initializeGL() again with a new context
+    // when it recreates the widget's context.
+    std::unique_ptr<QOpenGLShaderProgram> mesh_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_wireframe_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_surfaceangle_shader;
+    std::unique_ptr<QOpenGLShaderProgram> mesh_meshlight_shader;
+    void releaseGLResources();
+    bool meshDroppedWithContext = false;
 
     // Looked up once after linking; glGetUniformLocation per frame is a
     // driver round-trip on every rotation/zoom frame.

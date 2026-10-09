@@ -79,6 +79,9 @@ BackdropSettingsDialog::BackdropSettingsDialog(QWidget* parent, Canvas* _canvas)
 {
     canvas = _canvas;
 #ifndef Q_OS_ANDROID
+    // Desktop: a framed dialog window, not a transparent child over the view.
+    setWindowFlags(Qt::Dialog);
+    setWindowTitle(tr("Background Color Settings"));
     this->setMinimumWidth(400);
 #endif
 

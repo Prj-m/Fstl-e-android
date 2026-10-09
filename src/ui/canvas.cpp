@@ -170,11 +170,13 @@ Canvas::Canvas(QSurfaceFormat format, QWidget *parent)
 Canvas::~Canvas()
 {
     flushSettings();
+    // ~QOpenGLWidget destroys the context after this destructor has run; its
+    // aboutToBeDestroyed must not call cleanupGL() on destroyed members.
+    if (context())
+        disconnect(context(), nullptr, this, nullptr);
     makeCurrent();
     delete pendingMesh;
-    delete mesh;
-    delete backdrop;
-    delete axis;
+    releaseGLResources();
     doneCurrent();
 }
 
@@ -350,39 +352,48 @@ void Canvas::initializeGL()
     // which dominated the time to the first frame on slow drivers.
     QElapsedTimer shaderTimer;
     shaderTimer.start();
+    // Start from scratch: this also runs for a recreated context, whose old
+    // objects cannot be reused (and are freed via cleanupGL()).
+    releaseGLResources();
+    connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &Canvas::cleanupGL,
+            Qt::ConnectionType(Qt::DirectConnection | Qt::UniqueConnection));
+    mesh_shader = std::make_unique<QOpenGLShaderProgram>();
+    mesh_wireframe_shader = std::make_unique<QOpenGLShaderProgram>();
+    mesh_surfaceangle_shader = std::make_unique<QOpenGLShaderProgram>();
+    mesh_meshlight_shader = std::make_unique<QOpenGLShaderProgram>();
     const QString meshVert = QStringLiteral(":/gl/shaders/mesh.vert");
-    mesh_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
-    mesh_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh.frag"));
+    mesh_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh.frag"));
     // Other modes are skipped if they fail; without the shaded program there
     // is nothing to show, so explain that instead of a blank canvas.
-    if (!linkProgram(mesh_shader, "shaded"))
+    if (!linkProgram(*mesh_shader, "shaded"))
         glError = tr("This device's graphics driver could not compile the 3D shaders.");
-    mesh_wireframe_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
-    mesh_wireframe_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_wireframe.frag"));
-    linkProgram(mesh_wireframe_shader, "wireframe");
-    mesh_surfaceangle_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
-    mesh_surfaceangle_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_surfaceangle.frag"));
-    linkProgram(mesh_surfaceangle_shader, "surface angle");
+    mesh_wireframe_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_wireframe_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_wireframe.frag"));
+    linkProgram(*mesh_wireframe_shader, "wireframe");
+    mesh_surfaceangle_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_surfaceangle_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_surfaceangle.frag"));
+    linkProgram(*mesh_surfaceangle_shader, "surface angle");
     // Geometry shaders need desktop GLSL 330; OpenGL ES always uses the fallback.
     // That desktop path compiles eagerly (non-cacheable) so failure is detected here.
     bool loadSuccess330 = !context()->isOpenGLES() &&
                           QOpenGLShader::hasOpenGLShaders(QOpenGLShader::Geometry, context()) &&
-                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert)) &&
-                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Geometry, shaderSource(":/gl/shaders/calc_altitudes.glsl")) &&
-                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light.frag"));
+                          mesh_meshlight_shader->addShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert)) &&
+                          mesh_meshlight_shader->addShaderFromSourceCode(QOpenGLShader::Geometry, shaderSource(":/gl/shaders/calc_altitudes.glsl")) &&
+                          mesh_meshlight_shader->addShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light.frag"));
     if (!loadSuccess330) {
         // fallback to 120
         fallbackGlsl = true;
-        mesh_meshlight_shader.removeAllShaders();
-        mesh_meshlight_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
-        mesh_meshlight_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light_120.frag"));
+        mesh_meshlight_shader->removeAllShaders();
+        mesh_meshlight_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+        mesh_meshlight_shader->addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light_120.frag"));
     }
     emit fallbackGlslUpdated(fallbackGlsl);
-    linkProgram(mesh_meshlight_shader, "meshlight");
-    cacheLocations(shaded, mesh_shader);
-    cacheLocations(wireframe, mesh_wireframe_shader);
-    cacheLocations(surfaceangle, mesh_surfaceangle_shader);
-    cacheLocations(meshlight, mesh_meshlight_shader);
+    linkProgram(*mesh_meshlight_shader, "meshlight");
+    cacheLocations(shaded, *mesh_shader);
+    cacheLocations(wireframe, *mesh_wireframe_shader);
+    cacheLocations(surfaceangle, *mesh_surfaceangle_shader);
+    cacheLocations(meshlight, *mesh_meshlight_shader);
 
     backdrop = new Backdrop();
     // Apply persisted backdrop corner colors to the GL backdrop
@@ -392,6 +403,36 @@ void Canvas::initializeGL()
     if (hasMeshBounds)
         axis->setScale(meshLower, meshUpper);
     qInfo() << "Shaders ready in" << shaderTimer.elapsed() << "ms";
+    if (meshDroppedWithContext) {
+        meshDroppedWithContext = false;
+        QMetaObject::invokeMethod(this, &Canvas::glResourcesLost, Qt::QueuedConnection);
+    }
+}
+
+void Canvas::releaseGLResources()
+{
+    // GL objects are tied to the context they were created in.
+    if (mesh)
+        meshDroppedWithContext = true;
+    delete mesh;
+    mesh = nullptr;
+    delete backdrop;
+    backdrop = nullptr;
+    delete axis;
+    axis = nullptr;
+    mesh_shader.reset();
+    mesh_wireframe_shader.reset();
+    mesh_surfaceangle_shader.reset();
+    mesh_meshlight_shader.reset();
+    for (MeshLocations& l : meshLocations)
+        l = MeshLocations();
+}
+
+void Canvas::cleanupGL()
+{
+    makeCurrent();
+    releaseGLResources();
+    doneCurrent();
 }
 
 
@@ -453,28 +494,28 @@ void Canvas::draw_mesh()
     QOpenGLShaderProgram* selected_mesh_shader = NULL;
     if(drawMode == wireframe)
     {
-        selected_mesh_shader = &mesh_wireframe_shader;
+        selected_mesh_shader = mesh_wireframe_shader.get();
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Not supported in OpenGL ES
     }
     else
     {
         if(drawMode == shaded)
         {
-            selected_mesh_shader = &mesh_shader;
+            selected_mesh_shader = mesh_shader.get();
         }
         else if (drawMode == surfaceangle)
         {
-            selected_mesh_shader = &mesh_surfaceangle_shader;
+            selected_mesh_shader = mesh_surfaceangle_shader.get();
         }
         else if (drawMode == meshlight)
         {
-            selected_mesh_shader = &mesh_meshlight_shader;
+            selected_mesh_shader = mesh_meshlight_shader.get();
         }
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Not supported in OpenGL ES
     }
 
     const MeshLocations& l = meshLocations[drawMode];
-    if (!selected_mesh_shader->isLinked() || l.position < 0)
+    if (!selected_mesh_shader || !selected_mesh_shader->isLinked() || l.position < 0)
         return;
     selected_mesh_shader->bind();
 

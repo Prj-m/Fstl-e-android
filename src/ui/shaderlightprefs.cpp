@@ -57,6 +57,12 @@ const QString ShaderLightPrefs::PREFS_GEOM = "shaderPrefsGeometry";
 ShaderLightPrefs::ShaderLightPrefs(QWidget *parent, Canvas *_canvas) : QWidget(parent)
 {
     canvas = _canvas;
+#ifndef Q_OS_ANDROID
+    // Desktop: a framed dialog window (as in fstl-e), not a transparent child
+    // drawn over the 3D view; saved geometry and activateWindow() apply to it.
+    setWindowFlags(Qt::Dialog);
+    setWindowTitle(tr("Shader preferences"));
+#endif
 
 #ifdef Q_OS_ANDROID
     // Style the widget to appear as a solid, non-transparent panel on Android

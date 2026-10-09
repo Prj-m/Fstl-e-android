@@ -189,6 +189,12 @@ Window::Window(QWidget* parent)
 
     statusBar = new QStatusBar;
 
+    // A recreated GL context (e.g. moving to another display) drops the
+    // uploaded model; load the current file again.
+    connect(canvas, &Canvas::glResourcesLost, this, [this] {
+        if (!current_file.isEmpty())
+            load_stl(current_file, true);
+    });
     meshlightprefs = new ShaderLightPrefs(this, canvas);
     meshlightprefs->hide();
     backdropsettingsdialog = new BackdropSettingsDialog(this, canvas);
