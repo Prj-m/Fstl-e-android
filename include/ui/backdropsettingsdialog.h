@@ -35,6 +35,7 @@ private slots:
 #ifdef Q_OS_ANDROID
     void onPresetButtonClicked();
     void onPresetItemClicked(QListWidgetItem* item);
+    void syncPresetUi(int index);
 #endif
 
 public:
@@ -46,7 +47,7 @@ private:
     void setCustomBackdropCorners(const QColor& tl, const QColor& tr,
                                          const QColor& bl, const QColor& br) const;
     void restoreCustomBackdropCorners() const;
-    void applyCustomPreset() const;
+    void applyCustomPreset();
     bool confirmCustomColorChange();
 
 private:

@@ -45,11 +45,12 @@ android:versionName="1.0.4-rc.7"
             </intent-filter>
             <!-- Generic MIME types (e.g. application/octet-stream) by file name.
                  pathPattern is case-sensitive and stops at the first dot, hence
-                 the upper-case and multi-dot variants. -->
+                 the upper-case and multi-dot variants. No file:// scheme: under
+                 scoped storage such paths are unreadable without a storage
+                 permission the app does not request. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <data android:scheme="file"/>
                 <data android:scheme="content"/>
                 <data android:mimeType="*/*"/>
                 <data android:host="*"/>

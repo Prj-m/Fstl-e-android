@@ -12,8 +12,6 @@ class GLMesh;
 class Mesh;
 class Backdrop;
 class Axis;
-class QGestureEvent;
-class QPinchGesture;
 
 enum DrawMode {shaded, wireframe, surfaceangle, meshlight, DRAWMODECOUNT};
 
@@ -122,8 +120,6 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     bool event(QEvent* event) override;
-    bool gestureEvent(QGestureEvent* event);
-    void pinchTriggered(QPinchGesture* gesture);
     
     void set_perspective(float p);
     void view_anim(float v);
@@ -140,6 +136,7 @@ private:
     QMatrix4x4 transform_matrix() const;
     QMatrix4x4 aspect_matrix() const;
     QMatrix4x4 view_matrix() const;
+    float depthRadius() const;
     void resetTransform();
     QPointF changeMouseCoordinates(QPoint p);
     void calcArcballTransform(QPointF p1, QPointF p2);
@@ -241,7 +238,6 @@ private:
     QString meshInfo;
     
     // Pinch zoom support
-    qreal pinch_scale_factor; // stores initial zoom during gesture
 
     // Raw touch pinch zoom - track touch points manually
     bool touch_pinch_active = false;
@@ -250,6 +246,7 @@ private:
     QPointF touch_pinch_center;     // screen-space pinch center
     QPointF touch_last_center;      // previous midpoint, for two-finger pan
     bool touch_rotate_active = false;
+    QPair<int, int> touch_pair{-1, -1}; // touch IDs driving the current pinch
     QPointF touch_last_point;       // previous single-finger position
     QMap<int, QPointF> active_touches;  // track all active touch points by ID
 

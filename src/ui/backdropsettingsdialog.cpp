@@ -455,19 +455,21 @@ void BackdropSettingsDialog::restoreCustomBackdropCorners() const
     const QColor bl = settings.value(BACKDROP_BOTTOM_LEFT_CUSTOM, canvas->blStandardBackdrop).value<QColor>();
     const QColor br = settings.value(BACKDROP_BOTTOM_RIGHT_CUSTOM, canvas->brStandardBackdrop).value<QColor>();
     canvas->setBackdropCorners(tl, tr, bl, br);
+    // Keep the corner swatches in step with the restored set.
+    buttonColorTL->setIcon(createColorPatch(tl));
+    buttonColorTR->setIcon(createColorPatch(tr));
+    buttonColorBL->setIcon(createColorPatch(bl));
+    buttonColorBR->setIcon(createColorPatch(br));
 }
 
-void BackdropSettingsDialog::applyCustomPreset() const
+void BackdropSettingsDialog::applyCustomPreset()
 {
     setCustomBackdropCorners(canvas->backdropTL, canvas->backdropTR,
                              canvas->backdropBL, canvas->backdropBR);
     canvas->setBackdropPresetIndex(0); // reopen as "Custom Colors", not the old preset
 #ifdef Q_OS_ANDROID
     // Show that the colours no longer match the named preset.
-    if (presetButton && presetListWidget) {
-        presetButton->setText(presetNames.at(0)); // Custom Colors
-        presetListWidget->setCurrentRow(0);
-    }
+    syncPresetUi(0); // Custom Colors
 #else
     if (comboBackdropPresets) {
         // Block signals to prevent triggering onPresetChanged() recursion
@@ -512,19 +514,24 @@ void BackdropSettingsDialog::onPresetButtonClicked()
     }
 }
 
+void BackdropSettingsDialog::syncPresetUi(const int index)
+{
+    // The preset index, button label and list row must agree, or the old
+    // preset could not be re-selected after a corner edit.
+    currentPresetIndex = index;
+    if (presetButton)
+        presetButton->setText(presetNames.at(index));
+    if (presetListWidget)
+        presetListWidget->setCurrentRow(index);
+}
+
 void BackdropSettingsDialog::onPresetItemClicked(QListWidgetItem* item)
 {
     if (!item) return;
     
     int newIndex = presetListWidget->row(item);
     if (newIndex >= 0 && newIndex < presetNames.size() && newIndex != currentPresetIndex) {
-        currentPresetIndex = newIndex;
-        
-        // Update button text
-        if (presetButton) {
-            presetButton->setText(presetNames.at(newIndex));
-        }
-        
+        syncPresetUi(newIndex);
         // Apply preset
         onPresetChanged(newIndex);
     }
@@ -538,7 +545,15 @@ void BackdropSettingsDialog::onPresetItemClicked(QListWidgetItem* item)
 
 bool BackdropSettingsDialog::confirmCustomColorChange()
 {
-#ifndef Q_OS_ANDROID
+#ifdef Q_OS_ANDROID
+    // As on desktop: editing a corner switches to the saved custom set first,
+    // instead of overwriting it with the current preset plus one corner.
+    if (currentPresetIndex != 0) {
+        restoreCustomBackdropCorners();
+        syncPresetUi(0);
+        canvas->setBackdropPresetIndex(0);
+    }
+#else
     if (comboBackdropPresets && comboBackdropPresets->currentIndex() != 0) {
         // Block signals to prevent triggering onPresetChanged() recursion
         comboBackdropPresets->blockSignals(true);
@@ -570,7 +585,7 @@ void BackdropSettingsDialog::onResetButtonClicked()
 {
 #ifdef Q_OS_ANDROID
     // On Android, reset to Standard preset directly
-    currentPresetIndex = 1; // Standard
+    syncPresetUi(1); // Standard
     onPresetChanged(1);
 #else
     // Reset to the Standard preset (id 1) which restores default backdrop colors

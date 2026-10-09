@@ -343,7 +343,14 @@ Mesh* Loader::load_stl()
     if (!binarySize && file.read(5) == "solid")
     {
         // Bounded reads: a binary file may contain no newline for megabytes.
-        file.readLine(1024); // skip solid name
+        // The solid name may be long, so skip up to 64 KiB of it.
+        for (qint64 skipped = 0; skipped < 64 * 1024;)
+        {
+            const QByteArray chunk = file.readLine(1024);
+            skipped += chunk.size();
+            if (chunk.isEmpty() || chunk.endsWith('\n'))
+                break;
+        }
         const auto line = file.readLine(1024).trimmed();
         if (line.startsWith("facet") ||
             line.startsWith("endsolid"))
@@ -620,6 +627,9 @@ Mesh* Loader::load_3mf()
                     emit error_bad_stl();
                     return nullptr;
                 }
+                // The translation is in this part's unit, like its vertices.
+                for (int t = 9; t < 12; ++t)
+                    c.transform.m[t] *= unitScale;
                 object->components << c;
             }
             else if (name == QLatin1StringView("build"))
@@ -641,6 +651,9 @@ Mesh* Loader::load_3mf()
                     emit error_bad_stl();
                     return nullptr;
                 }
+                // The translation is in this part's unit, like its vertices.
+                for (int t = 9; t < 12; ++t)
+                    c.transform.m[t] *= unitScale;
                 items << c;
             }
         }
@@ -853,19 +866,19 @@ public:
         return token;
     }
 
-    // Skips the rest of the current line (bounded, like the old reader).
+    // Skips the rest of the current line (bounded).
     void skipLine()
     {
         qsizetype skipped = 0;
         for (;;)
         {
             const char* data = buffer.constData();
-            while (pos < buffer.size() && data[pos] != '\n' && skipped < 1024)
+            while (pos < buffer.size() && data[pos] != '\n' && skipped < MaxLine)
             {
                 ++pos;
                 ++skipped;
             }
-            if (pos < buffer.size() || eof || skipped >= 1024 || !refill())
+            if (pos < buffer.size() || eof || skipped >= MaxLine || !refill())
                 return;
         }
     }
@@ -875,6 +888,7 @@ public:
 private:
     static constexpr qsizetype Chunk = 1 << 20;
     static constexpr qsizetype MaxToken = 256;
+    static constexpr qsizetype MaxLine = 64 * 1024; // e.g. a long solid name
 
     static bool isSpace(char c) { return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\f' || c == '\v'; }
 

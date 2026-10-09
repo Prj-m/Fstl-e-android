@@ -144,6 +144,9 @@ int main(int argc, char** argv) {
         QByteArray solidHeader = binaryStl(1);
         solidHeader.replace(0, 5, "solid");
         check(solidHeader, false, true, "binary STL whose header starts with solid");
+        QByteArray longName = ascii;
+        longName.replace("solid test", "solid " + QByteArray(1500, 'n'));
+        check(longName, false, true, "ASCII STL with a long solid name");
     }
     for (const QByteArray& invalid : {QByteArray("vertex"), QByteArray("vertex 0"), QByteArray("vertex 0 0"), QByteArray("vertex invalid 0 0"), QByteArray("vertex 0 invalid 0"), QByteArray("vertex nan 0 0"), QByteArray("vertex 0 0 inf")}) {
         QByteArray malformed = ascii;
@@ -181,6 +184,24 @@ int main(int argc, char** argv) {
         std::unique_ptr<Mesh> mesh(loader.load_3mf());
         ++checks;
         if (!mesh || std::abs(mesh->xmax() - 25.4f) > 1e-4f) { ++failures; std::cerr << "FAIL: 3MF inch units\n"; }
+    }
+    {
+        // Build-item translations are in the model unit too: the second copy is
+        // offset by 2 inches, so the assembly spans [0, 3] in = [0, 76.2] mm.
+        const QByteArray placed = "<model unit='inch'><resources><object id='1'><mesh><vertices>"
+            "<vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/>"
+            "</vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources>"
+            "<build><item objectid='1'/><item objectid='1' transform='1 0 0 0 1 0 0 0 1 2 0 0'/></build></model>";
+        const QString path = dir.filePath("placed.3mf");
+        QZipWriter writer(path);
+        writer.addFile("3D/3dmodel.model", placed);
+        writer.close();
+        TestLoader loader(path);
+        std::unique_ptr<Mesh> mesh(loader.load_3mf());
+        ++checks;
+        if (!mesh || std::abs(mesh->xmax() - 76.2f) > 1e-3f || std::abs(mesh->xmin()) > 1e-4f) {
+            ++failures; std::cerr << "FAIL: 3MF unit applied to build-item translation\n";
+        }
     }
     checkCancelled(model, true, "cancelled 3MF stops silently");
     check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);

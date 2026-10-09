@@ -380,8 +380,6 @@ Window::Window(QWidget* parent)
     backdropSettings_action->setShortcut(shortcutBackdropSettings);
     backdropSettings_action->setIcon(QIcon(":/qt/icons/backdrop-settings.png"));
     this->addAction(backdropSettings_action);
-    QObject::connect(backdropSettings_action, &QAction::triggered,
-                     this, &Window::on_backdropSettings);
 
     view_menu->addAction(axes_action);
     axes_action->setCheckable(true);
@@ -415,13 +413,6 @@ Window::Window(QWidget* parent)
     fullscreen_action->setShortcut(shortcutFullscreen);
     fullscreen_action->setIcon(QIcon(":/qt/icons/view-fullscreen.png"));
     fullscreen_action->setCheckable(true);
-    if (!isWayland) {
-        QObject::connect(fullscreen_action, &QAction::toggled,
-            this, &Window::on_fullscreen);
-    } else {
-        fullscreen_action->setDisabled(true);
-    }
-    this->addAction(fullscreen_action);
 
     QMenu *resolutionMenu = view_menu->addMenu("Set Viewport Size");
     resolutionMenu->setIcon(QIcon(":/qt/icons/resolution_1_32.png"));
@@ -1021,7 +1012,13 @@ void Window::load_persist_settings(){
     on_drawMode(dm_acts[draw_mode]);
 
     // menu bar
+#ifdef Q_OS_ANDROID
+    // Hiding is only possible with a keyboard and has no touch undo: always
+    // start with the toolbar visible.
+    bool hideMenu = false;
+#else
     bool hideMenu = settings.value(HIDE_MENU_BAR, false).toBool();
+#endif
     hide_menuBar_action->blockSignals(true);
     hide_menuBar_action->setChecked(hideMenu);
     on_hide_menuBar();
@@ -1216,7 +1213,8 @@ void Window::on_open()
                 this, "Load 3D file", lastDir, "All files (*)");
 #else
     const QString filename = QFileDialog::getOpenFileName(
-                this, "Load 3D file", lastDir, "3D files (*.stl *.STL *.3mf *.3MF)");
+                this, "Load 3D file", lastDir,
+                "3D files (*.stl *.STL *.3mf *.3MF *.step *.STEP *.stp *.STP)");
 #endif
     if (!filename.isNull())
     {
@@ -1289,6 +1287,7 @@ void Window::show_import_error(const QString& message)
 
 void Window::on_bad_stl()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "This 3D file could not be loaded. It may be invalid, corrupted, or use a format that is not yet fully supported.<br>"
                       "Please re-export it from the original source or try a simpler version.");
@@ -1296,12 +1295,14 @@ void Window::on_bad_stl()
 
 void Window::on_empty_mesh()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "This file is syntactically correct<br>but contains no triangles.");
 }
 
 void Window::on_missing_file()
 {
+    startup_import_failed = active_import_is_startup;
     show_import_error("<b>Error:</b><br>"
                       "The target file is missing.<br>");
 }
@@ -1327,12 +1328,21 @@ void Window::stop_active_import()
     {
         loader->setParent(nullptr);
         connect(loader, &QThread::finished, loader, &QObject::deleteLater);
+        detached_loaders << loader;
     }
 }
 
 Window::~Window()
 {
     stop_active_import();
+#ifndef Q_OS_ANDROID
+    // A detached import thread must not keep running while the application
+    // tears down. (Android ends the process instead, and blocking here could
+    // trigger an ANR.)
+    for (const QPointer<Loader>& loader : std::as_const(detached_loaders))
+        if (loader)
+            loader->wait();
+#endif
 }
 
 void Window::closeEvent(QCloseEvent* event)
@@ -1528,7 +1538,8 @@ void Window::on_save_screenshot()
     output.close();
     if(save_ok)
     {
-        canvas->set_status("Screenshot saved: " + filename);
+        // The picker may have renamed it; the content URI has no readable name.
+        canvas->set_status("Screenshot saved");
         QTimer::singleShot(2000, canvas, &Canvas::clear_status);
     }
     else
@@ -1580,8 +1591,10 @@ void Window::on_hide_menuBar()
 #endif
     windowToolBar->setVisible(!hide_menuBar_action->isChecked());
     statusBar->setVisible(!hide_menuBar_action->isChecked());
+#ifndef Q_OS_ANDROID
     QSettings settings;
     settings.setValue(HIDE_MENU_BAR,hide_menuBar_action->isChecked());
+#endif
 }
 
 void Window::rebuild_recent_files()
@@ -1634,8 +1647,11 @@ void Window::on_reload()
 bool Window::load_stl(QString filename, bool is_reload)
 {
     if (filename.isEmpty()) return false;
-    if (!open_action->isEnabled()) {
-        if (active_loader && active_import_is_startup && !is_reload)
+    if (active_loader) {
+        // A watcher reload must not replace a file the user asked to open.
+        if (is_reload && !pending_import.isEmpty() && !pending_import_reload)
+            return true;
+        if (active_import_is_startup && !is_reload)
             active_loader->cancel();
         pending_import = filename;
         pending_import_reload = is_reload;
@@ -1653,9 +1669,11 @@ bool Window::load_stl(QString filename, bool is_reload)
         }
     }
 
-    // Reserve the import before starting the thread. Its started signal is
-    // queued, so rapid file intents could otherwise start concurrent imports.
-    disable_open();
+    // Reserve the import before starting the thread (active_loader is the busy
+    // flag). Open stays available during the startup model so the user can
+    // pick a file at once; choosing one cancels the startup import.
+    if (!loading_startup_file)
+        disable_open();
     canvas->set_status("Loading " + filename);
 
     Loader* loader = new Loader(this, filename, is_reload);
@@ -1672,11 +1690,18 @@ bool Window::load_stl(QString filename, bool is_reload)
 
     connect(loader, &Loader::finished,
             loader, &Loader::deleteLater);
-    connect(loader, &Loader::finished, this, [this, loader] {
+    const bool startupImport = loading_startup_file;
+    connect(loader, &Loader::finished, this, [this, loader, startupImport] {
         if (active_loader == loader)
         {
             active_loader = nullptr;
         }
+        // The last file can still exist but fail (offline cloud file, corrupt
+        // replacement): show the sphere rather than an empty viewer each launch.
+        if (startupImport && startup_import_failed && pending_import.isEmpty())
+            pending_import = ":/gl/shaders/sphere.stl";
+        if (startupImport)
+            startup_import_failed = false;
         canvas->clear_status();
         enable_open();
     });
@@ -1744,8 +1769,8 @@ void Window::mousePressEvent(QMouseEvent *event) {
         drag->setPixmap(QPixmap(":/qt/icons/fstl-e_64x64.png").scaledToWidth(32));
         // Possibly move source file to the drop destination :-(, but works well on every
         // configurations xcb,wayland,windows
-        Qt::DropAction dropAction = drag->exec();
-        //qDebug() << dropAction;
+        // CopyAction: the default (MoveAction) let a drop target move the file.
+        drag->exec(Qt::CopyAction);
 
         // accept drops again
         this->setAcceptDrops(true);
@@ -1932,7 +1957,33 @@ bool Window::load_next(void)
 
 void Window::keyPressEvent(QKeyEvent* event)
 {
-    if (!open_action->isEnabled())
+    if (event->key() == Qt::Key_Back || event->key() == Qt::Key_Escape)
+    {
+        // Close an open panel or popup first. An unhandled Back makes Qt close
+        // the window, which quit the app instead of closing the panel.
+        for (QWidget* w : {static_cast<QWidget*>(meshlightprefs),
+                           static_cast<QWidget*>(backdropsettingsdialog),
+                           static_cast<QWidget*>(speedMouseDialog)})
+        {
+            if (w && w->isVisible())
+            {
+                w->hide();
+                event->accept();
+                return;
+            }
+        }
+#ifdef Q_OS_ANDROID
+        // A keyboard 'M' hides the toolbar; there is no touch control to undo it.
+        if (hide_menuBar_action->isChecked())
+        {
+            hide_menuBar_action->setChecked(false);
+            event->accept();
+            return;
+        }
+#endif
+    }
+
+    if (active_loader)
     {
         QMainWindow::keyPressEvent(event);
         return;

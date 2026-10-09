@@ -2,6 +2,7 @@
 #define WINDOW_H
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QActionGroup>
 #include <QFileSystemWatcher>
 #include <QCollator>
@@ -88,6 +89,8 @@ private:
     // QThread aborts the process, so shutdown cancels and joins it first.
     Loader* active_loader = nullptr;
     bool active_import_is_startup = false;
+    bool startup_import_failed = false;
+    QList<QPointer<Loader>> detached_loaders; // timed out on close; joined on exit
     QString filenameText;
     void setFilenameLabel(const QString& text);
     bool eventFilter(QObject* watched, QEvent* event) override;
