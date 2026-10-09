@@ -249,6 +249,8 @@ private:
     qreal touch_base_zoom = 1.0;
     QPointF touch_pinch_center;     // screen-space pinch center
     QPointF touch_last_center;      // previous midpoint, for two-finger pan
+    bool touch_rotate_active = false;
+    QPointF touch_last_point;       // previous single-finger position
     QMap<int, QPointF> active_touches;  // track all active touch points by ID
 
     // Layer peeling / clip-plane state (object-space Z slicing)

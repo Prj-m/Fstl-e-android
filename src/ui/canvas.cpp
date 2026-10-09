@@ -569,9 +569,16 @@ QMatrix4x4 Canvas::aspect_matrix() const
 }
 QMatrix4x4 Canvas::view_matrix() const
 {
+    // The model fits a unit sphere around its centre. Panning or zooming onto
+    // a feature moves the rotation pivot away from that centre, and rotating
+    // then swung parts past the fixed depth range, where they were clipped
+    // (a hole in the model). Scale depth by the farthest possible distance
+    // from the pivot so the whole model always stays inside it.
+    const float depthRadius = 1.0f + scale * (center - centerOrg).length();
     QMatrix4x4 m = aspect_matrix();
-    m.scale(zoom, zoom, 1);
-    m(3, 2) = perspective;
+    m.scale(zoom, zoom, 1.0f / depthRadius);
+    // Keep w = 1 + p*z positive for every visible point (z is in [-r, r]).
+    m(3, 2) = std::min(perspective, 0.5f / depthRadius);
     return m;
 }
 
@@ -652,12 +659,6 @@ void Canvas::mouseMoveEvent(QMouseEvent* event)
 {
     auto p = event->pos();
     auto d = p - mouse_pos;
-    if (touch_pinch_active)
-    {
-        // Synthesized from the primary finger during a pinch: no rotation.
-        mouse_pos = p;
-        return;
-    }
     
 
     if (event->buttons() & Qt::LeftButton)
@@ -721,31 +722,26 @@ void Canvas::wheelEvent(QWheelEvent *event)
 
 bool Canvas::event(QEvent* event)
 {
-    // Prefer raw touch handling on Android for reliability
-    if (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate || event->type() == QEvent::TouchEnd)
+    // All touch input is handled here and accepted. Rotation used to come from
+    // mouse events Qt synthesizes from an ignored first touch; that finger's
+    // later positions then never reached this handler, so a two-finger drag
+    // saw one frozen point and zoomed instead of panning.
+    if (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate ||
+        event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel)
     {
         auto* te = static_cast<QTouchEvent*>(event);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        const auto pts = te->points();
-#else
-        const auto pts = te->touchPoints();
-#endif
-        
-        // Update our manual tracking of active touches
-        for (const auto& pt : pts)
+        for (const auto& pt : te->points())
         {
-            if (pt.state() & (Qt::TouchPointPressed | Qt::TouchPointMoved | Qt::TouchPointStationary))
-            {
-                active_touches[pt.id()] = pt.pos();
-            }
-            else if (pt.state() & (Qt::TouchPointReleased))
-            {
+            if (pt.state() & Qt::TouchPointReleased)
                 active_touches.remove(pt.id());
-            }
+            else
+                active_touches[pt.id()] = pt.position();
         }
-        
-        qCDebug(lcTouch) << "TOUCH EVENT type:" << event->type() << "reported:" << pts.count() << "active:" << active_touches.size();
-        
+        if (event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel)
+            active_touches.clear();
+
+        qCDebug(lcTouch) << "TOUCH EVENT type:" << event->type() << "active:" << active_touches.size();
+
         // Check if we have 2+ active touches for pinch zoom
         if (active_touches.size() >= 2)
         {
@@ -814,24 +810,30 @@ bool Canvas::event(QEvent* event)
                 qCDebug(lcTouch) << "PINCH ratio:" << ratio << "zoom:" << zoom << "dist:" << dist;
                 update();
             }
-            event->accept();
-            return true;
+            touch_rotate_active = false;
+        }
+        else if (active_touches.size() == 1)
+        {
+            // One finger rotates. Starting, or continuing after the second
+            // finger lifts, begins from the current position: no jump.
+            const QPointF p = active_touches.first();
+            if (touch_rotate_active && !touch_pinch_active)
+            {
+                calcArcballTransform(changeMouseCoordinates(touch_last_point.toPoint()),
+                                     changeMouseCoordinates(p.toPoint()));
+                update();
+            }
+            touch_pinch_active = false;
+            touch_rotate_active = true;
+            touch_last_point = p;
         }
         else
         {
-            // Less than 2 touches - end pinch if active
-            if (touch_pinch_active)
-            {
-                qCDebug(lcTouch) << "PINCH END";
-                touch_pinch_active = false;
-                // Rotation resumes from where the remaining finger is now, not
-                // from where the pinch started (which made the model jump).
-                if (!active_touches.isEmpty())
-                    mouse_pos = active_touches.first().toPoint();
-            }
+            touch_pinch_active = false;
+            touch_rotate_active = false;
         }
-        
-        return QOpenGLWidget::event(event);
+        event->accept();
+        return true;
     }
     // Fallback to Qt gesture if available (desktop only)
 #ifndef Q_OS_ANDROID
