@@ -797,7 +797,9 @@ bool Canvas::event(QEvent* event)
                 const qreal exponent = 1.5; // sensitivity (lower = gentler)
                 qreal scaled = pow(ratio, exponent);
                 
-                qreal newZoom = touch_base_zoom / scaled; // spread => zoom in (smaller zoom value)
+                // Spreading the fingers enlarges the model (larger zoom scales the
+                // view up); it used to shrink it. "Invert zoom" flips this too.
+                qreal newZoom = invertZoom ? touch_base_zoom / scaled : touch_base_zoom * scaled;
                 // Tighter limits to prevent clipping issues
                 newZoom = std::max(0.1, std::min(10.0, (double)newZoom));
                 zoom = newZoom;
