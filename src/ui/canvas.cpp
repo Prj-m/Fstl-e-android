@@ -9,6 +9,7 @@
 #include "rendering/backdrop.h"
 #include "rendering/axis.h"
 #include "rendering/glmesh.h"
+#include "rendering/shadersource.h"
 #include "core/mesh.h"
 #include <QLoggingCategory>
 #include <QGuiApplication>
@@ -350,31 +351,31 @@ void Canvas::initializeGL()
     QElapsedTimer shaderTimer;
     shaderTimer.start();
     const QString meshVert = QStringLiteral(":/gl/shaders/mesh.vert");
-    mesh_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
-    mesh_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh.frag");
+    mesh_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh.frag"));
     // Other modes are skipped if they fail; without the shaded program there
     // is nothing to show, so explain that instead of a blank canvas.
     if (!linkProgram(mesh_shader, "shaded"))
         glError = tr("This device's graphics driver could not compile the 3D shaders.");
-    mesh_wireframe_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
-    mesh_wireframe_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_wireframe.frag");
+    mesh_wireframe_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_wireframe_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_wireframe.frag"));
     linkProgram(mesh_wireframe_shader, "wireframe");
-    mesh_surfaceangle_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
-    mesh_surfaceangle_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_surfaceangle.frag");
+    mesh_surfaceangle_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+    mesh_surfaceangle_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_surfaceangle.frag"));
     linkProgram(mesh_surfaceangle_shader, "surface angle");
     // Geometry shaders need desktop GLSL 330; OpenGL ES always uses the fallback.
     // That desktop path compiles eagerly (non-cacheable) so failure is detected here.
     bool loadSuccess330 = !context()->isOpenGLES() &&
                           QOpenGLShader::hasOpenGLShaders(QOpenGLShader::Geometry, context()) &&
-                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Vertex, meshVert) &&
-                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Geometry, ":/gl/shaders/calc_altitudes.glsl") &&
-                          mesh_meshlight_shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light.frag");
+                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert)) &&
+                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Geometry, shaderSource(":/gl/shaders/calc_altitudes.glsl")) &&
+                          mesh_meshlight_shader.addShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light.frag"));
     if (!loadSuccess330) {
         // fallback to 120
         fallbackGlsl = true;
         mesh_meshlight_shader.removeAllShaders();
-        mesh_meshlight_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, meshVert);
-        mesh_meshlight_shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/mesh_light_120.frag");
+        mesh_meshlight_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(meshVert));
+        mesh_meshlight_shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/mesh_light_120.frag"));
     }
     emit fallbackGlslUpdated(fallbackGlsl);
     linkProgram(mesh_meshlight_shader, "meshlight");

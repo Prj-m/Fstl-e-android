@@ -84,6 +84,7 @@ set(PROJECT_SOURCES
     include/rendering/axis.h
     include/rendering/backdrop.h
     include/rendering/glmesh.h
+    include/rendering/shadersource.h
     
     # Resources
     resources/qml.qrc

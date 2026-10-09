@@ -1,4 +1,5 @@
 #include "rendering/axis.h"
+#include "rendering/shadersource.h"
 #include <QDebug>
 
 const float xLet[] = {
@@ -30,8 +31,8 @@ Axis::Axis()
 {
     initializeOpenGLFunctions();
 
-    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex, ":/gl/shaders/colored_lines.vert");
-    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/colored_lines.frag");
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(":/gl/shaders/colored_lines.vert"));
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/colored_lines.frag"));
     if (shader.link())
     {
         locTransform = shader.uniformLocation("transform_matrix");

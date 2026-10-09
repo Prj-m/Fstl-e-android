@@ -1,12 +1,13 @@
 #include "rendering/backdrop.h"
+#include "rendering/shadersource.h"
 #include <QVector3D>
 
 Backdrop::Backdrop()
 {
     initializeOpenGLFunctions();
 
-    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Vertex,   ":/gl/shaders/quad.vert");
-    shader.addCacheableShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/quad.frag");
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(":/gl/shaders/quad.vert"));
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/quad.frag"));
     if (shader.link())
     {
         locPosition = shader.attributeLocation("vertex_position");
