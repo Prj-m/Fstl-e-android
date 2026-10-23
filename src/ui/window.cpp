@@ -1037,8 +1037,13 @@ void Window::load_persist_settings(){
     // later start, so the desktop geometry setting is not used here.
     settings.remove(WINDOW_GEOM_KEY);
 #else
-    // Don't set a hardcoded size - let Qt handle window sizing
-    restoreGeometry(settings.value(WINDOW_GEOM_KEY).toByteArray());
+    // QOpenGLWidget has no useful size hint: a fresh desktop profile can
+    // otherwise collapse the viewport to a few pixels below the toolbar.
+    const bool restored = restoreGeometry(settings.value(WINDOW_GEOM_KEY).toByteArray());
+    if (!restored || height() < 320 || width() < 480) {
+        const QSize available = screen()->availableGeometry().size();
+        resize(QSize(960, 720).boundedTo(available));
+    }
 #endif
     if (this->isFullScreen()) {
         fullscreen_action->blockSignals(true);
