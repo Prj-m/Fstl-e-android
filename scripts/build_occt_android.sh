@@ -5,12 +5,13 @@ set -euo pipefail
 : "${FSTL_OCCT_ROOT:?Set FSTL_OCCT_ROOT to the installation prefix}"
 : "${ANDROID_NDK_ROOT:?Set ANDROID_NDK_ROOT}"
 : "${FSTL_BUILD_JOBS:=2}"
+: "${FSTL_ANDROID_ABI:=arm64-v8a}"
 occt_build_dir="${FSTL_OCCT_BUILD_DIR:-$FSTL_OCCT_ROOT-build}"
 occt_source_dir="$(cd "$FSTL_OCCT_SOURCE" && pwd)"
 prefix_map_flags="\"-ffile-prefix-map=$occt_source_dir=/src/occt\" \"-ffile-prefix-map=$occt_build_dir=/build/occt\""
 cmake -S "$FSTL_OCCT_SOURCE" -B "$occt_build_dir" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28 \
+    -DANDROID_ABI="$FSTL_ANDROID_ABI" -DANDROID_PLATFORM=android-28 \
     -DANDROID_STL=c++_shared -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
     '-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384' \
     -DCMAKE_C_FLAGS="$prefix_map_flags" -DCMAKE_CXX_FLAGS="$prefix_map_flags" \

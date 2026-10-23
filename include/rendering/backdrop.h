@@ -31,6 +31,8 @@ public:
     void draw();
 private:
     QOpenGLShaderProgram shader;
+    GLint locPosition = -1, locUv = -1;
+    GLint locTL = -1, locTR = -1, locBL = -1, locBR = -1;
     QOpenGLBuffer vertices;
     QColor tl, tr, bl, br;
 };

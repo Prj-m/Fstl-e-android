@@ -2,6 +2,10 @@
 #include "core/importlimits.h"
 #include "core/boundedzip.h"
 #include "core/fileopenpath.h"
+#include "core/fastfloat.h"
+#include <cstring>
+#include <cstdio>
+#include <random>
 #include <QtEndian>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -118,6 +122,32 @@ int main(int argc, char** argv) {
     checkCancelled(binaryStl(1), false, "cancelled binary STL stops silently");
     checkCancelled(ascii, false, "cancelled ASCII STL stops silently");
     check(ascii, false, true, "valid ASCII STL");
+    {
+        // Token-based ASCII reader: formatting variants real exporters produce.
+        QByteArray crlfTabs = ascii;
+        crlfTabs.replace("\n", "\r\n").replace(' ', '\t');
+        check(crlfTabs, false, true, "ASCII STL with CRLF and tabs");
+        check(ascii.chopped(QByteArray("endsolid test\n").size()), false, true, "ASCII STL without endsolid");
+        check(ascii.chopped(1), false, true, "ASCII STL without trailing newline");
+        QByteArray blankLines = ascii;
+        blankLines.replace("endfacet\n", "endfacet\n\n  \n");
+        check(blankLines, false, true, "ASCII STL with blank lines");
+        check(ascii + ascii, false, true, "ASCII STL with two solid blocks", 2);
+        const QByteArray facet = ascii.mid(ascii.indexOf("facet"), ascii.indexOf("endsolid") - ascii.indexOf("facet"));
+        QByteArray chunked = "solid big\n";
+        const int facets = 12000; // > 1 MiB, crosses the reader's chunk boundary
+        for (int i = 0; i < facets; ++i) chunked += facet;
+        check(chunked + "endsolid big\n", false, true, "ASCII STL across read chunks", facets);
+        QByteArray longToken = ascii;
+        longToken.replace("vertex 1 0 0", "vertex 1" + QByteArray(300, '0') + " 0 0");
+        check(longToken, false, false, "ASCII STL oversized token");
+        QByteArray solidHeader = binaryStl(1);
+        solidHeader.replace(0, 5, "solid");
+        check(solidHeader, false, true, "binary STL whose header starts with solid");
+        QByteArray longName = ascii;
+        longName.replace("solid test", "solid " + QByteArray(1500, 'n'));
+        check(longName, false, true, "ASCII STL with a long solid name");
+    }
     for (const QByteArray& invalid : {QByteArray("vertex"), QByteArray("vertex 0"), QByteArray("vertex 0 0"), QByteArray("vertex invalid 0 0"), QByteArray("vertex 0 invalid 0"), QByteArray("vertex nan 0 0"), QByteArray("vertex 0 0 inf")}) {
         QByteArray malformed = ascii;
         malformed.replace("vertex 0 0 0", invalid);
@@ -129,12 +159,50 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 1025; ++i) multipleRecords += record;
     check(multipleRecords, false, true, "binary record buffer boundary", 1025);
     check(binaryStl(1).chopped(1), false, false, "truncated binary STL");
+    check(binaryStl(1) + QByteArray(16, '\0'), false, true, "binary STL with trailing padding");
+    check(binaryStl(1) + QByteArray(5000, '\0'), false, false, "binary STL with excessive trailing data");
+    {
+        QByteArray zeroCount = binaryStl(1);
+        zeroCount.replace(80, 4, QByteArray(4, '\0'));
+        check(zeroCount, false, true, "binary STL with zero triangle count");
+    }
     check(QByteArray(82, '\0'), false, false, "truncated binary count");
     // 50 * count wraps to 50 in 32-bit arithmetic: old parser accepts 134 bytes.
     check(binaryStl(0x80000001U), false, false, "overflowed binary count");
     check(binaryStl(1, true, false), false, false, "nonfinite binary coordinates");
     const QByteArray model = "<model><resources><object><mesh><vertices><vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/></vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources></model>";
     check(model, true, true, "valid 3MF");
+    {
+        // 3MF units: coordinates are converted to millimetres.
+        QByteArray inches = model;
+        inches.replace("<model>", "<model unit='inch'>");
+        const QString path = dir.filePath("units.3mf");
+        QZipWriter writer(path);
+        writer.addFile("3D/3dmodel.model", inches);
+        writer.close();
+        TestLoader loader(path);
+        std::unique_ptr<Mesh> mesh(loader.load_3mf());
+        ++checks;
+        if (!mesh || std::abs(mesh->xmax() - 25.4f) > 1e-4f) { ++failures; std::cerr << "FAIL: 3MF inch units\n"; }
+    }
+    {
+        // Build-item translations are in the model unit too: the second copy is
+        // offset by 2 inches, so the assembly spans [0, 3] in = [0, 76.2] mm.
+        const QByteArray placed = "<model unit='inch'><resources><object id='1'><mesh><vertices>"
+            "<vertex x='0' y='0' z='0'/><vertex x='1' y='0' z='0'/><vertex x='0' y='1' z='0'/>"
+            "</vertices><triangles><triangle v1='0' v2='1' v3='2'/></triangles></mesh></object></resources>"
+            "<build><item objectid='1'/><item objectid='1' transform='1 0 0 0 1 0 0 0 1 2 0 0'/></build></model>";
+        const QString path = dir.filePath("placed.3mf");
+        QZipWriter writer(path);
+        writer.addFile("3D/3dmodel.model", placed);
+        writer.close();
+        TestLoader loader(path);
+        std::unique_ptr<Mesh> mesh(loader.load_3mf());
+        ++checks;
+        if (!mesh || std::abs(mesh->xmax() - 76.2f) > 1e-3f || std::abs(mesh->xmin()) > 1e-4f) {
+            ++failures; std::cerr << "FAIL: 3MF unit applied to build-item translation\n";
+        }
+    }
     checkCancelled(model, true, "cancelled 3MF stops silently");
     check(model, true, false, "declared oversized ZIP XML", 1, ImportLimits::ModelXmlBytes + 1);
     check(model, true, false, "understated ZIP XML size", 1, 1);
@@ -286,6 +354,49 @@ int main(int argc, char** argv) {
                              qMakePair(QString("content://models.provider/document/part%2Fone.stp"), QString("content://models.provider/document/part%2Fone.stp"))}) {
         ++checks;
         if (fileOpenPath(QUrl(item.first)) != item.second) { ++failures; std::cerr << "FAIL: file-open URI conversion\n"; }
+    }
+    {
+        // The fast decimal path must accept/reject exactly like Qt and agree
+        // with it to within one float ulp (double-then-float rounding).
+        auto ulps = [](float a, float b) {
+            int32_t ia, ib;
+            std::memcpy(&ia, &a, 4);
+            std::memcpy(&ib, &b, 4);
+            if ((ia < 0) != (ib < 0)) return (a == b) ? 0LL : 1LL << 40;
+            return std::llabs(qint64(ia) - qint64(ib));
+        };
+        std::vector<QByteArray> inputs = {"0", "-0", "1.", ".5", "+3", "1e", "e5", "-", ".", "", "1e-50", "1e50",
+            "nan", "inf", "-inf", "1.5e+38", "3.5e38", "123456789012345678", " 1", "1 ", "0x10", "1e+", "--1",
+            "0.000000000000000000000000001", "9999999999999999", "1.234560e+01", "-5.000000e-01", "007", "1e400"};
+        std::mt19937 random(42);
+        std::uniform_real_distribution<double> mantissa(-1.0, 1.0);
+        std::uniform_int_distribution<int> exponent(-12, 12);
+        for (int i = 0; i < 20000; ++i) {
+            const double v = mantissa(random) * std::pow(10.0, exponent(random));
+            for (const char* format : {"%e", "%.6f", "%g", "%.9g", "%.3f"})
+            {
+                char text[64];
+                std::snprintf(text, sizeof(text), format, v);
+                inputs.push_back(QByteArray(text));
+            }
+        }
+        int mismatches = 0;
+        for (const QByteArray& input : inputs) {
+            bool qtOk = false, fastOk = false;
+            const float qtValue = QByteArrayView(input).toFloat(&qtOk);
+            const float fastValue = FastFloat::toFloat(QByteArrayView(input), &fastOk);
+            bool utf16Ok = false;
+            const QString wide = QString::fromLatin1(input);
+            const float utf16Value = FastFloat::toFloat(QStringView(wide), &utf16Ok);
+            const bool same = qtOk == fastOk && fastOk == utf16Ok
+                && (!qtOk || ((std::isnan(qtValue) && std::isnan(fastValue)) ||
+                              (ulps(qtValue, fastValue) <= 1 && fastValue == utf16Value)));
+            if (!same && ++mismatches <= 5)
+                std::cerr << "FastFloat mismatch for '" << input.constData() << "': qt " << qtOk << ' ' << qtValue
+                          << " fast " << fastOk << ' ' << fastValue << '\n';
+        }
+        ++checks;
+        if (mismatches) { ++failures; std::cerr << "FAIL: fast float parsing (" << mismatches << " mismatches)\n"; }
     }
     std::cout << checks << " checks, " << failures << " failures\n";
     return failures ? 1 : 0;

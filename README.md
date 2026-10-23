@@ -8,7 +8,7 @@ Android port of [fstl-e](https://github.com/wdaniau/fstl), a viewer for STL, 3MF
 
 Closed test on Google Play, build 1.0.4-rc.5. Opt in: [play.google.com/apps/testing/com.github.prjm.fstl_e](https://play.google.com/apps/testing/com.github.prjm.fstl_e)
 
-Android 9+, arm64. Report problems with the [bug report template](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md).
+Android 9+ on 64-bit ARM, 32-bit ARM and x86_64 (Chromebooks, emulators); OpenGL ES 3.0 required. Report problems with the [bug report template](https://github.com/Prj-m/fstl-e-android/issues/new?template=bug_report.md).
 
 ## Building
 

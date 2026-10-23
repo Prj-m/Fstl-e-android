@@ -1,7 +1,6 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QLocale>
-#include <QStyleFactory>
 
 #include "core/app.h"
 
@@ -20,6 +19,11 @@ int main(int argc, char *argv[])
     
     // Prevent widgets from creating backing stores during event processing
     QCoreApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+
+    // Use simpler Fusion style on Android to avoid native widget conflicts with
+    // OpenGL. Selected before App builds the window: setting it afterwards
+    // re-polished and re-laid-out every widget during startup.
+    qputenv("QT_STYLE_OVERRIDE", "Fusion");
 #endif
 
     // Force C locale to force decimal point
@@ -31,11 +35,6 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationVersion("1.0.0");
     
     App a(argc, argv);
-
-#ifdef Q_OS_ANDROID
-    // Use simpler Fusion style on Android to avoid native widget conflicts with OpenGL
-    a.setStyle(QStyleFactory::create("Fusion"));
-#endif
 
     return a.exec();
 }

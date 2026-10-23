@@ -1,18 +1,24 @@
 #include <future>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 #include "core/loader.h"
 #include "core/importlimits.h"
 #include "core/boundedzip.h"
+#include "core/fastfloat.h"
 #include "core/vertex.h"
 #include "loaders/stepmeshloader.h"
 #include "loaders/occtsteploader.h"
 #include <QXmlStreamReader>
+#include <QBuffer>
 #include <functional>
 #include <QSet>
 #include <QMap>
 #include <QFile>
+#include <QElapsedTimer>
+#include <QDir>
+#include <QStandardPaths>
 #include <QVector3D>
 
 #ifdef Q_OS_ANDROID
@@ -24,9 +30,54 @@
 #endif
 
 Loader::Loader(QObject* parent, const QString& filename, bool is_reload)
-    : QThread(parent), filename(filename), is_reload(is_reload)
+    : QThread(parent), filename(filename), sourcePath(filename), is_reload(is_reload)
 {
     // Nothing to do here
+}
+
+bool Loader::copyUnsizedSource()
+{
+    QFile in(filename);
+    if (!in.open(QIODevice::ReadOnly))
+    {
+        emit error_missing_file();
+        return false;
+    }
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (cachePath.isEmpty() || !QDir().mkpath(cachePath))
+    {
+        emit error_missing_file();
+        return false;
+    }
+    sourceCopy = std::make_unique<QTemporaryFile>(cachePath + "/fstl_source_XXXXXX");
+    if (!sourceCopy->open())
+    {
+        emit error_missing_file();
+        return false;
+    }
+    // Read until the stream ends: size() and atEnd() are meaningless here.
+    for (;;)
+    {
+        if (isCancelled()) return false;
+        const QByteArray chunk = in.read(1024 * 1024);
+        if (chunk.isEmpty())
+            break;
+        if (sourceCopy->size() + chunk.size() > ImportLimits::SourceBytes ||
+            sourceCopy->write(chunk) != chunk.size())
+        {
+            emit error_bad_stl();
+            return false;
+        }
+    }
+    if (in.error() != QFileDevice::NoError || !sourceCopy->flush() || sourceCopy->size() == 0)
+    {
+        emit error_bad_stl();
+        return false;
+    }
+    sourceCopy->close();
+    sourcePath = sourceCopy->fileName();
+    ALOG("Copied unsized content URI to the cache");
+    return true;
 }
 
 void Loader::cancel()
@@ -44,13 +95,20 @@ void Loader::run()
 try
 {
     Mesh* mesh = nullptr;
+    QElapsedTimer importTimer;
+    importTimer.start();
     
     ALOG("Loader::run() called for file: %s", filename.toStdString().c_str());
+
+    // Some providers (cloud, messaging, unscanned media) report no size.
+    if (filename.startsWith(QLatin1String("content://")) && QFile(filename).size() <= 0 &&
+        !copyUnsizedSource())
+        return;
     
     // Detect 3MF and STEP by inspecting the file header.
     // 3MF: ZIP container (magic bytes "PK")
     // STEP: ISO-10303-21 text header and/or HEADER/DATA markers
-    QFile file(filename);
+    QFile file(sourcePath);
     bool is_3mf = false;
     bool is_step = false;
     
@@ -137,6 +195,8 @@ try
         }
         else
         {
+            ALOG("Import finished in %lld ms (%d triangles)",
+                 static_cast<long long>(importTimer.elapsed()), mesh->triCount());
             emit got_mesh(mesh, is_reload);
             emit loaded_file(filename);
         }
@@ -179,53 +239,10 @@ void parallel_sort(Vertex* begin, Vertex* end, int threads)
 
 Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
 {
-#ifdef Q_OS_ANDROID
-    // Android: Calculate per-triangle normals for flat shading
-    std::vector<GLfloat> flat_verts;
-    std::vector<GLfloat> flat_normals;
-    flat_verts.reserve(size_t(tri_count)*9); // 3 vertices * 3 floats per triangle
-    flat_normals.reserve(size_t(tri_count)*9); // 3 normals * 3 floats per triangle
-    
-    for (size_t i = 0; i < verts.size(); i += 3)
-    {
-        // Get triangle vertices
-        float v0x = verts[i].x, v0y = verts[i].y, v0z = verts[i].z;
-        float v1x = verts[i+1].x, v1y = verts[i+1].y, v1z = verts[i+1].z;
-        float v2x = verts[i+2].x, v2y = verts[i+2].y, v2z = verts[i+2].z;
-        
-        // Calculate edge vectors
-        float e1x = v1x - v0x, e1y = v1y - v0y, e1z = v1z - v0z;
-        float e2x = v2x - v0x, e2y = v2y - v0y, e2z = v2z - v0z;
-        
-        // Calculate normal via cross product
-        float nx = e1y * e2z - e1z * e2y;
-        float ny = e1z * e2x - e1x * e2z;
-        float nz = e1x * e2y - e1y * e2x;
-        
-        // Normalize
-        float len = std::sqrt(nx*nx + ny*ny + nz*nz);
-        if (len > 0.0001f) {
-            nx /= len; ny /= len; nz /= len;
-        }
-        
-        // Store vertices
-        flat_verts.push_back(v0x); flat_verts.push_back(v0y); flat_verts.push_back(v0z);
-        flat_verts.push_back(v1x); flat_verts.push_back(v1y); flat_verts.push_back(v1z);
-        flat_verts.push_back(v2x); flat_verts.push_back(v2y); flat_verts.push_back(v2z);
-        
-        // Store actual NORMALS (same for all 3 vertices of the triangle)
-        for (int j = 0; j < 3; j++) {
-            flat_normals.push_back(nx);
-            flat_normals.push_back(ny);
-            flat_normals.push_back(nz);
-        }
-    }
-    
-    // No indices - use non-indexed rendering
-    std::vector<GLuint> empty_indices;
-    return new Mesh(std::move(flat_verts), std::move(flat_normals), std::move(empty_indices));
-#else
-    // Desktop: Use indexed rendering with vertex deduplication
+    // Indexed rendering with vertex deduplication. Face normals are derived in
+    // the fragment shaders, so shared vertices need no per-face data: a closed
+    // mesh uploads ~half as many vertices as triangles plus 12 bytes of
+    // indices per triangle, instead of 72 bytes per triangle non-indexed.
     // Save indicies as the second element in the array
     // (so that we can reconstruct triangle order after sorting)
     for (size_t i=0; i < tri_count*3; ++i)
@@ -272,41 +289,69 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
     }
 
     return new Mesh(std::move(flat_verts), std::move(indices));
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 Mesh* Loader::load_stl()
 {
-    QFile file(filename);
+    QFile file(sourcePath);
     if (!file.open(QIODevice::ReadOnly))
     {
         emit error_missing_file();
         return NULL;
     }
 
-    qint64 file_size, file_size_old;
-    file_size = file.size();
-    int stabilityChecks = 0;
-    do {
-        file_size_old = file_size;
-        QThread::usleep(100000);
-        if (isCancelled()) return nullptr;
-        file_size = file.size();
-        if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
-        {
-            emit error_bad_stl();
-            return nullptr;
-        }
+    qint64 file_size = file.size();
+    if (file_size > ImportLimits::SourceBytes)
+    {
+        emit error_bad_stl();
+        return nullptr;
     }
-    while(file_size != file_size_old);
+    // Watcher-triggered reloads can see a file that is still being written;
+    // wait for its size to settle. First opens skip this delay.
+    if (is_reload)
+    {
+        qint64 file_size_old;
+        int stabilityChecks = 0;
+        do {
+            file_size_old = file_size;
+            QThread::usleep(100000);
+            if (isCancelled()) return nullptr;
+            file_size = file.size();
+            if (file_size > ImportLimits::SourceBytes || ++stabilityChecks > 10)
+            {
+                emit error_bad_stl();
+                return nullptr;
+            }
+        }
+        while(file_size != file_size_old);
+    }
+
+    // A size matching the binary triangle count is binary even when the
+    // 80-byte header starts with "solid" (common with CAD exporters).
+    bool binarySize = false;
+    if (file_size >= 84 && file.seek(80))
+    {
+        uchar count[4];
+        binarySize = file.read(reinterpret_cast<char*>(count), 4) == 4 &&
+                     file_size == 84 + qint64(qFromLittleEndian<quint32>(count)) * 50;
+    }
+    file.seek(0);
 
     // First, try to read the stl as an ASCII file
-    if (file.read(5) == "solid")
+    if (!binarySize && file.read(5) == "solid")
     {
-        file.readLine(); // skip solid name
-        const auto line = file.readLine().trimmed();
+        // Bounded reads: a binary file may contain no newline for megabytes.
+        // The solid name may be long, so skip up to 64 KiB of it.
+        for (qint64 skipped = 0; skipped < 64 * 1024;)
+        {
+            const QByteArray chunk = file.readLine(1024);
+            skipped += chunk.size();
+            if (chunk.isEmpty() || chunk.endsWith('\n'))
+                break;
+        }
+        const auto line = file.readLine(1024).trimmed();
         if (line.startsWith("facet") ||
             line.startsWith("endsolid"))
         {
@@ -334,10 +379,16 @@ Mesh* Loader::read_stl_binary(QFile& file)
     uint32_t tri_count = 0;
     data >> tri_count;
 
-    // Verify that the file is the right size
+    // Some exporters leave the count at 0; recover it from an exact payload.
+    const qint64 records = file.size() - 84;
+    if (tri_count == 0 && records > 0 && records % 50 == 0)
+        tri_count = uint32_t(std::min<qint64>(records / 50, qint64(ImportLimits::Triangles) + 1));
+
+    // Verify the size. A little trailing data (padding some exporters append)
+    // is ignored; the size check otherwise doubles as format validation.
     const qint64 payloadSize = qint64(tri_count) * 50;
     if (tri_count > ImportLimits::Triangles || data.status() != QDataStream::Ok ||
-        file.size() != 84 + payloadSize ||
+        file.size() < 84 + payloadSize || file.size() > 84 + payloadSize + 4096 ||
         quint64(tri_count) * 3 > quint64(std::numeric_limits<int>::max()))
     {
         emit error_bad_stl();
@@ -392,7 +443,7 @@ Mesh* Loader::load_3mf()
 {
     ALOG("load_3mf() START for: %s", filename.toStdString().c_str());
     
-    QFile file(filename);
+    QFile file(sourcePath);
     if (!file.open(QIODevice::ReadOnly))
     {
         ALOG("FAILED to open 3MF file: %s", filename.toStdString().c_str());
@@ -475,9 +526,16 @@ Mesh* Loader::load_3mf()
 
     for (auto part = parts.constBegin(); part != parts.constEnd(); ++part)
     {
-        QXmlStreamReader xml(part.value());
+        // Read through a device: given a QByteArray, QXmlStreamReader decodes
+        // the whole part to UTF-16 at once (2x the XML size); a device is
+        // decoded in small chunks.
+        QBuffer xmlSource;
+        xmlSource.setData(part.value());
+        xmlSource.open(QIODevice::ReadOnly);
+        QXmlStreamReader xml(&xmlSource);
         Object* object = nullptr;
         int implicitId = 0;
+        float unitScale = 1.0f; // coordinates are converted to millimetres
         while (!xml.atEnd())
         {
             if (isCancelled()) return nullptr;
@@ -493,7 +551,18 @@ Mesh* Loader::load_3mf()
                 continue;
             const QStringView name = xml.name();
             const QXmlStreamAttributes attrs = xml.attributes();
-            if (name == QLatin1StringView("object"))
+            if (name == QLatin1StringView("model"))
+            {
+                // 3MF core spec units; millimetre is the default.
+                const QStringView unit = attr(attrs, QLatin1StringView("unit"));
+                unitScale = unit == QLatin1StringView("micron") ? 0.001f
+                          : unit == QLatin1StringView("centimeter") ? 10.0f
+                          : unit == QLatin1StringView("inch") ? 25.4f
+                          : unit == QLatin1StringView("foot") ? 304.8f
+                          : unit == QLatin1StringView("meter") ? 1000.0f
+                          : 1.0f;
+            }
+            else if (name == QLatin1StringView("object"))
             {
                 QByteArray id = attr(attrs, QLatin1StringView("id")).toUtf8();
                 if (id.isEmpty())
@@ -517,15 +586,15 @@ Mesh* Loader::load_3mf()
                     return nullptr;
                 }
                 bool vx = false, vy = false, vz = false;
-                const float x = attr(attrs, QLatin1StringView("x")).toFloat(&vx);
-                const float y = attr(attrs, QLatin1StringView("y")).toFloat(&vy);
-                const float z = attr(attrs, QLatin1StringView("z")).toFloat(&vz);
+                const float x = FastFloat::toFloat(attr(attrs, QLatin1StringView("x")), &vx);
+                const float y = FastFloat::toFloat(attr(attrs, QLatin1StringView("y")), &vy);
+                const float z = FastFloat::toFloat(attr(attrs, QLatin1StringView("z")), &vz);
                 if (!vx || !vy || !vz || !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
                 {
                     emit error_bad_stl();
                     return nullptr;
                 }
-                object->coords << x << y << z;
+                object->coords << x * unitScale << y * unitScale << z * unitScale;
             }
             else if (name == QLatin1StringView("triangle") && object)
             {
@@ -558,6 +627,9 @@ Mesh* Loader::load_3mf()
                     emit error_bad_stl();
                     return nullptr;
                 }
+                // The translation is in this part's unit, like its vertices.
+                for (int t = 9; t < 12; ++t)
+                    c.transform.m[t] *= unitScale;
                 object->components << c;
             }
             else if (name == QLatin1StringView("build"))
@@ -579,6 +651,9 @@ Mesh* Loader::load_3mf()
                     emit error_bad_stl();
                     return nullptr;
                 }
+                // The translation is in this part's unit, like its vertices.
+                for (int t = 9; t < 12; ++t)
+                    c.transform.m[t] *= unitScale;
                 items << c;
             }
         }
@@ -589,6 +664,8 @@ Mesh* Loader::load_3mf()
             return nullptr;
         }
     }
+
+    parts.clear(); // up to ModelXmlBytes of XML is no longer needed
 
     // Files without a <build> section draw every top-level object of the root part.
     if (!hasBuild)
@@ -603,6 +680,7 @@ Mesh* Loader::load_3mf()
     }
 
     QVector<Vertex> verts;
+    verts.reserve(totalIndices); // exact without instancing; a lower bound otherwise
     uint32_t tri_count = 0;
     qsizetype instances = 0;
     QSet<QByteArray> stack;
@@ -660,6 +738,7 @@ Mesh* Loader::load_3mf()
         emit error_empty_mesh();
         return nullptr;
     }
+    objects.clear(); // release per-object coordinates before building the mesh
     return mesh_from_verts(tri_count, verts);
 }
 
@@ -681,7 +760,7 @@ Mesh* Loader::load_step()
         ALOG("Trying Open CASCADE STEP loader first...");
         OcctStepLoader occtLoader;
         unsigned int occtTriCount = 0;
-        const bool loaded = occtLoader.load(filename, stepVerts, occtTriCount,
+        const bool loaded = occtLoader.load(sourcePath, stepVerts, occtTriCount,
                                             [this] { return isCancelled(); });
         if (isCancelled())
         {
@@ -704,7 +783,7 @@ Mesh* Loader::load_step()
     if (stepVerts.isEmpty())
     {
         StepMeshLoader stepLoader;
-        if (!stepLoader.parseFile(filename))
+        if (!stepLoader.parseFile(sourcePath))
         {
             ALOG("Failed to parse STEP file with internal parser");
             emit error_bad_stl();
@@ -747,53 +826,171 @@ Mesh* Loader::load_step()
     return mesh_from_verts(tri_count, verts);
 }
 
+namespace {
+// Streams whitespace-separated tokens from a file in large chunks without
+// per-line allocations (the previous readLine/simplified/split approach
+// allocated ~7 times per vertex line).
+class StlTokenReader
+{
+public:
+    explicit StlTokenReader(QFile& file) : file(file) {}
+
+    // Next token, or empty at end of input. Tokens are views into the buffer
+    // and stay valid only until the next call.
+    QByteArrayView next()
+    {
+        skipSpace();
+        qsizetype end = pos;
+        for (;;)
+        {
+            // constData(): a non-const QByteArray::operator[] checks for detach per byte.
+            const char* data = buffer.constData();
+            const qsizetype size = buffer.size();
+            while (end < size && !isSpace(data[end]))
+                ++end;
+            if (end < size || eof)
+                break;
+            // Token reaches the end of the buffer: keep it and read more.
+            // At end of input the loop ends with the token complete.
+            end -= pos;
+            refill();
+            end += pos;
+        }
+        if (end - pos > MaxToken)
+        {
+            failed = true;
+            return {};
+        }
+        const QByteArrayView token(buffer.constData() + pos, end - pos);
+        pos = end;
+        return token;
+    }
+
+    // Skips the rest of the current line (bounded).
+    void skipLine()
+    {
+        qsizetype skipped = 0;
+        for (;;)
+        {
+            const char* data = buffer.constData();
+            while (pos < buffer.size() && data[pos] != '\n' && skipped < MaxLine)
+            {
+                ++pos;
+                ++skipped;
+            }
+            if (pos < buffer.size() || eof || skipped >= MaxLine || !refill())
+                return;
+        }
+    }
+
+    bool failed = false;
+
+private:
+    static constexpr qsizetype Chunk = 1 << 20;
+    static constexpr qsizetype MaxToken = 256;
+    static constexpr qsizetype MaxLine = 64 * 1024; // e.g. a long solid name
+
+    static bool isSpace(char c) { return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\f' || c == '\v'; }
+
+    void skipSpace()
+    {
+        for (;;)
+        {
+            const char* data = buffer.constData();
+            const qsizetype size = buffer.size();
+            while (pos < size && isSpace(data[pos]))
+                ++pos;
+            if (pos < buffer.size() || eof || !refill())
+                return;
+        }
+    }
+
+    bool refill()
+    {
+        buffer.remove(0, pos);
+        pos = 0;
+        const qsizetype kept = buffer.size();
+        buffer.resize(kept + Chunk);
+        const qint64 got = file.read(buffer.data() + kept, Chunk);
+        if (got <= 0)
+        {
+            buffer.resize(kept);
+            eof = true;
+            failed = failed || got < 0;
+            return false;
+        }
+        buffer.resize(kept + qsizetype(got));
+        return true;
+    }
+
+    QFile& file;
+    QByteArray buffer;
+    qsizetype pos = 0;
+    bool eof = false;
+};
+} // namespace
+
 Mesh* Loader::read_stl_ascii(QFile& file)
 {
-    file.readLine();
+    StlTokenReader tokens(file);
+    tokens.skipLine(); // "solid name"
+
     uint32_t tri_count = 0;
-    QVector<Vertex> verts(tri_count*3);
+    QVector<Vertex> verts;
+    // Typical facets take ~250 bytes; reserving avoids repeated regrowth.
+    verts.reserve(qsizetype(std::min<qint64>(file.size() / 250, ImportLimits::Triangles)) * 3);
 
     bool okay = true;
-    while (!file.atEnd() && okay)
+    for (;;)
     {
-        if (isCancelled()) return nullptr;
-        const auto line = file.readLine().simplified();
-        if (line.startsWith("endsolid"))
+        if ((tri_count & 0x3FF) == 0 && isCancelled()) return nullptr;
+        const QByteArrayView token = tokens.next();
+        if (token.isEmpty())
         {
-            break;
+            break; // end of input (some files omit endsolid)
         }
-        else if (!line.startsWith("facet normal") ||
-                 !file.readLine().simplified().startsWith("outer loop"))
+        if (token == "endsolid")
+        {
+            // Some exporters write one solid block per body.
+            tokens.skipLine();
+            if (tokens.next() == "solid")
+            {
+                tokens.skipLine();
+                continue;
+            }
+            break; // ignore trailing data after the last block, as before
+        }
+        if (token != "facet" || tokens.next() != "normal" || tri_count >= ImportLimits::Triangles)
         {
             okay = false;
             break;
         }
-
-        if (tri_count >= ImportLimits::Triangles)
+        // The stored facet normal is recomputed later; skip its values.
+        QByteArrayView word;
+        for (int i = 0; i < 4 && (word = tokens.next()) != "outer"; ++i) {}
+        if (word != "outer" || tokens.next() != "loop")
         {
             okay = false;
             break;
         }
-        for (int i=0; i < 3; ++i)
+        for (int i = 0; i < 3 && okay; ++i)
         {
-            auto line = file.readLine().simplified().split(' ');
-            if (line.size() != 4 || line[0] != "vertex")
+            if (tokens.next() != "vertex")
             {
                 okay = false;
                 break;
             }
-            bool validX = false, validY = false, validZ = false;
-            const float x = line[1].toFloat(&validX);
-            const float y = line[2].toFloat(&validY);
-            const float z = line[3].toFloat(&validZ);
-            okay = validX && validY && validZ &&
-                   std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
-            if (!okay)
-                break;
-            verts.push_back(Vertex(x, y, z));
+            float xyz[3];
+            for (float& value : xyz)
+            {
+                bool valid = false;
+                value = FastFloat::toFloat(tokens.next(), &valid);
+                okay = okay && valid && std::isfinite(value);
+            }
+            if (okay)
+                verts.push_back(Vertex(xyz[0], xyz[1], xyz[2]));
         }
-        if (!file.readLine().trimmed().startsWith("endloop") ||
-            !file.readLine().trimmed().startsWith("endfacet"))
+        if (!okay || tokens.next() != "endloop" || tokens.next() != "endfacet")
         {
             okay = false;
             break;
@@ -801,7 +998,7 @@ Mesh* Loader::read_stl_ascii(QFile& file)
         tri_count++;
     }
 
-    if (okay)
+    if (okay && !tokens.failed)
     {
         return mesh_from_verts(tri_count, verts);
     }

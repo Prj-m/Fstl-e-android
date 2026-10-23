@@ -4,10 +4,9 @@ precision mediump float;
 
 // Layer-peeling clip plane (object-space Z)
 uniform bool layerClipEnabled;
-uniform float layerClipZ;
+uniform highp float layerClipZ;  // highp: mediump is fp16 on many GPUs
 
-in vec3 world_normal;
-in vec3 vObjPos;
+in highp vec3 vObjPos;
 out vec4 fragColor;
 
 void main() {

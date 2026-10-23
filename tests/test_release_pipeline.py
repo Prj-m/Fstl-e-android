@@ -23,6 +23,19 @@ def elf(align=16384, machine=183, offset=0, vaddr=0):
     return data
 
 
+def elf32(align=16384, machine=40):
+    data = bytearray(84)
+    data[:6] = b"\x7fELF\x01\x01"
+    struct.pack_into("<H", data, 18, machine)
+    struct.pack_into("<I", data, 28, 52)
+    struct.pack_into("<HH", data, 42, 32, 1)
+    struct.pack_into("<IIIIIIII", data, 52, 1, 0, 0, 0, 0, 0, 5, align)
+    return data
+
+
+ABI_ELF = {"arm64-v8a": elf, "armeabi-v7a": elf32, "x86_64": lambda: elf(machine=62)}
+
+
 def write_bundle(path, app=True, step=True, alignment=16384, extra=None):
     with zipfile.ZipFile(path, "w") as archive:
         if app:
@@ -97,6 +110,31 @@ class BundleChecks(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bundle_check.verify_bundle(path)
 
+    def test_accepts_32bit_arm_and_x86_64(self):
+        bundle_check.verify_elf(elf32(), "library.so", "armeabi-v7a")
+        bundle_check.verify_elf(elf(machine=62), "library.so", "x86_64")
+        bundle_check.verify_elf(elf32(4096), "library.so", "armeabi-v7a")  # 16 KB pages are 64-bit only
+        for data, abi in ((elf(), "armeabi-v7a"), (elf32(), "arm64-v8a"), (elf32(machine=3), "armeabi-v7a"), (elf32(2048), "armeabi-v7a"), (elf(4096, 62), "x86_64")):
+            with self.subTest(abi=abi), self.assertRaises(ValueError):
+                bundle_check.verify_elf(data, "library.so", abi)
+
+    def test_multi_abi_bundle_requires_every_abi(self):
+        abis = tuple(ABI_ELF)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "app.aab"
+            with zipfile.ZipFile(path, "w") as archive:
+                for abi, make in ABI_ELF.items():
+                    archive.writestr(f"base/lib/{abi}/libfstl_viewer_{abi}.so", make())
+                    archive.writestr(f"base/lib/{abi}/libTKDESTEP.so", make())
+            self.assertEqual(bundle_check.verify_bundle(path, abis=abis), 6)
+            with self.assertRaises(ValueError):
+                bundle_check.verify_bundle(path)  # arm64-only check rejects extra ABIs
+            with zipfile.ZipFile(path, "w") as archive:
+                for abi, make in ABI_ELF.items():
+                    archive.writestr(f"base/lib/{abi}/libfstl_viewer_{abi}.so", make())
+            with self.assertRaisesRegex(ValueError, "STEP"):
+                bundle_check.verify_bundle(path, abis=abis)
+
     def test_required_bundle_libraries_and_abi(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "app.aab"
@@ -131,8 +169,9 @@ class ReleaseBuildChecks(unittest.TestCase):
             "QT_CMAKE": str(tools / "cmake"),
             "PATH": str(tools) + os.pathsep + self.env["PATH"],
             "FSTL_TEST_ROOT": str(self.base),
+            "FSTL_ANDROID_ABIS": "arm64-v8a",
         })
-        for path in ("qt/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake", "ndk/build/cmake/android.toolchain.cmake", "occt/lib/libTKDESTEP.so", "occt/include/opencascade/STEPControl_Reader.hxx"):
+        for path in ("qt/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_arm64_v8a/plugins/platforms/libplugins_platforms_qtforandroid_arm64-v8a.so", "ndk/build/cmake/android.toolchain.cmake", "occt/lib/libTKDESTEP.so", "occt/include/opencascade/STEPControl_Reader.hxx"):
             file = self.base / path
             file.parent.mkdir(parents=True, exist_ok=True)
             file.touch()
@@ -149,13 +188,20 @@ if '-B' in sys.argv:
     (build / 'android-fstl_viewer-deployment-settings.json').write_text('{}')
     if os.environ.get('FSTL_TEST_FAIL') != 'no-native':
         (build / 'libfstl_viewer_arm64-v8a.so').write_bytes(b'native')
+        for abi in os.environ['FSTL_ANDROID_ABIS'].split()[1:]:
+            (build / 'android_abi_builds' / abi).mkdir(parents=True)
+            (build / 'android_abi_builds' / abi / f'libfstl_viewer_{abi}.so').write_bytes(b'native')
 """)
         self.executable(self.base / "qt/gcc_64/bin/androiddeployqt", """import os, pathlib, shutil, sys
 root = pathlib.Path(os.environ['FSTL_TEST_ROOT'])
 (root / 'deploy-called').touch()
 if os.environ.get('FSTL_TEST_FAIL') == 'deploy': sys.exit(8)
 out = pathlib.Path(sys.argv[sys.argv.index('--output') + 1])
-assert (out / 'libs/arm64-v8a/libfstl_viewer_arm64-v8a.so').read_bytes() == b'native'
+if '--copy-dependencies-only' in sys.argv:
+    with (root / 'dependency-copies').open('a') as log: log.write(sys.argv[sys.argv.index('--input') + 1] + '\\n')
+    sys.exit(0)
+for abi in os.environ['FSTL_ANDROID_ABIS'].split():
+    assert (out / f'libs/{abi}/libfstl_viewer_{abi}.so').read_bytes() == b'native'
 (out / 'gradlew').write_text('exit 9\\n' if os.environ.get('FSTL_TEST_FAIL') == 'lint' else 'exit 0\\n')
 if os.environ.get('FSTL_TEST_FAIL') != 'no-bundle':
     bundles = out / 'build/outputs/bundle/release'
@@ -206,7 +252,7 @@ if sys.argv[1] == 'dump':
         self.prepare_phone_tools()
         result = self.run_phone_package()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue((self.base / "build/phone-artifacts/fstl-e-arm64-dev.apk.sha256").is_file())
+        self.assertTrue((self.base / "build/phone-artifacts/fstl-e-dev.apk.sha256").is_file())
 
     def test_phone_failures_do_not_export_apk(self):
         self.prepare_phone_tools()
@@ -219,10 +265,42 @@ if sys.argv[1] == 'dump':
     def test_success_exports_a_fresh_bundle_and_checksum(self):
         result = self.run_build()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue((self.base / "build/artifacts/fstl-e-arm64-release.aab.sha256").is_file())
+        self.assertTrue((self.base / "build/artifacts/fstl-e-release.aab.sha256").is_file())
         calls = (self.base / "cmake-calls").read_text()
         self.assertIn("-DCMAKE_BUILD_TYPE=Release", calls)
         self.assertIn("-DFSTL_REQUIRE_OCCT=ON", calls)
+
+    def test_multi_abi_build_forwards_dependencies_and_stages_every_abi(self):
+        self.env["FSTL_ANDROID_ABIS"] = "arm64-v8a armeabi-v7a x86_64"
+        for path in ("qt/android_armv7/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_armv7/plugins/platforms/libplugins_platforms_qtforandroid_armeabi-v7a.so", "qt/android_x86_64/lib/cmake/Qt6/qt.toolchain.cmake", "qt/android_x86_64/plugins/platforms/libplugins_platforms_qtforandroid_x86_64.so", "occt-armeabi-v7a/lib/libTKDESTEP.so", "occt-x86_64/lib/libTKDESTEP.so"):
+            file = self.base / path
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.touch()
+        with zipfile.ZipFile(self.base / "fixture.aab", "w") as archive:
+            for abi, make in ABI_ELF.items():
+                archive.writestr(f"base/lib/{abi}/libfstl_viewer_{abi}.so", make())
+                archive.writestr(f"base/lib/{abi}/libTKDESTEP.so", make())
+        result = self.run_build()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = (self.base / "cmake-calls").read_text()
+        self.assertIn("-DFSTL_ANDROID_ABIS=arm64-v8a;armeabi-v7a;x86_64", calls)
+        self.assertIn(f"-DFSTL_OCCT_ROOT_armeabi-v7a={self.base}/occt-armeabi-v7a", calls)
+        self.assertIn("FSTL_OCCT_ROOT_x86_64", calls)
+        copies = (self.base / "dependency-copies").read_text().split()
+        self.assertEqual([Path(c).parent.name for c in copies], ["armeabi-v7a", "x86_64"])
+
+    def test_wrong_abi_qt_kit_fails_before_build(self):
+        # CI once exported the x86_64 kit as QT_ROOT_DIR; reject it up front.
+        (self.base / "qt/android_arm64_v8a/plugins/platforms/libplugins_platforms_qtforandroid_arm64-v8a.so").unlink()
+        result = self.run_build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not the arm64-v8a Qt kit", result.stderr)
+        self.assertFalse((self.base / "cmake-calls").exists())
+
+    def test_missing_secondary_abi_dependency_fails_before_build(self):
+        self.env["FSTL_ANDROID_ABIS"] = "arm64-v8a x86_64"
+        self.assertNotEqual(self.run_build().returncode, 0)
+        self.assertFalse((self.base / "cmake-calls").exists())
 
     def test_missing_native_library_fails_before_deployment(self):
         self.env["FSTL_TEST_FAIL"] = "no-native"

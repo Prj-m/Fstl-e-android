@@ -11,4 +11,4 @@
 
 ## Rebuilding with modified libraries
 
-Qt, OCCT and libc++ are shared libraries and can be replaced. Build your versions, point `QT_ANDROID_ROOT`, `QT_HOST_ROOT` and `FSTL_OCCT_ROOT` at them, and run `scripts/build_android_full_release_aab.sh` with `FSTL_SIGN_WITH_KEYSTORE=0`. Keep the arm64 ABI and 16 KB alignment, and verify with `scripts/check_android_release.sh`. `scripts/package_android_phone_apk.sh` builds an installable APK signed with your own debug key; no project key is needed.
+Qt, OCCT and libc++ are shared libraries and can be replaced. Build your versions, point `QT_ANDROID_ROOT`, `QT_HOST_ROOT` and `FSTL_OCCT_ROOT` at them, and run `scripts/build_android_full_release_aab.sh` with `FSTL_SIGN_WITH_KEYSTORE=0`. Keep the packaged ABIs (`FSTL_ANDROID_ABIS`) and 16 KB alignment for 64-bit libraries, and verify with `scripts/check_android_release.sh`. `scripts/package_android_phone_apk.sh` builds an installable APK signed with your own debug key; no project key is needed.

@@ -72,12 +72,20 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    lintOptions {
+    lint {
         abortOnError = true
+    }
+
+    // Store native libraries uncompressed and page-aligned so they load
+    // directly from the APK instead of being extracted (~75 MB) at install.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     aaptOptions {

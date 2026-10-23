@@ -2,6 +2,8 @@
 #define LOADER_H
 
 #include <QThread>
+#include <QTemporaryFile>
+#include <memory>
 #include <atomic>
 
 #include "core/mesh.h"
@@ -31,6 +33,9 @@ protected:
     Mesh* read_3mf_file();
     /*  Reads a STEP file (ISO 10303-21 format) */
     Mesh* read_step_file();
+    /*  Copies a provider stream that reports no size into the app cache so
+     *  the size-dependent readers can use it. Sets sourcePath. */
+    bool copyUnsizedSource();
 
 signals:
     void loaded_file(QString filename);
@@ -42,6 +47,8 @@ signals:
 
 private:
     const QString filename;
+    QString sourcePath;  // file actually read; a cache copy for unsized content URIs
+    std::unique_ptr<QTemporaryFile> sourceCopy;
     bool is_reload;
     std::atomic<bool> cancelled{false};
 };

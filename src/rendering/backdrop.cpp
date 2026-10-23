@@ -1,13 +1,22 @@
 #include "rendering/backdrop.h"
+#include "rendering/shadersource.h"
 #include <QVector3D>
 
 Backdrop::Backdrop()
 {
     initializeOpenGLFunctions();
 
-    shader.addShaderFromSourceFile(QOpenGLShader::Vertex,   ":/gl/shaders/quad.vert");
-    shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/gl/shaders/quad.frag");
-    shader.link();
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Vertex, shaderSource(":/gl/shaders/quad.vert"));
+    shader.addCacheableShaderFromSourceCode(QOpenGLShader::Fragment, shaderSource(":/gl/shaders/quad.frag"));
+    if (shader.link())
+    {
+        locPosition = shader.attributeLocation("vertex_position");
+        locUv = shader.attributeLocation("vertex_uv");
+        locTL = shader.uniformLocation("colorTL");
+        locTR = shader.uniformLocation("colorTR");
+        locBL = shader.uniformLocation("colorBL");
+        locBR = shader.uniformLocation("colorBR");
+    }
 
     // Fullscreen quad with UVs for 4-corner gradient
     // BL (-1,-1) -> (0,0), TL (-1,1) -> (0,1), BR (1,-1) -> (1,0), TR (1,1) -> (1,1)
@@ -63,11 +72,13 @@ void Backdrop::setBottomRight(const QColor& color)
 
 void Backdrop::draw()
 {
+    if (!shader.isLinked() || locPosition < 0 || locUv < 0)
+        return;
     shader.bind();
     vertices.bind();
 
-    const GLint vp = shader.attributeLocation("vertex_position");
-    const GLint vt = shader.attributeLocation("vertex_uv");
+    const GLint vp = locPosition;
+    const GLint vt = locUv;
 
     glEnableVertexAttribArray(vp);
     glEnableVertexAttribArray(vt);
@@ -84,13 +95,16 @@ void Backdrop::draw()
         };
     };
 
-    shader.setUniformValue("colorTL", toVec3(tl));
-    shader.setUniformValue("colorTR", toVec3(tr));
-    shader.setUniformValue("colorBL", toVec3(bl));
-    shader.setUniformValue("colorBR", toVec3(br));
+    shader.setUniformValue(locTL, toVec3(tl));
+    shader.setUniformValue(locTR, toVec3(tr));
+    shader.setUniformValue(locBL, toVec3(bl));
+    shader.setUniformValue(locBR, toVec3(br));
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    // Leaving these enabled lets later draws read past this 4-vertex buffer.
+    glDisableVertexAttribArray(vt);
+    glDisableVertexAttribArray(vp);
     vertices.release();
     shader.release();
 }

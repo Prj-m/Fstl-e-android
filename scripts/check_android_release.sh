@@ -2,6 +2,8 @@
 set -euo pipefail
 [[ "$#" == 1 && -s "$1" ]] || { echo "Usage: $0 <release.aab>" >&2; exit 1; }
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/android_abis.sh
+source "$repo_root/scripts/android_abis.sh"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 # Immutable digest verified against Google's GitHub release asset metadata.
@@ -16,4 +18,4 @@ if [[ -n "${FSTL_PLAY_HIGHEST_VERSION_CODE:-}" ]]; then
     version_args=(--highest-version-code "$FSTL_PLAY_HIGHEST_VERSION_CODE")
 fi
 python3 "$repo_root/scripts/verify_android_manifest.py" "$work_dir/manifest.xml" "${version_args[@]}"
-python3 "$repo_root/scripts/verify_android_bundle.py" "$1"
+python3 "$repo_root/scripts/verify_android_bundle.py" --abis "${fstl_android_abis[*]}" "$1"
